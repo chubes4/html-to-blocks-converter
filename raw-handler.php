@@ -2,12 +2,12 @@
 /**
  * Raw handler pipeline ported from Gutenberg JavaScript to PHP
  *
- * This file contains the main raw_handler function that converts HTML to blocks.
- * It uses the Transform_Registry for block transforms and Block_Factory for block creation.
+ * Uses WordPress HTML API (WP_HTML_Processor) for spec-compliant HTML5 parsing.
+ * Converts HTML to Gutenberg blocks using registered transforms.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 /**
@@ -17,37 +17,37 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Array of block arrays
  */
 function html_to_blocks_raw_handler( $args ) {
-    $html = $args['HTML'] ?? '';
+	$html = $args['HTML'] ?? '';
 
-    if ( empty( $html ) ) {
-        return [];
-    }
+	if ( empty( $html ) ) {
+		return [];
+	}
 
-    if ( strpos( $html, '<!-- wp:' ) !== false ) {
-        $blocks = parse_blocks( $html );
-        $is_single_freeform = count( $blocks ) === 1
-            && isset( $blocks[0]['blockName'] )
-            && $blocks[0]['blockName'] === 'core/freeform';
-        if ( ! $is_single_freeform ) {
-            return $blocks;
-        }
-    }
+	if ( strpos( $html, '<!-- wp:' ) !== false ) {
+		$blocks             = parse_blocks( $html );
+		$is_single_freeform = count( $blocks ) === 1
+			&& isset( $blocks[0]['blockName'] )
+			&& $blocks[0]['blockName'] === 'core/freeform';
+		if ( ! $is_single_freeform ) {
+			return $blocks;
+		}
+	}
 
-    $pieces = html_to_blocks_shortcode_converter( $html );
+	$pieces = html_to_blocks_shortcode_converter( $html );
 
-    $result = [];
-    foreach ( $pieces as $piece ) {
-        if ( ! is_string( $piece ) ) {
-            $result[] = $piece;
-            continue;
-        }
+	$result = [];
+	foreach ( $pieces as $piece ) {
+		if ( ! is_string( $piece ) ) {
+			$result[] = $piece;
+			continue;
+		}
 
-        $piece = html_to_blocks_normalise_blocks( $piece );
-        $blocks = html_to_blocks_convert( $piece );
-        $result = array_merge( $result, $blocks );
-    }
+		$piece  = html_to_blocks_normalise_blocks( $piece );
+		$blocks = html_to_blocks_convert( $piece );
+		$result = array_merge( $result, $blocks );
+	}
 
-    return array_filter( $result );
+	return array_filter( $result );
 }
 
 /**
@@ -57,91 +57,210 @@ function html_to_blocks_raw_handler( $args ) {
  * @return array Array of blocks
  */
 function html_to_blocks_convert( $html ) {
-    if ( empty( trim( $html ) ) ) {
-        return [];
-    }
+	if ( empty( trim( $html ) ) ) {
+		return [];
+	}
 
-    $doc = new DOMDocument();
-    libxml_use_internal_errors( true );
-    $doc->loadHTML(
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>',
-        LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-    );
-    libxml_clear_errors();
+	$processor = WP_HTML_Processor::create_fragment( $html );
+	if ( ! $processor ) {
+		return [];
+	}
 
-    $body = $doc->getElementsByTagName( 'body' )->item( 0 );
-    if ( ! $body ) {
-        return [];
-    }
+	$blocks     = [];
+	$transforms = HTML_To_Blocks_Transform_Registry::get_raw_transforms();
 
-    $blocks = [];
-    $transforms = HTML_To_Blocks_Transform_Registry::get_raw_transforms();
+	$body_depth      = 2;
+	$top_level_depth = $body_depth + 1;
+	$tag_occurrences = [];
+	$tag_positions   = [];
 
-    foreach ( $body->childNodes as $node ) {
-        if ( $node->nodeType === XML_TEXT_NODE ) {
-            $text = trim( $node->textContent );
-            if ( ! empty( $text ) ) {
-                $blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', [
-                    'content' => htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' ),
-                ] );
-            }
-            continue;
-        }
+	while ( $processor->next_token() ) {
+		$token_type = $processor->get_token_type();
+		$depth      = $processor->get_current_depth();
 
-        if ( $node->nodeType !== XML_ELEMENT_NODE ) {
-            continue;
-        }
+		if ( '#text' === $token_type && $depth === $body_depth ) {
+			$text = trim( $processor->get_modifiable_text() );
+			if ( ! empty( $text ) ) {
+				$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+					'core/paragraph',
+					[ 'content' => htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' ) ]
+				);
+			}
+			continue;
+		}
 
-        $raw_transform = html_to_blocks_find_transform( $node, $transforms );
+		if ( '#tag' !== $token_type ) {
+			continue;
+		}
 
-        if ( ! $raw_transform ) {
-            $blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/html', [
-                'content' => $doc->saveHTML( $node ),
-            ] );
-        } else {
-            $transform_fn = $raw_transform['transform'] ?? null;
+		if ( $processor->is_tag_closer() ) {
+			continue;
+		}
 
-            if ( $transform_fn && is_callable( $transform_fn ) ) {
-                $block = call_user_func( $transform_fn, $node, 'html_to_blocks_raw_handler' );
+		if ( $depth !== $top_level_depth ) {
+			continue;
+		}
 
-                if ( $node instanceof DOMElement && $node->hasAttribute( 'class' ) ) {
-                    $existing_class = $block['attrs']['className'] ?? '';
-                    $node_class = $node->getAttribute( 'class' );
-                    if ( ! empty( $node_class ) && strpos( $existing_class, $node_class ) === false ) {
-                        $block['attrs']['className'] = trim( $existing_class . ' ' . $node_class );
-                    }
-                }
+		$tag_name = $processor->get_tag();
 
-                $blocks[] = $block;
-            } else {
-                $block_name = $raw_transform['blockName'];
-                $attributes = HTML_To_Blocks_Attribute_Parser::get_block_attributes(
-                    $block_name,
-                    $doc->saveHTML( $node )
-                );
-                $blocks[] = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
-            }
-        }
-    }
+		if ( ! isset( $tag_occurrences[ $tag_name ] ) ) {
+			$tag_occurrences[ $tag_name ] = 0;
+			$tag_positions[ $tag_name ]   = html_to_blocks_find_all_tag_positions( $html, $tag_name );
+		}
 
-    return $blocks;
+		$occurrence   = $tag_occurrences[ $tag_name ]++;
+		$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
+
+		if ( ! $element_html ) {
+			continue;
+		}
+
+		$element = HTML_To_Blocks_HTML_Element::from_html( $element_html );
+		if ( ! $element ) {
+			$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/html',
+				[ 'content' => $element_html ]
+			);
+			continue;
+		}
+
+		$raw_transform = html_to_blocks_find_transform( $element, $transforms );
+
+		if ( ! $raw_transform ) {
+			$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/html',
+				[ 'content' => $element_html ]
+			);
+		} else {
+			$transform_fn = $raw_transform['transform'] ?? null;
+
+			if ( $transform_fn && is_callable( $transform_fn ) ) {
+				$block = call_user_func( $transform_fn, $element, 'html_to_blocks_raw_handler' );
+
+				if ( $element->has_attribute( 'class' ) ) {
+					$existing_class = $block['attrs']['className'] ?? '';
+					$node_class     = $element->get_attribute( 'class' );
+					if ( ! empty( $node_class ) && strpos( $existing_class, $node_class ) === false ) {
+						$block['attrs']['className'] = trim( $existing_class . ' ' . $node_class );
+					}
+				}
+
+				$blocks[] = $block;
+			} else {
+				$block_name = $raw_transform['blockName'];
+				$attributes = HTML_To_Blocks_Attribute_Parser::get_block_attributes(
+					$block_name,
+					$element_html
+				);
+				$blocks[]   = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
+			}
+		}
+	}
+
+	return $blocks;
 }
 
 /**
- * Finds a matching raw transform for a node
+ * Finds all positions of a tag's opening tags in HTML
  *
- * @param DOMNode $node       The node to match
- * @param array   $transforms Array of transforms
+ * @param string $html     Source HTML
+ * @param string $tag_name Tag name to find
+ * @return array Array of start positions
+ */
+function html_to_blocks_find_all_tag_positions( $html, $tag_name ) {
+	$positions = [];
+	$pattern   = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>/i';
+
+	if ( preg_match_all( $pattern, $html, $matches, PREG_OFFSET_CAPTURE ) ) {
+		foreach ( $matches[0] as $match ) {
+			$positions[] = $match[1];
+		}
+	}
+
+	return $positions;
+}
+
+/**
+ * Extracts element HTML at a specific occurrence
+ *
+ * @param string $html       Source HTML
+ * @param string $tag_name   Tag name
+ * @param array  $positions  Array of tag start positions
+ * @param int    $occurrence Which occurrence (0-based)
+ * @return string|null Element HTML or null
+ */
+function html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $positions, $occurrence ) {
+	if ( ! isset( $positions[ $occurrence ] ) ) {
+		return null;
+	}
+
+	$start_pos = $positions[ $occurrence ];
+	$html_from_start = substr( $html, $start_pos );
+
+	$void_elements = [
+		'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT',
+		'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR',
+	];
+
+	if ( in_array( strtoupper( $tag_name ), $void_elements, true ) ) {
+		$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?\/?>/i';
+		if ( preg_match( $pattern, $html_from_start, $matches ) ) {
+			return $matches[0];
+		}
+		return null;
+	}
+
+	return html_to_blocks_extract_balanced_element( $html_from_start, $tag_name );
+}
+
+/**
+ * Extracts a balanced element including nested elements of the same type
+ *
+ * @param string $html     HTML starting with the opening tag
+ * @param string $tag_name Tag name to balance
+ * @return string|null Balanced element HTML or null
+ */
+function html_to_blocks_extract_balanced_element( $html, $tag_name ) {
+	$depth = 0;
+	$len   = strlen( $html );
+	$i     = 0;
+
+	$open_pattern  = '/^<' . preg_quote( $tag_name, '/' ) . '(?:\s|>)/i';
+	$close_pattern = '/^<\/' . preg_quote( $tag_name, '/' ) . '\s*>/i';
+
+	while ( $i < $len ) {
+		$remaining = substr( $html, $i );
+
+		if ( preg_match( $open_pattern, $remaining ) ) {
+			$depth++;
+		} elseif ( preg_match( $close_pattern, $remaining, $close_match ) ) {
+			$depth--;
+			if ( $depth === 0 ) {
+				return substr( $html, 0, $i + strlen( $close_match[0] ) );
+			}
+		}
+
+		$i++;
+	}
+
+	return null;
+}
+
+/**
+ * Finds a matching raw transform for an element
+ *
+ * @param HTML_To_Blocks_HTML_Element $element    The element to match
+ * @param array                       $transforms Array of transforms
  * @return array|null The transform data or null
  */
-function html_to_blocks_find_transform( $node, $transforms ) {
-    foreach ( $transforms as $transform ) {
-        $is_match = $transform['isMatch'] ?? null;
-        if ( $is_match && is_callable( $is_match ) && call_user_func( $is_match, $node ) ) {
-            return $transform;
-        }
-    }
-    return null;
+function html_to_blocks_find_transform( $element, $transforms ) {
+	foreach ( $transforms as $transform ) {
+		$is_match = $transform['isMatch'] ?? null;
+		if ( $is_match && is_callable( $is_match ) && call_user_func( $is_match, $element ) ) {
+			return $transform;
+		}
+	}
+	return null;
 }
 
 /**
@@ -151,34 +270,34 @@ function html_to_blocks_find_transform( $node, $transforms ) {
  * @return array Array of pieces (strings or blocks)
  */
 function html_to_blocks_shortcode_converter( $html ) {
-    $pieces = [];
-    $last_index = 0;
+	$pieces     = [];
+	$last_index = 0;
 
-    preg_match_all( '/' . get_shortcode_regex() . '/', $html, $matches, PREG_OFFSET_CAPTURE );
+	preg_match_all( '/' . get_shortcode_regex() . '/', $html, $matches, PREG_OFFSET_CAPTURE );
 
-    if ( empty( $matches[0] ) ) {
-        return [ $html ];
-    }
+	if ( empty( $matches[0] ) ) {
+		return [ $html ];
+	}
 
-    foreach ( $matches[0] as $match ) {
-        $shortcode = $match[0];
-        $index = $match[1];
+	foreach ( $matches[0] as $match ) {
+		$shortcode = $match[0];
+		$index     = $match[1];
 
-        if ( $index > $last_index ) {
-            $pieces[] = substr( $html, $last_index, $index - $last_index );
-        }
+		if ( $index > $last_index ) {
+			$pieces[] = substr( $html, $last_index, $index - $last_index );
+		}
 
-        $parsed = html_to_blocks_parse_shortcode( $shortcode );
-        $pieces[] = $parsed !== null ? $parsed : $shortcode;
+		$parsed   = html_to_blocks_parse_shortcode( $shortcode );
+		$pieces[] = $parsed !== null ? $parsed : $shortcode;
 
-        $last_index = $index + strlen( $shortcode );
-    }
+		$last_index = $index + strlen( $shortcode );
+	}
 
-    if ( $last_index < strlen( $html ) ) {
-        $pieces[] = substr( $html, $last_index );
-    }
+	if ( $last_index < strlen( $html ) ) {
+		$pieces[] = substr( $html, $last_index );
+	}
 
-    return $pieces;
+	return $pieces;
 }
 
 /**
@@ -188,17 +307,15 @@ function html_to_blocks_shortcode_converter( $html ) {
  * @return array|null The block array or null
  */
 function html_to_blocks_parse_shortcode( $shortcode ) {
-    $pattern = get_shortcode_regex();
-    if ( ! preg_match( "/$pattern/", $shortcode, $match ) ) {
-        return null;
-    }
+	$pattern = get_shortcode_regex();
+	if ( ! preg_match( "/$pattern/", $shortcode, $match ) ) {
+		return null;
+	}
 
-    $tag = $match[2];
-    $content = $match[5] ?? '';
-
-    return HTML_To_Blocks_Block_Factory::create_block( 'core/shortcode', [
-        'text' => $shortcode,
-    ] );
+	return HTML_To_Blocks_Block_Factory::create_block(
+		'core/shortcode',
+		[ 'text' => $shortcode ]
+	);
 }
 
 /**
@@ -208,80 +325,122 @@ function html_to_blocks_parse_shortcode( $shortcode ) {
  * @return string The normalized HTML
  */
 function html_to_blocks_normalise_blocks( $html ) {
-    $doc = new DOMDocument();
-    libxml_use_internal_errors( true );
-    $doc->loadHTML(
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>',
-        LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-    );
-    libxml_clear_errors();
+	$processor = WP_HTML_Processor::create_fragment( $html );
+	if ( ! $processor ) {
+		return $html;
+	}
 
-    $body = $doc->getElementsByTagName( 'body' )->item( 0 );
-    if ( ! $body ) {
-        return $html;
-    }
+	$phrasing_tags = [
+		'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DFN',
+		'EM', 'I', 'KBD', 'MARK', 'Q', 'RP', 'RT', 'RUBY', 'S', 'SAMP',
+		'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR', 'WBR',
+	];
 
-    $result_doc = new DOMDocument();
-    $result_body = $result_doc->createElement( 'body' );
-    $result_doc->appendChild( $result_body );
+	$body_depth       = 2;
+	$top_level_depth  = $body_depth + 1;
+	$output           = '';
+	$paragraph_buffer = '';
+	$in_paragraph     = false;
+	$last_was_br      = false;
+	$tag_occurrences  = [];
+	$tag_positions    = [];
 
-    $current_paragraph = null;
-    $phrasing_tags = [
-        'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DFN',
-        'EM', 'I', 'KBD', 'MARK', 'Q', 'RP', 'RT', 'RUBY', 'S', 'SAMP',
-        'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR', 'WBR',
-    ];
+	while ( $processor->next_token() ) {
+		$token_type = $processor->get_token_type();
+		$depth      = $processor->get_current_depth();
 
-    foreach ( $body->childNodes as $node ) {
-        if ( $node->nodeType === XML_TEXT_NODE ) {
-            $text = $node->textContent;
-            if ( trim( $text ) === '' ) {
-                continue;
-            }
+		if ( '#text' === $token_type && $depth === $body_depth ) {
+			$text = $processor->get_modifiable_text();
+			if ( trim( $text ) === '' ) {
+				continue;
+			}
 
-            if ( ! $current_paragraph ) {
-                $current_paragraph = $result_doc->createElement( 'p' );
-                $result_body->appendChild( $current_paragraph );
-            }
-            $current_paragraph->appendChild( $result_doc->importNode( $node, true ) );
-            continue;
-        }
+			if ( ! $in_paragraph ) {
+				$in_paragraph = true;
+			}
+			$paragraph_buffer .= htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+			$last_was_br       = false;
+			continue;
+		}
 
-        if ( $node->nodeType !== XML_ELEMENT_NODE ) {
-            continue;
-        }
+		if ( '#tag' !== $token_type ) {
+			continue;
+		}
 
-        $tag = strtoupper( $node->nodeName );
+		if ( $depth < $top_level_depth && ! $processor->is_tag_closer() ) {
+			continue;
+		}
 
-        if ( $tag === 'BR' ) {
-            $next = $node->nextSibling;
-            if ( $next && $next->nodeType === XML_ELEMENT_NODE && strtoupper( $next->nodeName ) === 'BR' ) {
-                $current_paragraph = null;
-                continue;
-            }
-            if ( $current_paragraph && $current_paragraph->hasChildNodes() ) {
-                $current_paragraph->appendChild( $result_doc->importNode( $node, true ) );
-            }
-            continue;
-        }
+		$tag_name  = $processor->get_tag();
+		$tag_upper = strtoupper( $tag_name );
+		$is_closer = $processor->is_tag_closer();
 
-        if ( in_array( $tag, $phrasing_tags, true ) ) {
-            if ( ! $current_paragraph ) {
-                $current_paragraph = $result_doc->createElement( 'p' );
-                $result_body->appendChild( $current_paragraph );
-            }
-            $current_paragraph->appendChild( $result_doc->importNode( $node, true ) );
-            continue;
-        }
+		if ( $depth !== $top_level_depth && $depth !== $body_depth ) {
+			continue;
+		}
 
-        $current_paragraph = null;
-        $result_body->appendChild( $result_doc->importNode( $node, true ) );
-    }
+		if ( 'BR' === $tag_upper && ! $is_closer ) {
+			if ( $last_was_br ) {
+				if ( ! empty( trim( $paragraph_buffer ) ) ) {
+					$output .= '<p>' . trim( $paragraph_buffer ) . '</p>';
+				}
+				$paragraph_buffer = '';
+				$in_paragraph     = false;
+				$last_was_br      = false;
+			} else {
+				if ( $in_paragraph && ! empty( $paragraph_buffer ) ) {
+					$paragraph_buffer .= '<br>';
+				}
+				$last_was_br = true;
+			}
+			continue;
+		}
 
-    $output = '';
-    foreach ( $result_body->childNodes as $child ) {
-        $output .= $result_doc->saveHTML( $child );
-    }
+		$last_was_br = false;
 
-    return $output;
+		if ( in_array( $tag_upper, $phrasing_tags, true ) && ! $is_closer ) {
+			if ( ! $in_paragraph ) {
+				$in_paragraph = true;
+			}
+
+			if ( ! isset( $tag_occurrences[ $tag_name ] ) ) {
+				$tag_occurrences[ $tag_name ] = 0;
+				$tag_positions[ $tag_name ]   = html_to_blocks_find_all_tag_positions( $html, $tag_name );
+			}
+
+			$occurrence   = $tag_occurrences[ $tag_name ]++;
+			$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
+
+			if ( $element_html ) {
+				$paragraph_buffer .= $element_html;
+			}
+			continue;
+		}
+
+		if ( ! $is_closer && ! in_array( $tag_upper, $phrasing_tags, true ) ) {
+			if ( $in_paragraph && ! empty( trim( $paragraph_buffer ) ) ) {
+				$output .= '<p>' . trim( $paragraph_buffer ) . '</p>';
+			}
+			$paragraph_buffer = '';
+			$in_paragraph     = false;
+
+			if ( ! isset( $tag_occurrences[ $tag_name ] ) ) {
+				$tag_occurrences[ $tag_name ] = 0;
+				$tag_positions[ $tag_name ]   = html_to_blocks_find_all_tag_positions( $html, $tag_name );
+			}
+
+			$occurrence   = $tag_occurrences[ $tag_name ]++;
+			$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
+
+			if ( $element_html ) {
+				$output .= $element_html;
+			}
+		}
+	}
+
+	if ( $in_paragraph && ! empty( trim( $paragraph_buffer ) ) ) {
+		$output .= '<p>' . trim( $paragraph_buffer ) . '</p>';
+	}
+
+	return ! empty( $output ) ? $output : $html;
 }

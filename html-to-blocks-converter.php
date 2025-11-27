@@ -3,7 +3,7 @@
  * Plugin Name: HTML to Blocks Converter
  * Plugin URI: https://github.com/chubes4/html-to-blocks-converter
  * Description: Converts raw HTML to Gutenberg blocks when inserting posts via REST API or wp_insert_post
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Chris Huber
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -15,7 +15,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'HTML_TO_BLOCKS_CONVERTER_PATH', plugin_dir_path( __FILE__ ) );
+define( 'HTML_TO_BLOCKS_CONVERTER_MIN_WP', '6.4' );
 
+if ( version_compare( get_bloginfo( 'version' ), HTML_TO_BLOCKS_CONVERTER_MIN_WP, '<' ) ) {
+	add_action(
+		'admin_notices',
+		function () {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: %s: minimum WordPress version */
+				esc_html__( 'HTML to Blocks Converter requires WordPress %s or higher.', 'html-to-blocks-converter' ),
+				HTML_TO_BLOCKS_CONVERTER_MIN_WP
+			);
+			echo '</p></div>';
+		}
+	);
+	return;
+}
+
+require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'includes/class-html-element.php';
 require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'includes/class-block-factory.php';
 require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'includes/class-attribute-parser.php';
 require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'includes/class-transform-registry.php';

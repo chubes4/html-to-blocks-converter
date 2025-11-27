@@ -2,11 +2,12 @@
 /**
  * Block Factory - Creates block arrays compatible with serialize_blocks()
  *
- * PHP port of Gutenberg's createBlock() from packages/blocks/src/api/factory.js
+ * Creates Gutenberg block structures from parsed HTML elements.
+ * Works with HTML_To_Blocks_HTML_Element adapter for DOM-like access.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class HTML_To_Blocks_Block_Factory {
@@ -324,36 +325,41 @@ class HTML_To_Blocks_Block_Factory {
         return $sanitized;
     }
 
-    /**
-     * Gets the inner HTML content from a DOMNode
-     *
-     * @param DOMNode $node DOM node
-     * @return string Inner HTML
-     */
-    public static function get_inner_html( $node ) {
-        if ( ! $node instanceof DOMNode ) {
-            return '';
-        }
+	/**
+	 * Gets the inner HTML content from an element
+	 *
+	 * @param HTML_To_Blocks_HTML_Element|string $element Element or HTML string
+	 * @return string Inner HTML
+	 */
+	public static function get_inner_html( $element ) {
+		if ( $element instanceof HTML_To_Blocks_HTML_Element ) {
+			return $element->get_inner_html();
+		}
 
-        $html = '';
-        foreach ( $node->childNodes as $child ) {
-            $html .= $node->ownerDocument->saveHTML( $child );
-        }
+		if ( is_string( $element ) ) {
+			$parsed = HTML_To_Blocks_HTML_Element::from_html( $element );
+			return $parsed ? $parsed->get_inner_html() : '';
+		}
 
-        return trim( $html );
-    }
+		return '';
+	}
 
-    /**
-     * Gets text content from a DOMNode
-     *
-     * @param DOMNode $node DOM node
-     * @return string Text content
-     */
-    public static function get_text_content( $node ) {
-        if ( ! $node instanceof DOMNode ) {
-            return '';
-        }
+	/**
+	 * Gets text content from an element
+	 *
+	 * @param HTML_To_Blocks_HTML_Element|string $element Element or HTML string
+	 * @return string Text content
+	 */
+	public static function get_text_content( $element ) {
+		if ( $element instanceof HTML_To_Blocks_HTML_Element ) {
+			return $element->get_text_content();
+		}
 
-        return trim( $node->textContent );
-    }
+		if ( is_string( $element ) ) {
+			$parsed = HTML_To_Blocks_HTML_Element::from_html( $element );
+			return $parsed ? $parsed->get_text_content() : '';
+		}
+
+		return '';
+	}
 }

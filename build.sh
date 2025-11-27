@@ -12,10 +12,8 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${PLUGIN_DIR}"
 
 cp -r includes "${PLUGIN_DIR}/"
-cp -r docs "${PLUGIN_DIR}/"
 cp html-to-blocks-converter.php "${PLUGIN_DIR}/"
 cp raw-handler.php "${PLUGIN_DIR}/"
-cp README.md "${PLUGIN_DIR}/"
 
 cd "${BUILD_DIR}"
 zip -r "${PLUGIN_SLUG}.zip" "${PLUGIN_SLUG}"

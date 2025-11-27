@@ -4,7 +4,7 @@ A WordPress plugin that automatically converts raw HTML to Gutenberg blocks when
 
 ## Description
 
-This plugin provides server-side HTML-to-blocks conversion, directly inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling). It enables programmatic content creation with proper block structure without requiring the block editor.
+This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure without requiring the block editor.
 
 ### Use Cases
 
@@ -42,7 +42,7 @@ Or clone directly to your plugins directory:
 
 ```bash
 cd wp-content/plugins
-git clone https://github.com/chubes4/html-to-blocks-converter.git
+git clone https://github.com/Extra-Chill/html-to-blocks-converter.git
 ```
 
 ## Usage
@@ -99,16 +99,25 @@ Default: `['post', 'page']`
 
 ## Architecture
 
-The plugin is structured following Gutenberg's architecture:
+The plugin uses WordPress Core's HTML API for parsing:
 
+- **HTML Element Adapter** - DOM-like interface over `WP_HTML_Processor` for familiar traversal methods
 - **Transform Registry** - PHP port of block transforms from `packages/block-library/src/*/transforms.js`
 - **Block Factory** - Creates block arrays compatible with `serialize_blocks()`
-- **Raw Handler** - Main conversion pipeline inspired by `packages/blocks/src/api/raw-handling`
-- **Attribute Parser** - Extracts block attributes from HTML using DOM parsing
+- **Raw Handler** - Main conversion pipeline using `WP_HTML_Processor::create_fragment()`
+- **Attribute Parser** - Extracts block attributes from HTML using WordPress HTML API
+
+### Why WordPress HTML API?
+
+- HTML5 spec-compliant parsing that matches browser behavior
+- Proper UTF-8 character encoding handling
+- Correct handling of implied/virtual tags
+- WordPress Core maintained and security hardened
+- Future-proof as the API continues to improve
 
 ## Requirements
 
-- WordPress 6.0+
+- WordPress 6.4+ (required for `WP_HTML_Processor`)
 - PHP 7.4+
 
 ## License
