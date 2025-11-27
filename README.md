@@ -42,7 +42,7 @@ Or clone directly to your plugins directory:
 
 ```bash
 cd wp-content/plugins
-git clone https://github.com/Extra-Chill/html-to-blocks-converter.git
+git clone https://github.com/chubes4/html-to-blocks-converter.git
 ```
 
 ## Usage

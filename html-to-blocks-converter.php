@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: HTML to Blocks Converter
- * Plugin URI: https://github.com/Extra-Chill/html-to-blocks-converter
+ * Plugin URI: https://github.com/chubes4/html-to-blocks-converter
  * Description: Converts raw HTML to Gutenberg blocks when inserting posts via REST API or wp_insert_post
  * Version: 0.2.0
  * Author: Chris Huber
