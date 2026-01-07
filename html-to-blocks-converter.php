@@ -3,7 +3,7 @@
  * Plugin Name: HTML to Blocks Converter
  * Plugin URI: https://github.com/chubes4/html-to-blocks-converter
  * Description: Converts raw HTML to Gutenberg blocks when inserting posts via REST API or wp_insert_post
- * Version: 0.2.0
+ * Version: 0.2.1
  * Author: Chris Huber
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -59,7 +59,8 @@ function html_to_blocks_convert_on_insert( $data, $postarr ) {
         return $data;
     }
 
-    $supported_types = apply_filters( 'html_to_blocks_supported_post_types', [ 'post', 'page' ] );
+    $default_types   = array_keys( get_post_types( [ 'show_in_rest' => true, 'public' => true ] ) );
+    $supported_types = apply_filters( 'html_to_blocks_supported_post_types', $default_types );
     if ( ! in_array( $data['post_type'], $supported_types, true ) ) {
         return $data;
     }
