@@ -63,9 +63,15 @@ function html_to_blocks_convert( $html ) {
 
 	$processor = WP_HTML_Processor::create_fragment( $html );
 	if ( ! $processor ) {
+		error_log( sprintf(
+			'[HTML to Blocks] create_fragment() failed | HTML length: %d | Preview: %s',
+			strlen( $html ),
+			substr( $html, 0, 300 )
+		) );
 		return [];
 	}
 
+	$original_html_length = strlen( $html );
 	$blocks     = [];
 	$transforms = HTML_To_Blocks_Transform_Registry::get_raw_transforms();
 
@@ -112,6 +118,12 @@ function html_to_blocks_convert( $html ) {
 		$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
 
 		if ( ! $element_html ) {
+			error_log( sprintf(
+				'[HTML to Blocks] Element extraction failed | Tag: %s | Occurrence: %d | HTML preview: %s',
+				$tag_name,
+				$occurrence,
+				substr( $html, 0, 300 )
+			) );
 			continue;
 		}
 
@@ -155,6 +167,35 @@ function html_to_blocks_convert( $html ) {
 				$blocks[]   = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
 			}
 		}
+	}
+
+	// Check if processor bailed due to unsupported HTML
+	$last_error = $processor->get_last_error();
+	if ( $last_error !== null ) {
+		error_log( sprintf(
+			'[HTML to Blocks] WP_HTML_Processor bailed | Error: %s | Blocks created: %d | HTML length: %d | Preview: %s',
+			$last_error,
+			count( $blocks ),
+			$original_html_length,
+			substr( $html, 0, 500 )
+		) );
+	}
+
+	// Check for significant content loss (input had content but output is empty/minimal)
+	$output_content_length = 0;
+	foreach ( $blocks as $block ) {
+		$output_content_length += strlen( $block['innerHTML'] ?? '' );
+	}
+	
+	if ( $original_html_length > 100 && $output_content_length < ( $original_html_length * 0.1 ) ) {
+		error_log( sprintf(
+			'[HTML to Blocks] Significant content loss detected | Input: %d chars | Output: %d chars | Blocks: %d | Processor error: %s | Preview: %s',
+			$original_html_length,
+			$output_content_length,
+			count( $blocks ),
+			$last_error ?? 'none',
+			substr( $html, 0, 500 )
+		) );
 	}
 
 	return $blocks;
