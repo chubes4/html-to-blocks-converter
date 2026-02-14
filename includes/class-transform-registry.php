@@ -429,9 +429,19 @@ class HTML_To_Blocks_Transform_Registry {
 					$code    = $element->query_selector( 'code' );
 					$content = $code ? $code->get_text_content() : $element->get_text_content();
 
+					$attributes = [ 'content' => $content ];
+
+					// Preserve language class for syntax highlighting
+					if ( $code && $code->has_attribute( 'class' ) ) {
+						$class = $code->get_attribute( 'class' );
+						if ( preg_match( '/language-(\S+)/', $class, $matches ) ) {
+							$attributes['className'] = 'language-' . $matches[1];
+						}
+					}
+
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/code',
-						[ 'content' => $content ]
+						$attributes
 					);
 				},
 			],

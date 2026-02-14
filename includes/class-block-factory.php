@@ -93,7 +93,11 @@ class HTML_To_Blocks_Block_Factory {
 
             case 'core/code':
                 $content = esc_html( $attributes['content'] ?? '' );
-                return '<pre class="wp-block-code"><code>' . $content . '</code></pre>';
+                $extra_class = '';
+                if ( ! empty( $attributes['className'] ) && strpos( $attributes['className'], 'language-' ) !== false ) {
+                    $extra_class = ' ' . esc_attr( $attributes['className'] );
+                }
+                return '<pre class="wp-block-code' . $extra_class . '"><code>' . $content . '</code></pre>';
 
             case 'core/preformatted':
                 $content = $attributes['content'] ?? '';
