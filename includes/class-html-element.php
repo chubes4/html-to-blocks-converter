@@ -42,18 +42,72 @@ class HTML_To_Blocks_HTML_Element {
 		}
 
 		if ( ! $processor->next_token() ) {
-			return null;
+			return self::from_table_scoped_html( $html );
 		}
 
 		$tag_name = $processor->get_tag();
 		if ( ! $tag_name ) {
-			return null;
+			return self::from_table_scoped_html( $html );
 		}
 
 		$attributes      = self::extract_attributes( $processor );
 		$inner_html      = self::extract_inner_html( $html, $tag_name );
 
 		return new self( $tag_name, $attributes, $html, $inner_html );
+	}
+
+	/**
+	 * Creates an HTML_Element for table-scoped tags that cannot be parsed standalone
+	 *
+	 * @param string $html Raw HTML
+	 * @return self|null
+	 */
+	private static function from_table_scoped_html( string $html ): ?self {
+		if ( ! preg_match( '/^<\s*([a-z0-9:-]+)/i', $html, $matches ) ) {
+			return null;
+		}
+
+		$tag = strtolower( $matches[1] );
+
+		$wrappers = [
+			'thead'    => '<table>%s</table>',
+			'tbody'    => '<table>%s</table>',
+			'tfoot'    => '<table>%s</table>',
+			'caption'  => '<table>%s</table>',
+			'colgroup' => '<table>%s</table>',
+			'col'      => '<table><colgroup>%s</colgroup></table>',
+			'tr'       => '<table><tbody>%s</tbody></table>',
+			'td'       => '<table><tbody><tr>%s</tr></tbody></table>',
+			'th'       => '<table><tbody><tr>%s</tr></tbody></table>',
+		];
+
+		if ( ! isset( $wrappers[ $tag ] ) ) {
+			return null;
+		}
+
+		$wrapped_html = sprintf( $wrappers[ $tag ], $html );
+		$processor    = WP_HTML_Processor::create_fragment( $wrapped_html );
+
+		if ( ! $processor ) {
+			return null;
+		}
+
+		while ( $processor->next_tag() ) {
+			if ( $processor->is_tag_closer() ) {
+				continue;
+			}
+
+			if ( strtolower( $processor->get_tag() ) !== $tag ) {
+				continue;
+			}
+
+			$attributes = self::extract_attributes( $processor );
+			$inner_html = self::extract_inner_html( $html, $processor->get_tag() );
+
+			return new self( $processor->get_tag(), $attributes, $html, $inner_html );
+		}
+
+		return null;
 	}
 
 	/**
@@ -203,7 +257,7 @@ class HTML_To_Blocks_HTML_Element {
 	 * @return array Array of matching elements
 	 */
 	public function query_selector_all( string $selector ): array {
-		$processor = WP_HTML_Processor::create_fragment( $this->inner_html );
+		$processor = WP_HTML_Processor::create_fragment( $this->outer_html );
 		if ( ! $processor ) {
 			return [];
 		}
@@ -214,6 +268,7 @@ class HTML_To_Blocks_HTML_Element {
 		$tag_match   = null;
 		$class_match = null;
 		$id_match    = null;
+		$occurrence_counters = [];
 
 		if ( preg_match( '/^([a-z0-9]+)?(?:\.([a-z0-9_-]+))?(?:#([a-z0-9_-]+))?$/i', $selector, $matches ) ) {
 			$tag_match   = ! empty( $matches[1] ) ? strtoupper( $matches[1] ) : null;
@@ -221,12 +276,26 @@ class HTML_To_Blocks_HTML_Element {
 			$id_match    = $matches[3] ?? null;
 		}
 
+		$root_depth = null;
+
 		while ( $processor->next_tag() ) {
 			if ( $processor->is_tag_closer() ) {
 				continue;
 			}
 
+			if ( $root_depth === null ) {
+				$root_depth = $processor->get_current_depth();
+				continue;
+			}
+
+			if ( $processor->get_current_depth() <= $root_depth ) {
+				continue;
+			}
+
 			$tag = $processor->get_tag();
+			$tag_lower = strtolower( $tag );
+			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
+			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
 
 			if ( $tag_match && strtoupper( $tag ) !== $tag_match ) {
 				continue;
@@ -246,7 +315,7 @@ class HTML_To_Blocks_HTML_Element {
 				}
 			}
 
-			$element_html = self::extract_element_html_at_position( $this->inner_html, $processor );
+			$element_html = self::extract_element_html_at_occurrence( $this->outer_html, $tag_lower, $occurrence );
 			if ( $element_html ) {
 				$element = self::from_html( $element_html );
 				if ( $element ) {
@@ -330,27 +399,36 @@ class HTML_To_Blocks_HTML_Element {
 	 * @return array Array of child elements
 	 */
 	public function get_child_elements(): array {
-		$processor = WP_HTML_Processor::create_fragment( $this->inner_html );
+		$processor = WP_HTML_Processor::create_fragment( $this->outer_html );
 		if ( ! $processor ) {
 			return [];
 		}
 
-		$children    = [];
-		$body_depth  = 2;
-		$target_depth = $body_depth + 1;
+		$children   = [];
+		$root_depth = null;
+		$occurrence_counters = [];
 
 		while ( $processor->next_tag() ) {
 			if ( $processor->is_tag_closer() ) {
 				continue;
 			}
 
-			$depth = $processor->get_current_depth();
-			if ( $depth !== $target_depth ) {
+			$tag_name = $processor->get_tag();
+			$tag_lower = strtolower( $tag_name );
+			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
+			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
+
+			if ( $root_depth === null ) {
+				$root_depth = $processor->get_current_depth();
 				continue;
 			}
 
-			$tag_name     = $processor->get_tag();
-			$element_html = self::extract_element_html_from_fragment( $this->inner_html, $processor, $tag_name );
+			$depth = $processor->get_current_depth();
+			if ( $depth !== $root_depth + 1 ) {
+				continue;
+			}
+
+			$element_html = self::extract_element_html_at_occurrence( $this->outer_html, $tag_lower, $occurrence );
 
 			if ( $element_html ) {
 				$element = self::from_html( $element_html );
@@ -395,6 +473,92 @@ class HTML_To_Blocks_HTML_Element {
 		$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>.*?<\/' . preg_quote( $tag_name, '/' ) . '>/is';
 		if ( preg_match( $pattern, $fragment_html, $matches ) ) {
 			return $matches[0];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extracts element HTML at a specific occurrence in source HTML
+	 *
+	 * @param string $html       Source HTML
+	 * @param string $tag_name   Tag name (lowercase)
+	 * @param int    $occurrence Which occurrence (0-based)
+	 * @return string|null
+	 */
+	private static function extract_element_html_at_occurrence( string $html, string $tag_name, int $occurrence ): ?string {
+		$positions = self::find_tag_positions( $html, $tag_name );
+		if ( ! isset( $positions[ $occurrence ] ) ) {
+			return null;
+		}
+
+		$start_pos        = $positions[ $occurrence ];
+		$html_from_start  = substr( $html, $start_pos );
+
+		$void_elements = [
+			'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+			'link', 'meta', 'param', 'source', 'track', 'wbr',
+		];
+
+		if ( in_array( strtolower( $tag_name ), $void_elements, true ) ) {
+			$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?\/?>/i';
+			if ( preg_match( $pattern, $html_from_start, $matches ) ) {
+				return $matches[0];
+			}
+			return null;
+		}
+
+		return self::extract_balanced_element( $html_from_start, $tag_name );
+	}
+
+	/**
+	 * Finds all positions of a tag's opening tags in HTML
+	 *
+	 * @param string $html     Source HTML
+	 * @param string $tag_name Tag name
+	 * @return array
+	 */
+	private static function find_tag_positions( string $html, string $tag_name ): array {
+		$positions = [];
+		$offset    = 0;
+		$pattern   = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s|>)/i';
+
+		while ( preg_match( $pattern, $html, $matches, PREG_OFFSET_CAPTURE, $offset ) ) {
+			$positions[] = $matches[0][1];
+			$offset      = $matches[0][1] + 1;
+		}
+
+		return $positions;
+	}
+
+	/**
+	 * Extracts a balanced element including nested elements of same type
+	 *
+	 * @param string $html     HTML starting with opening tag
+	 * @param string $tag_name Tag name
+	 * @return string|null
+	 */
+	private static function extract_balanced_element( string $html, string $tag_name ): ?string {
+		$depth = 0;
+		$len   = strlen( $html );
+		$i     = 0;
+
+		$open_pattern  = '/^<' . preg_quote( $tag_name, '/' ) . '(?:\s|>)/i';
+		$close_pattern = '/^<\/' . preg_quote( $tag_name, '/' ) . '\s*>/i';
+
+		while ( $i < $len ) {
+			$remaining = substr( $html, $i );
+
+			if ( preg_match( $open_pattern, $remaining ) ) {
+				$depth++;
+			} elseif ( preg_match( $close_pattern, $remaining, $close_match ) ) {
+				$depth--;
+				if ( $depth === 0 ) {
+					return substr( $html, 0, $i + strlen( $close_match[0] ) );
+				}
+			}
+
+			$i++;
 		}
 
 		return null;
