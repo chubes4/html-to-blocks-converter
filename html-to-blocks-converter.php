@@ -100,7 +100,11 @@ function html_to_blocks_register_rest_filters() {
 	}
 }
 
-add_action( 'init', 'html_to_blocks_register_rest_filters' );
+// Priority 20: run after all plugins have registered their custom post types
+// at the default init priority (10). Without this, CPTs registered by other
+// plugins (e.g. Intelligence's wiki post type) won't exist yet when
+// get_post_types() is called, and their REST response filter won't be added.
+add_action( 'init', 'html_to_blocks_register_rest_filters', 20 );
 
 /**
  * Convert HTML to blocks in REST API responses.
