@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-15
+
+### Added
+- HTML→blocks conversion on REST read for the block editor
+
+### Changed
+- Refactor attribute parser to WordPress HTML API
+- Preserve language classes on code blocks for syntax highlighting
+- v0.2.3
+- Bump version to 0.2.2 and add error logging/content loss detection
+- Bump version to 0.2.1
+- added claude.md
+- Update plugin URI from Extra-Chill to chubes4
+- Initial plan
+- Add Requires at least and Requires PHP plugin headers
+- Migrate to WordPress HTML API (WP_HTML_Processor) for HTML5-compliant parsing
+- Initial release v0.1.0
+
+### Fixed
+- point changelog_target to docs/CHANGELOG.md
+- register REST filters at init priority 20
+
 ## [0.2.3] - 2026-01-18
 
 ### Fixed
