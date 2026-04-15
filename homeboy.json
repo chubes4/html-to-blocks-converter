@@ -1,6 +1,6 @@
 {
   "auto_cleanup": false,
-  "changelog_target": "CHANGELOG.md",
+  "changelog_target": "docs/CHANGELOG.md",
   "extensions": {
     "wordpress": {}
   },
