@@ -4,7 +4,7 @@ A WordPress plugin that automatically converts raw HTML to Gutenberg blocks when
 
 ## Description
 
-This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure without requiring the block editor.
+This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor always sees proper blocks even when post_content contains raw HTML.
 
 ### Use Cases
 
@@ -82,6 +82,14 @@ $blocks = html_to_blocks_raw_handler(['HTML' => $html]);
 $block_content = serialize_blocks($blocks);
 ```
 
+## REST API Read Path (v0.4.0+)
+
+The plugin also converts HTML to blocks when the block editor loads a post via the REST API. When `context=edit` is requested, any post with HTML in `content.raw` (no `<!-- wp:` block markup) is automatically converted to proper block markup before the editor sees it.
+
+This means the block editor always shows proper blocks — even when `post_content` was written as raw HTML by a migration script, an external API, or another plugin. No "Convert to blocks" prompt.
+
+The REST filters are registered at `init` priority 20 to ensure all custom post types are available.
+
 ## Filters
 
 ### `html_to_blocks_supported_post_types`
@@ -95,7 +103,7 @@ add_filter('html_to_blocks_supported_post_types', function($post_types) {
 });
 ```
 
-Default: `['post', 'page']`
+Default: all public REST-enabled post types via `get_post_types(['show_in_rest' => true, 'public' => true])`
 
 ## Architecture
 
