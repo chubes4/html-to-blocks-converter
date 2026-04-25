@@ -40,4 +40,3 @@ if ( version_compare( get_bloginfo( 'version' ), HTML_TO_BLOCKS_CONVERTER_MIN_WP
 }
 
 require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'library.php';
-require_once HTML_TO_BLOCKS_CONVERTER_PATH . 'includes/hooks.php';
