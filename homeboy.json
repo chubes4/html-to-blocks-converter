@@ -10,6 +10,10 @@
     {
       "file": "html-to-blocks-converter.php",
       "pattern": "(?m)^\\s*\\*?\\s*Version:\\s*([0-9.]+)"
+    },
+    {
+      "file": "library.php",
+      "pattern": "(?m)^\\$html_to_blocks_library_version\\s*=\\s*'([0-9.]+)'"
     }
   ]
 }

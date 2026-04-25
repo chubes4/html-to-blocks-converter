@@ -1,6 +1,11 @@
 # HTML to Blocks Converter
 
-A WordPress plugin that automatically converts raw HTML to Gutenberg blocks when inserting posts via the REST API or `wp_insert_post()`.
+A WordPress plugin **and Composer package** that converts raw HTML to Gutenberg block arrays using WordPress Core's HTML API.
+
+It works in two modes:
+
+- **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads.
+- **Package mode:** `composer require chubes4/html-to-blocks-converter` and call `html_to_blocks_raw_handler()` directly. No hooks are registered in package mode.
 
 ## Description
 
@@ -44,6 +49,16 @@ Or clone directly to your plugins directory:
 cd wp-content/plugins
 git clone https://github.com/chubes4/html-to-blocks-converter.git
 ```
+
+Or install as a Composer package:
+
+```bash
+composer require chubes4/html-to-blocks-converter
+```
+
+Composer autoloads `library.php`, which registers the conversion library
+through an Action-Scheduler-style version registry. It does **not** register
+the plugin's automatic write/read hooks.
 
 ## Usage
 
@@ -90,6 +105,22 @@ This means the block editor always shows proper blocks — even when `post_conte
 
 The REST filters are registered at `init` priority 20 to ensure all custom post types are available.
 
+### Package Mode
+
+When loaded by Composer, only the conversion API is available:
+
+```php
+// Available after Composer autoload runs.
+$blocks = html_to_blocks_raw_handler([
+    'HTML' => '<h1>Hello</h1><p>World</p>',
+]);
+```
+
+The automatic hook helpers (`html_to_blocks_convert_on_insert()`, REST
+response filters, etc.) are intentionally **not** loaded in package mode.
+Consumers such as `block-format-bridge` own their own hook integration and call
+the raw handler directly.
+
 ## Filters
 
 ### `html_to_blocks_supported_post_types`
@@ -114,6 +145,20 @@ The plugin uses WordPress Core's HTML API for parsing:
 - **Block Factory** - Creates block arrays compatible with `serialize_blocks()`
 - **Raw Handler** - Main conversion pipeline using `WP_HTML_Processor::create_fragment()`
 - **Attribute Parser** - Extracts block attributes from HTML using WordPress HTML API
+
+### Dual-mode loading
+
+`library.php` is the package entry point. It registers the local copy's version
+and initializer with `HTML_To_Blocks_Versions`. On `plugins_loaded:1`, the
+registry initializes the highest registered version exactly once. This lets
+multiple plugins bundle the package while the standalone plugin is also active;
+everyone gets the newest loaded conversion library and no duplicate class/function
+definitions.
+
+`html-to-blocks-converter.php` is the plugin shell. It loads `library.php`, then
+loads `includes/hooks.php` to register the automatic `wp_insert_post_data` and
+REST editor-read integrations. Composer consumers never load the plugin shell,
+so package mode stays hook-free.
 
 ### Why WordPress HTML API?
 
