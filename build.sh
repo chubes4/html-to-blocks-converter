@@ -12,7 +12,9 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${PLUGIN_DIR}"
 
 cp -r includes "${PLUGIN_DIR}/"
+cp composer.json "${PLUGIN_DIR}/"
 cp html-to-blocks-converter.php "${PLUGIN_DIR}/"
+cp library.php "${PLUGIN_DIR}/"
 cp raw-handler.php "${PLUGIN_DIR}/"
 
 cd "${BUILD_DIR}"
