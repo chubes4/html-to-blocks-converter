@@ -3,9 +3,9 @@
  * Library entry point for html-to-blocks-converter.
  *
  * Composer consumers autoload this file (`autoload.files`) to make the
- * raw HTML → block array API available without registering plugin hooks.
- * The standalone plugin also loads this file, then separately loads its
- * hook integration.
+ * zero-configuration HTML → blocks automation available without requiring
+ * the standalone plugin to be separately activated. The raw conversion API
+ * is loaded alongside the automatic write/read hooks.
  *
  * Multiple bundled copies can coexist: each registers its version and
  * initializer, then `HTML_To_Blocks_Versions` initializes the highest
@@ -41,6 +41,7 @@ $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_p
 	if ( ! function_exists( 'html_to_blocks_raw_handler' ) ) {
 		require_once $html_to_blocks_library_path . '/raw-handler.php';
 	}
+	require_once $html_to_blocks_library_path . '/includes/hooks.php';
 };
 
 $html_to_blocks_register = static function () use ( $html_to_blocks_library_version, $html_to_blocks_initializer ): void {

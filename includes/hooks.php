@@ -1,10 +1,10 @@
 <?php
 /**
- * Standalone plugin hook integration.
+ * Automatic hook integration.
  *
- * This file is loaded by `html-to-blocks-converter.php` only. Composer
- * consumers load `library.php`, which exposes the conversion API without
- * registering these automatic write/read hooks.
+ * Loaded by the winning library version in both standalone-plugin and
+ * Composer-package mode. Guards keep older standalone plugin copies and
+ * bundled package copies from double-registering callbacks.
  *
  * @package HTML_To_Blocks_Converter
  */
@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Write path: convert HTML → blocks when a post is inserted/updated.
 // ---------------------------------------------------------------------------
 
+$html_to_blocks_insert_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_convert_on_insert' : 'html_to_blocks_convert_on_insert';
+
 /**
  * Converts raw HTML to Gutenberg blocks during post insertion.
  *
@@ -24,34 +26,41 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param array $postarr An array of sanitized (and slashed) but otherwise unmodified post data.
  * @return array Modified post data with HTML converted to blocks.
  */
-function html_to_blocks_convert_on_insert( $data, $postarr ) {
-	if ( empty( $data['post_content'] ) ) {
+if ( ! function_exists( $html_to_blocks_insert_callback ) ) {
+	function html_to_blocks_convert_on_insert( $data, $postarr ) {
+		if ( empty( $data['post_content'] ) ) {
+			return $data;
+		}
+
+		$content = wp_unslash( $data['post_content'] );
+
+		if ( strpos( $content, '<!-- wp:' ) !== false ) {
+			return $data;
+		}
+
+		if ( ! html_to_blocks_is_supported_type( $data['post_type'] ) ) {
+			return $data;
+		}
+
+		$serialized = html_to_blocks_convert_content( $content );
+		if ( $serialized !== null ) {
+			$data['post_content'] = wp_slash( $serialized );
+		}
+
 		return $data;
 	}
-
-	$content = wp_unslash( $data['post_content'] );
-
-	if ( strpos( $content, '<!-- wp:' ) !== false ) {
-		return $data;
-	}
-
-	if ( ! html_to_blocks_is_supported_type( $data['post_type'] ) ) {
-		return $data;
-	}
-
-	$serialized = html_to_blocks_convert_content( $content );
-	if ( $serialized !== null ) {
-		$data['post_content'] = wp_slash( $serialized );
-	}
-
-	return $data;
 }
 
-add_filter( 'wp_insert_post_data', 'html_to_blocks_convert_on_insert', 10, 2 );
+if ( function_exists( 'add_filter' ) && ( ! function_exists( 'has_filter' ) || false === has_filter( 'wp_insert_post_data', $html_to_blocks_insert_callback ) ) ) {
+	add_filter( 'wp_insert_post_data', $html_to_blocks_insert_callback, 10, 2 );
+}
 
 // ---------------------------------------------------------------------------
 // Read path: convert HTML → blocks in REST API responses for the editor.
 // ---------------------------------------------------------------------------
+
+$html_to_blocks_register_rest_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_register_rest_filters' : 'html_to_blocks_register_rest_filters';
+$html_to_blocks_convert_rest_callback  = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_convert_rest_response' : 'html_to_blocks_convert_rest_response';
 
 /**
  * Register REST API response filters for all supported post types.
@@ -63,12 +72,18 @@ add_filter( 'wp_insert_post_data', 'html_to_blocks_convert_on_insert', 10, 2 );
  * Runs at priority 10 — after any upstream filters (e.g. markdown → HTML
  * at priority 5) have already converted to HTML.
  */
-function html_to_blocks_register_rest_filters() {
-	$default_types   = array_keys( get_post_types( array( 'show_in_rest' => true, 'public' => true ) ) );
-	$supported_types = apply_filters( 'html_to_blocks_supported_post_types', $default_types );
+if ( ! function_exists( $html_to_blocks_register_rest_callback ) ) {
+	function html_to_blocks_register_rest_filters() {
+		global $html_to_blocks_convert_rest_callback;
 
-	foreach ( $supported_types as $post_type ) {
-		add_filter( "rest_prepare_{$post_type}", 'html_to_blocks_convert_rest_response', 10, 3 );
+		$default_types   = array_keys( get_post_types( array( 'show_in_rest' => true, 'public' => true ) ) );
+		$supported_types = apply_filters( 'html_to_blocks_supported_post_types', $default_types );
+
+		foreach ( $supported_types as $post_type ) {
+			if ( ! function_exists( 'has_filter' ) || false === has_filter( "rest_prepare_{$post_type}", $html_to_blocks_convert_rest_callback ) ) {
+				add_filter( "rest_prepare_{$post_type}", $html_to_blocks_convert_rest_callback, 10, 3 );
+			}
+		}
 	}
 }
 
@@ -76,7 +91,9 @@ function html_to_blocks_register_rest_filters() {
 // at the default init priority (10). Without this, CPTs registered by other
 // plugins (e.g. Intelligence's wiki post type) won't exist yet when
 // get_post_types() is called, and their REST response filter won't be added.
-add_action( 'init', 'html_to_blocks_register_rest_filters', 20 );
+if ( function_exists( 'add_action' ) && ( ! function_exists( 'has_action' ) || false === has_action( 'init', $html_to_blocks_register_rest_callback ) ) ) {
+	add_action( 'init', $html_to_blocks_register_rest_callback, 20 );
+}
 
 /**
  * Convert HTML to blocks in REST API responses.
@@ -89,32 +106,34 @@ add_action( 'init', 'html_to_blocks_register_rest_filters', 20 );
  * @param WP_REST_Request  $request  The request object.
  * @return WP_REST_Response Modified response.
  */
-function html_to_blocks_convert_rest_response( $response, $post, $request ) {
-	// Only convert for edit context (block editor).
-	if ( $request->get_param( 'context' ) !== 'edit' ) {
+if ( ! function_exists( $html_to_blocks_convert_rest_callback ) ) {
+	function html_to_blocks_convert_rest_response( $response, $post, $request ) {
+		// Only convert for edit context (block editor).
+		if ( $request->get_param( 'context' ) !== 'edit' ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+
+		if ( empty( $data['content']['raw'] ) ) {
+			return $response;
+		}
+
+		$raw = $data['content']['raw'];
+
+		// Already block markup — nothing to do.
+		if ( strpos( $raw, '<!-- wp:' ) !== false ) {
+			return $response;
+		}
+
+		$serialized = html_to_blocks_convert_content( $raw );
+		if ( $serialized !== null ) {
+			$data['content']['raw'] = $serialized;
+			$response->set_data( $data );
+		}
+
 		return $response;
 	}
-
-	$data = $response->get_data();
-
-	if ( empty( $data['content']['raw'] ) ) {
-		return $response;
-	}
-
-	$raw = $data['content']['raw'];
-
-	// Already block markup — nothing to do.
-	if ( strpos( $raw, '<!-- wp:' ) !== false ) {
-		return $response;
-	}
-
-	$serialized = html_to_blocks_convert_content( $raw );
-	if ( $serialized !== null ) {
-		$data['content']['raw'] = $serialized;
-		$response->set_data( $data );
-	}
-
-	return $response;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,10 +146,14 @@ function html_to_blocks_convert_rest_response( $response, $post, $request ) {
  * @param string $post_type The post type slug.
  * @return bool
  */
-function html_to_blocks_is_supported_type( string $post_type ): bool {
-	$default_types   = array_keys( get_post_types( array( 'show_in_rest' => true, 'public' => true ) ) );
-	$supported_types = apply_filters( 'html_to_blocks_supported_post_types', $default_types );
-	return in_array( $post_type, $supported_types, true );
+$html_to_blocks_is_supported_type_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_is_supported_type' : 'html_to_blocks_is_supported_type';
+
+if ( ! function_exists( $html_to_blocks_is_supported_type_callback ) ) {
+	function html_to_blocks_is_supported_type( string $post_type ): bool {
+		$default_types   = array_keys( get_post_types( array( 'show_in_rest' => true, 'public' => true ) ) );
+		$supported_types = apply_filters( 'html_to_blocks_supported_post_types', $default_types );
+		return in_array( $post_type, $supported_types, true );
+	}
 }
 
 /**
@@ -141,26 +164,30 @@ function html_to_blocks_is_supported_type( string $post_type ): bool {
  * @param string $html The HTML content.
  * @return string|null Serialized block markup, or null on failure.
  */
-function html_to_blocks_convert_content( string $html ): ?string {
-	$blocks = html_to_blocks_raw_handler( array( 'HTML' => $html ) );
+$html_to_blocks_convert_content_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_convert_content' : 'html_to_blocks_convert_content';
 
-	if ( empty( $blocks ) ) {
-		return null;
+if ( ! function_exists( $html_to_blocks_convert_content_callback ) ) {
+	function html_to_blocks_convert_content( string $html ): ?string {
+		$blocks = html_to_blocks_raw_handler( array( 'HTML' => $html ) );
+
+		if ( empty( $blocks ) ) {
+			return null;
+		}
+
+		$serialized             = serialize_blocks( $blocks );
+		$serialized_text_length = strlen( wp_strip_all_tags( $serialized ) );
+		$original_text_length   = strlen( wp_strip_all_tags( $html ) );
+
+		// Safety: abort if we'd lose significant content.
+		if ( $original_text_length > 50 && $serialized_text_length < ( $original_text_length * 0.3 ) ) {
+			error_log( sprintf(
+				'[HTML to Blocks] Aborting conversion due to content loss | Original: %d chars | Converted: %d chars',
+				$original_text_length,
+				$serialized_text_length
+			) );
+			return null;
+		}
+
+		return $serialized;
 	}
-
-	$serialized             = serialize_blocks( $blocks );
-	$serialized_text_length = strlen( wp_strip_all_tags( $serialized ) );
-	$original_text_length   = strlen( wp_strip_all_tags( $html ) );
-
-	// Safety: abort if we'd lose significant content.
-	if ( $original_text_length > 50 && $serialized_text_length < ( $original_text_length * 0.3 ) ) {
-		error_log( sprintf(
-			'[HTML to Blocks] Aborting conversion due to content loss | Original: %d chars | Converted: %d chars',
-			$original_text_length,
-			$serialized_text_length
-		) );
-		return null;
-	}
-
-	return $serialized;
 }
