@@ -5,7 +5,7 @@ A WordPress plugin **and Composer package** that converts raw HTML to Gutenberg 
 It works in two modes:
 
 - **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads.
-- **Package mode:** `composer require chubes4/html-to-blocks-converter` and call `html_to_blocks_raw_handler()` directly. No hooks are registered in package mode.
+- **Package mode:** `composer require chubes4/html-to-blocks-converter` and load WordPress. Composer autoload registers the same conversion library and automatic hooks through the version registry. Consumers can also call `html_to_blocks_raw_handler()` directly.
 
 ## Description
 
@@ -20,20 +20,29 @@ This plugin provides server-side HTML-to-blocks conversion using WordPress Core'
 
 ## Supported Block Transforms
 
-The plugin converts the following HTML elements to their corresponding Gutenberg blocks:
+The plugin converts high-confidence static HTML patterns to their corresponding Gutenberg blocks:
 
-| HTML Element | Block Type |
+| HTML signal | Block type |
 |-------------|------------|
 | `<h1>` - `<h6>` | `core/heading` |
-| `<p>` | `core/paragraph` |
+| `<p>` and plain text | `core/paragraph` |
 | `<ul>`, `<ol>` | `core/list` with `core/list-item` children |
 | `<blockquote>` | `core/quote` |
-| `<figure><img>` | `core/image` |
-| `<img>` | `core/image` |
+| `<blockquote class="wp-block-pullquote">` | `core/pullquote` |
+| `<figure><img>`, `<img>` | `core/image` |
+| gallery-like wrappers with multiple images | `core/gallery` with `core/image` children |
+| `<video>` / `<audio>` with a source | `core/video` / `core/audio` |
+| recognized provider `<iframe>` embeds | `core/embed` |
+| downloadable file anchors | `core/file` |
+| media-text wrappers | `core/media-text` |
+| button-like anchors | `core/buttons` with `core/button` children |
+| `<details>` | `core/details` |
+| `<pre class="wp-block-verse">` | `core/verse` |
 | `<pre><code>` | `core/code` |
 | `<pre>` | `core/preformatted` |
 | `<hr>` | `core/separator` |
 | `<table>` | `core/table` |
+| high-confidence semantic/layout wrappers | `core/group`, `core/columns`, `core/column`, `core/cover`, `core/spacer` |
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
 
@@ -69,8 +78,9 @@ composer require chubes4/html-to-blocks-converter
 ```
 
 Composer autoloads `library.php`, which registers the conversion library
-through an Action-Scheduler-style version registry. It does **not** register
-the plugin's automatic write/read hooks.
+through an Action-Scheduler-style version registry. The winning library version
+loads the raw handler and the automatic write/read hooks so bundled consumers get
+the same HTML → blocks behavior as the standalone plugin.
 
 ## Usage
 
@@ -119,7 +129,9 @@ The REST filters are registered at `init` priority 20 to ensure all custom post 
 
 ### Package Mode
 
-When loaded by Composer, only the conversion API is available:
+When loaded by Composer inside WordPress, the version registry loads both the
+conversion API and the automatic hooks. Consumers that only need direct
+conversion can call the raw handler without going through the hooks:
 
 ```php
 // Available after Composer autoload runs.
@@ -128,10 +140,9 @@ $blocks = html_to_blocks_raw_handler([
 ]);
 ```
 
-The automatic hook helpers (`html_to_blocks_convert_on_insert()`, REST
-response filters, etc.) are intentionally **not** loaded in package mode.
-Consumers such as `block-format-bridge` own their own hook integration and call
-the raw handler directly.
+Consumers such as `block-format-bridge` call the raw handler directly for their
+own adapter pipeline, but the package still registers h2bc's normal hooks for
+plain HTML write/read paths.
 
 ## Filters
 
