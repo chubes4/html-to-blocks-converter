@@ -28,9 +28,13 @@ class HTML_To_Blocks_Transform_Registry {
 		self::$transforms = array_merge(
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
+			self::get_button_transforms(),
 			self::get_image_transforms(),
+			self::get_details_transforms(),
+			self::get_pullquote_transforms(),
 			self::get_quote_transforms(),
 			self::get_code_transforms(),
+			self::get_verse_transforms(),
 			self::get_preformatted_transforms(),
 			self::get_separator_transforms(),
 			self::get_table_transforms(),
@@ -266,6 +270,134 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
+	 * core/buttons and core/button transforms - explicit button-like anchors.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_button_transforms() {
+		return [
+			[
+				'blockName' => 'core/buttons',
+				'priority'  => 9,
+				'selector'  => 'a',
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'A' && self::is_button_like_anchor( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_buttons_block_from_anchor( $element );
+				},
+			],
+			[
+				'blockName' => 'core/buttons',
+				'priority'  => 9,
+				'selector'  => 'p',
+				'isMatch'   => function ( $element ) {
+					$anchor = self::get_single_anchor_from_html( $element->get_inner_html() );
+					return $element->get_tag_name() === 'P' && $anchor && self::is_button_like_anchor( $anchor );
+				},
+				'transform' => function ( $element ) {
+					$anchor = self::get_single_anchor_from_html( $element->get_inner_html() );
+					return self::create_buttons_block_from_anchor( $anchor );
+				},
+			],
+		];
+	}
+
+	/**
+	 * Gets a single anchor element when the HTML is only one anchor.
+	 *
+	 * @param string $html Inner HTML to inspect.
+	 * @return HTML_To_Blocks_HTML_Element|null Anchor element or null.
+	 */
+	private static function get_single_anchor_from_html( string $html ): ?HTML_To_Blocks_HTML_Element {
+		$html = trim( $html );
+		if ( ! preg_match( '/^<a\s([^>]*)>(.*)<\/a>$/is', $html, $matches ) ) {
+			return null;
+		}
+
+		$attributes = self::parse_attribute_string( $matches[1] );
+		return new HTML_To_Blocks_HTML_Element( 'a', $attributes, $html, trim( $matches[2] ) );
+	}
+
+	/**
+	 * Parses an HTML attribute string into an associative array.
+	 *
+	 * @param string $attribute_string Raw attribute string.
+	 * @return array Parsed attributes.
+	 */
+	private static function parse_attribute_string( string $attribute_string ): array {
+		$attributes = [];
+		if ( preg_match_all( '/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))/', $attribute_string, $matches, PREG_SET_ORDER ) ) {
+			foreach ( $matches as $match ) {
+				$attributes[ strtolower( $match[1] ) ] = html_entity_decode( $match[3] !== '' ? $match[3] : ( $match[4] !== '' ? $match[4] : $match[5] ), ENT_QUOTES, 'UTF-8' );
+			}
+		}
+
+		return $attributes;
+	}
+
+	/**
+	 * Checks if an anchor explicitly carries button intent.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Anchor element.
+	 * @return bool True when the anchor is button-like.
+	 */
+	private static function is_button_like_anchor( $element ): bool {
+		if ( ! $element || $element->get_tag_name() !== 'A' ) {
+			return false;
+		}
+
+		$class_name = $element->get_attribute( 'class' ) ?? '';
+		return preg_match( '/(?:^|\s)(?:button|btn|wp-block-button__link|wp-element-button)(?:$|\s|-)/i', $class_name ) === 1;
+	}
+
+	/**
+	 * Creates a buttons wrapper with one button child from an anchor.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $anchor Anchor element.
+	 * @return array Block array.
+	 */
+	private static function create_buttons_block_from_anchor( $anchor ): array {
+		$attributes = [
+			'text' => $anchor->get_inner_html(),
+		];
+
+		if ( $anchor->has_attribute( 'href' ) ) {
+			$attributes['url'] = $anchor->get_attribute( 'href' );
+		}
+		if ( $anchor->has_attribute( 'target' ) ) {
+			$attributes['linkTarget'] = $anchor->get_attribute( 'target' );
+		}
+		if ( $anchor->has_attribute( 'rel' ) ) {
+			$attributes['rel'] = $anchor->get_attribute( 'rel' );
+		}
+		if ( $anchor->has_attribute( 'class' ) ) {
+			$attributes['className'] = self::button_block_class_name( $anchor->get_attribute( 'class' ) );
+		}
+
+		$button = HTML_To_Blocks_Block_Factory::create_block( 'core/button', $attributes );
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/buttons', [], [ $button ] );
+	}
+
+	/**
+	 * Converts anchor classes to button block classes.
+	 *
+	 * @param string $class_name Anchor class attribute.
+	 * @return string Button block class name.
+	 */
+	private static function button_block_class_name( string $class_name ): string {
+		$classes = preg_split( '/\s+/', trim( $class_name ) );
+		$classes = array_filter(
+			$classes,
+			function ( $class ) {
+				return ! in_array( $class, [ 'wp-block-button__link', 'wp-element-button' ], true );
+			}
+		);
+
+		return trim( implode( ' ', $classes ) );
+	}
+
+	/**
 	 * core/image transforms - figure with img
 	 *
 	 * @return array Transform definitions
@@ -375,6 +507,74 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
+	 * core/details transforms - details elements with a summary.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_details_transforms() {
+		return [
+			[
+				'blockName' => 'core/details',
+				'priority'  => 10,
+				'selector'  => 'details',
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'DETAILS' && preg_match( '/<summary(?:\s[^>]*)?>.*?<\/summary>/is', $element->get_inner_html() ) === 1;
+				},
+				'transform' => function ( $element, $handler ) {
+					$inner_html = $element->get_inner_html();
+					preg_match( '/<summary(?:\s[^>]*)?>(.*?)<\/summary>/is', $inner_html, $summary_matches );
+
+					$summary      = trim( $summary_matches[1] ?? '' );
+					$content_html  = trim( preg_replace( '/<summary(?:\s[^>]*)?>.*?<\/summary>/is', '', $inner_html, 1 ) );
+					$inner_blocks  = $content_html !== '' ? $handler( [ 'HTML' => $content_html ] ) : [];
+					$attributes    = [ 'summary' => $summary ];
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/details', $attributes, $inner_blocks );
+				},
+			],
+		];
+	}
+
+	/**
+	 * core/pullquote transforms - explicit pullquote blockquotes.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_pullquote_transforms() {
+		return [
+			[
+				'blockName' => 'core/pullquote',
+				'priority'  => 9,
+				'selector'  => 'blockquote',
+				'isMatch'   => function ( $element ) {
+					if ( $element->get_tag_name() !== 'BLOCKQUOTE' || ! $element->has_attribute( 'class' ) ) {
+						return false;
+					}
+
+					$class_name = $element->get_attribute( 'class' );
+					return preg_match( '/(?:^|\s)(?:wp-block-pullquote|pullquote|is-style-pullquote)(?:$|\s)/i', $class_name ) === 1;
+				},
+				'transform' => function ( $element ) {
+					$value    = trim( $element->get_inner_html() );
+					$citation = '';
+
+					if ( preg_match( '/<cite(?:\s[^>]*)?>(.*?)<\/cite>/is', $value, $matches ) ) {
+						$citation = trim( $matches[1] );
+						$value    = trim( preg_replace( '/<cite(?:\s[^>]*)?>.*?<\/cite>/is', '', $value, 1 ) );
+					}
+
+					$attributes = [ 'value' => $value ];
+					if ( $citation !== '' ) {
+						$attributes['citation'] = $citation;
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/pullquote', $attributes );
+				},
+			],
+		];
+	}
+
+	/**
 	 * core/quote transforms - blockquote elements
 	 *
 	 * @return array Transform definitions
@@ -444,6 +644,32 @@ class HTML_To_Blocks_Transform_Registry {
 						'core/code',
 						$attributes
 					);
+				},
+			],
+		];
+	}
+
+	/**
+	 * core/verse transforms - explicit verse/preformatted poetry classes.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_verse_transforms() {
+		return [
+			[
+				'blockName' => 'core/verse',
+				'priority'  => 10,
+				'selector'  => 'pre',
+				'isMatch'   => function ( $element ) {
+					if ( $element->get_tag_name() !== 'PRE' || ! $element->has_attribute( 'class' ) ) {
+						return false;
+					}
+
+					$class_name = $element->get_attribute( 'class' );
+					return preg_match( '/(?:^|\s)(?:wp-block-verse|verse)(?:$|\s)/i', $class_name ) === 1;
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/verse', [ 'content' => $element->get_inner_html() ] );
 				},
 			],
 		];
