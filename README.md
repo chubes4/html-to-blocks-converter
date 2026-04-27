@@ -37,6 +37,10 @@ The plugin converts the following HTML elements to their corresponding Gutenberg
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
 
+For the source-of-truth status of supported transforms, observed fallbacks,
+future candidates, and context-required block families, see the
+[Core Block Coverage Matrix](docs/core-block-coverage.md).
+
 For full-site-editing boundaries, including which block families should not be
 inferred from raw HTML alone, see [FSE Boundary](docs/fse-boundary.md).
 
