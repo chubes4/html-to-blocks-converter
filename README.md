@@ -4,12 +4,12 @@ A WordPress plugin **and Composer package** that converts raw HTML to Gutenberg 
 
 It works in two modes:
 
-- **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads.
+- **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads for public REST-enabled post types.
 - **Package mode:** `composer require chubes4/html-to-blocks-converter` and load WordPress. Composer autoload registers the same conversion library and automatic hooks through the version registry. Consumers can also call `html_to_blocks_raw_handler()` directly.
 
 ## Description
 
-This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor always sees proper blocks even when post_content contains raw HTML.
+This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor sees proper blocks for supported post types even when `post_content` contains raw HTML.
 
 ### Use Cases
 
@@ -85,7 +85,7 @@ the same HTML → blocks behavior as the standalone plugin.
 
 ## Usage
 
-The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks. No configuration required.
+The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. No configuration required for public REST-enabled post types.
 
 ### Programmatic Usage
 
