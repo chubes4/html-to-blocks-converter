@@ -37,6 +37,9 @@ The plugin converts the following HTML elements to their corresponding Gutenberg
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
 
+For full-site-editing boundaries, including which block families should not be
+inferred from raw HTML alone, see [FSE Boundary](docs/fse-boundary.md).
+
 ## Installation
 
 1. Download the plugin zip file
