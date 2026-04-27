@@ -20,6 +20,9 @@ HTML fragment
 This layer is intentionally deterministic. It should only produce a semantic
 block when the HTML fragment itself contains enough information to choose that
 block without knowing the surrounding template, site identity, query, or theme.
+The source-of-truth list of supported transforms, observed fallbacks, future
+candidates, and context-required block families lives in the
+[Core Block Coverage Matrix](core-block-coverage.md).
 
 ## Block Family Boundary
 
