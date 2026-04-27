@@ -123,6 +123,18 @@ class HTML_To_Blocks_Block_Factory {
             case 'core/table':
                 return self::generate_table_html( $attributes );
 
+			case 'core/video':
+				return self::generate_video_html( $attributes );
+
+			case 'core/audio':
+				return self::generate_audio_html( $attributes );
+
+			case 'core/file':
+				return self::generate_file_html( $attributes );
+
+			case 'core/embed':
+				return self::generate_embed_html( $attributes );
+
             default:
                 return '';
         }
@@ -202,7 +214,7 @@ class HTML_To_Blocks_Block_Factory {
      * @param array $attributes Block attributes
      * @return string Table HTML
      */
-    private static function generate_table_html( $attributes ) {
+	private static function generate_table_html( $attributes ) {
         $html = '<figure class="wp-block-table"><table>';
 
         if ( ! empty( $attributes['head'] ) ) {
@@ -252,8 +264,117 @@ class HTML_To_Blocks_Block_Factory {
 
         $html .= '</figure>';
 
-        return $html;
-    }
+		return $html;
+	}
+
+	/**
+	 * Generates HTML for a video block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML.
+	 */
+	private static function generate_video_html( $attributes ) {
+		$src = $attributes['src'] ?? '';
+		if ( $src === '' ) {
+			return '';
+		}
+
+		$attrs = ' controls';
+		foreach ( [ 'autoplay', 'loop', 'muted', 'playsInline' ] as $flag ) {
+			if ( ! empty( $attributes[ $flag ] ) ) {
+				$attrs .= ' ' . strtolower( $flag === 'playsInline' ? 'playsinline' : $flag );
+			}
+		}
+		foreach ( [ 'poster', 'preload' ] as $key ) {
+			if ( ! empty( $attributes[ $key ] ) ) {
+				$attrs .= ' ' . $key . '="' . esc_attr( $attributes[ $key ] ) . '"';
+			}
+		}
+
+		$html = '<figure class="wp-block-video"><video src="' . esc_url( $src ) . '"' . $attrs . '></video>';
+		if ( ! empty( $attributes['caption'] ) ) {
+			$html .= '<figcaption class="wp-element-caption">' . $attributes['caption'] . '</figcaption>';
+		}
+		$html .= '</figure>';
+
+		return $html;
+	}
+
+	/**
+	 * Generates HTML for an audio block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML.
+	 */
+	private static function generate_audio_html( $attributes ) {
+		$src = $attributes['src'] ?? '';
+		if ( $src === '' ) {
+			return '';
+		}
+
+		$attrs = ' controls';
+		foreach ( [ 'autoplay', 'loop' ] as $flag ) {
+			if ( ! empty( $attributes[ $flag ] ) ) {
+				$attrs .= ' ' . $flag;
+			}
+		}
+		if ( ! empty( $attributes['preload'] ) ) {
+			$attrs .= ' preload="' . esc_attr( $attributes['preload'] ) . '"';
+		}
+
+		$html = '<figure class="wp-block-audio"><audio src="' . esc_url( $src ) . '"' . $attrs . '></audio>';
+		if ( ! empty( $attributes['caption'] ) ) {
+			$html .= '<figcaption class="wp-element-caption">' . $attributes['caption'] . '</figcaption>';
+		}
+		$html .= '</figure>';
+
+		return $html;
+	}
+
+	/**
+	 * Generates HTML for a file block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML.
+	 */
+	private static function generate_file_html( $attributes ) {
+		$href = $attributes['href'] ?? $attributes['textLinkHref'] ?? '';
+		if ( $href === '' ) {
+			return '';
+		}
+
+		$name   = $attributes['fileName'] ?? basename( strtok( $href, '?#' ) );
+		$target = ! empty( $attributes['textLinkTarget'] ) ? ' target="' . esc_attr( $attributes['textLinkTarget'] ) . '"' : '';
+
+		$html = '<div class="wp-block-file"><a href="' . esc_url( $href ) . '"' . $target . '>' . $name . '</a>';
+		if ( ! isset( $attributes['showDownloadButton'] ) || $attributes['showDownloadButton'] ) {
+			$html .= '<a href="' . esc_url( $href ) . '" class="wp-block-file__button wp-element-button" download>Download</a>';
+		}
+		$html .= '</div>';
+
+		return $html;
+	}
+
+	/**
+	 * Generates HTML for an embed block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML.
+	 */
+	private static function generate_embed_html( $attributes ) {
+		$url = $attributes['url'] ?? '';
+		if ( $url === '' ) {
+			return '';
+		}
+
+		$provider = $attributes['providerNameSlug'] ?? '';
+		$class    = 'wp-block-embed';
+		if ( $provider !== '' ) {
+			$class .= ' is-provider-' . sanitize_html_class( $provider ) . ' wp-block-embed-' . sanitize_html_class( $provider );
+		}
+
+		return '<figure class="' . esc_attr( $class ) . '"><div class="wp-block-embed__wrapper">' . esc_url( $url ) . '</div></figure>';
+	}
 
     /**
      * Generates wrapper HTML for blocks with inner blocks
@@ -310,13 +431,39 @@ class HTML_To_Blocks_Block_Factory {
                     'closing' => '</div>',
                 ];
 
-            case 'core/columns':
-                return [
-                    'opening' => '<div class="wp-block-columns">',
-                    'closing' => '</div>',
-                ];
+			case 'core/columns':
+				return [
+					'opening' => '<div class="wp-block-columns">',
+					'closing' => '</div>',
+				];
 
-            default:
+			case 'core/gallery':
+				$class = 'wp-block-gallery has-nested-images columns-default is-cropped';
+				if ( ! empty( $attributes['columns'] ) ) {
+					$class = 'wp-block-gallery has-nested-images columns-' . (int) $attributes['columns'] . ' is-cropped';
+				}
+				return [
+					'opening' => '<figure class="' . esc_attr( $class ) . '">',
+					'closing' => '</figure>',
+				];
+
+			case 'core/media-text':
+				$media_url  = $attributes['mediaUrl'] ?? '';
+				$media_type = $attributes['mediaType'] ?? 'image';
+				$media_alt  = esc_attr( $attributes['mediaAlt'] ?? '' );
+				$media_html = $media_type === 'video'
+					? '<video src="' . esc_url( $media_url ) . '" controls></video>'
+					: '<img src="' . esc_url( $media_url ) . '" alt="' . $media_alt . '"/>';
+				$class = 'wp-block-media-text is-stacked-on-mobile';
+				if ( ( $attributes['mediaPosition'] ?? 'left' ) === 'right' ) {
+					$class .= ' has-media-on-the-right';
+				}
+				return [
+					'opening' => '<div class="' . esc_attr( $class ) . '"><figure class="wp-block-media-text__media">' . $media_html . '</figure><div class="wp-block-media-text__content">',
+					'closing' => '</div></div>',
+				];
+
+			default:
                 return [
                     'opening' => '',
                     'closing' => '',
