@@ -135,6 +135,9 @@ class HTML_To_Blocks_Block_Factory {
 			case 'core/embed':
 				return self::generate_embed_html( $attributes );
 
+			case 'core/shortcode':
+				return $attributes['text'] ?? '';
+
             default:
                 return '';
         }

@@ -30,6 +30,7 @@ fragments are preserved as `core/html` rather than guessed.
 | `core/preformatted` | `supported` | `<pre>` without a verse or code signal | Transform registry | Preserves preformatted static text. |
 | `core/separator` | `supported` | `<hr>` | Transform registry | Direct static transform. |
 | `core/table` | `supported` | `<table>` | Transform registry | Static table transform only; no data-source or query inference. |
+| `core/shortcode` | `supported` | WordPress shortcode text matched by `get_shortcode_regex()` | `tests/GutenbergRawHandlerParityUnitTest.php` | Mirrors Gutenberg rawHandler's shortcode conversion path for WordPress shortcodes. |
 | `core/group` | `supported` | High-confidence semantic wrapper such as `<section>` or explicit grouping classes | `tests/smoke-layout-transforms.php` | Arbitrary `<div>` does not qualify. Inner content recurses through the raw handler. |
 | `core/columns`, `core/column` | `supported` | Explicit row/grid wrapper plus direct column-like children | `tests/smoke-layout-transforms.php` | Requires layout classes such as `row` and `col-*`; ambiguous wrappers fall back. |
 | `core/cover` | `supported` | Hero/cover wrapper with explicit background image or color signal | `tests/smoke-layout-transforms.php` | Preserves static background values and routes inner content through the raw handler. |

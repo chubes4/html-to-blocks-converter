@@ -54,6 +54,9 @@ future candidates, and context-required block families, see the
 For full-site-editing boundaries, including which block families should not be
 inferred from raw HTML alone, see [FSE Boundary](docs/fse-boundary.md).
 
+For the supported subset h2bc intentionally keeps aligned with Gutenberg's
+`rawHandler`, see [Gutenberg rawHandler Parity](docs/gutenberg-rawhandler-parity.md).
+
 Unsupported top-level elements are preserved as `core/html` instead of guessed.
 When that fallback is used, h2bc fires `html_to_blocks_unsupported_html_fallback`
 with the unsupported HTML fragment, fallback context, and generated block so
