@@ -29,6 +29,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
 			self::get_button_transforms(),
+			self::get_media_transforms(),
 			self::get_image_transforms(),
 			self::get_details_transforms(),
 			self::get_pullquote_transforms(),
@@ -50,6 +51,354 @@ class HTML_To_Blocks_Transform_Registry {
 		);
 
 		return self::$transforms;
+	}
+
+	/**
+	 * Media and embed transforms for high-confidence static HTML patterns.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_media_transforms() {
+		return [
+			[
+				'blockName' => 'core/gallery',
+				'priority'  => 8,
+				'isMatch'   => function ( $element ) {
+					return self::is_gallery_element( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_gallery_block( $element );
+				},
+			],
+			[
+				'blockName' => 'core/media-text',
+				'priority'  => 8,
+				'isMatch'   => function ( $element ) {
+					$class = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+					return preg_match( '/(?:^|\s)(?:wp-block-media-text|media-text)(?:$|\s)/i', $class ) === 1
+						&& ( $element->query_selector( 'img' ) || $element->query_selector( 'video' ) );
+				},
+				'transform' => function ( $element, $handler ) {
+					return self::create_media_text_block( $element, $handler );
+				},
+			],
+			[
+				'blockName' => 'core/video',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					$video = $element->get_tag_name() === 'VIDEO' ? $element : $element->query_selector( 'video' );
+					return $video && self::get_media_src( $video ) !== '';
+				},
+				'transform' => function ( $element ) {
+					$video      = $element->get_tag_name() === 'VIDEO' ? $element : $element->query_selector( 'video' );
+					$attributes = self::get_media_attributes( $video, [ 'src', 'poster', 'preload', 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ] );
+
+					if ( $element->get_tag_name() === 'FIGURE' ) {
+						$caption = $element->query_selector( 'figcaption' );
+						if ( $caption ) {
+							$attributes['caption'] = $caption->get_inner_html();
+						}
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/video', $attributes );
+				},
+			],
+			[
+				'blockName' => 'core/audio',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					$audio = $element->get_tag_name() === 'AUDIO' ? $element : $element->query_selector( 'audio' );
+					return $audio && self::get_media_src( $audio ) !== '';
+				},
+				'transform' => function ( $element ) {
+					$audio      = $element->get_tag_name() === 'AUDIO' ? $element : $element->query_selector( 'audio' );
+					$attributes = self::get_media_attributes( $audio, [ 'src', 'preload', 'autoplay', 'loop' ] );
+
+					if ( $element->get_tag_name() === 'FIGURE' ) {
+						$caption = $element->query_selector( 'figcaption' );
+						if ( $caption ) {
+							$attributes['caption'] = $caption->get_inner_html();
+						}
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/audio', $attributes );
+				},
+			],
+			[
+				'blockName' => 'core/file',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'A'
+						&& $element->has_attribute( 'href' )
+						&& self::is_file_link( $element );
+				},
+				'transform' => function ( $element ) {
+					$attributes = [
+						'href'               => $element->get_attribute( 'href' ),
+						'textLinkHref'       => $element->get_attribute( 'href' ),
+						'fileName'           => $element->get_inner_html(),
+						'showDownloadButton' => true,
+					];
+
+					if ( $element->has_attribute( 'target' ) ) {
+						$attributes['textLinkTarget'] = $element->get_attribute( 'target' );
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/file', $attributes );
+				},
+			],
+			[
+				'blockName' => 'core/embed',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'IFRAME'
+						&& $element->has_attribute( 'src' )
+						&& self::get_embed_provider_slug( $element->get_attribute( 'src' ) ) !== '';
+				},
+				'transform' => function ( $element ) {
+					$src        = $element->get_attribute( 'src' );
+					$attributes = [
+						'url'              => self::normalise_embed_url( $src ),
+						'type'             => 'rich',
+						'providerNameSlug' => self::get_embed_provider_slug( $src ),
+						'responsive'       => true,
+					];
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/embed', $attributes );
+				},
+			],
+		];
+	}
+
+	/**
+	 * Checks whether an element is a high-confidence gallery wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool
+	 */
+	private static function is_gallery_element( $element ): bool {
+		$class = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+		if ( preg_match( '/(?:^|\s)(?:wp-block-gallery|blocks-gallery-grid|gallery|image-grid)(?:$|\s)/i', $class ) !== 1 ) {
+			return false;
+		}
+
+		return count( $element->query_selector_all( 'img' ) ) > 1;
+	}
+
+	/**
+	 * Creates a gallery block containing image inner blocks.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Gallery wrapper.
+	 * @return array Block array.
+	 */
+	private static function create_gallery_block( $element ): array {
+		$images       = $element->query_selector_all( 'img' );
+		$captions     = $element->query_selector_all( 'figcaption' );
+		$inner_blocks = [];
+		$ids          = [];
+
+		foreach ( $images as $index => $img ) {
+			$caption        = isset( $captions[ $index ] ) ? $captions[ $index ]->get_inner_html() : '';
+			$image_block    = self::create_image_block_from_img( $img, $caption );
+			$inner_blocks[] = $image_block;
+
+			if ( isset( $image_block['attrs']['id'] ) ) {
+				$ids[] = $image_block['attrs']['id'];
+			}
+		}
+
+		$attributes = [];
+		if ( ! empty( $ids ) ) {
+			$attributes['ids'] = $ids;
+		}
+
+		if ( preg_match( '/(?:^|\s)columns-(\d+)(?:$|\s)/', $element->get_attribute( 'class' ) ?? '', $matches ) ) {
+			$attributes['columns'] = min( 8, max( 1, (int) $matches[1] ) );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/gallery', $attributes, $inner_blocks );
+	}
+
+	/**
+	 * Creates an image block from an img element.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $img     Image element.
+	 * @param string                      $caption Optional caption HTML.
+	 * @return array Block array.
+	 */
+	private static function create_image_block_from_img( $img, string $caption = '' ): array {
+		$attributes = [
+			'url' => $img->get_attribute( 'src' ) ?? '',
+		];
+
+		if ( $img->has_attribute( 'alt' ) ) {
+			$attributes['alt'] = $img->get_attribute( 'alt' );
+		}
+		if ( $caption !== '' ) {
+			$attributes['caption'] = $caption;
+		}
+		if ( $img->has_attribute( 'class' ) && preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $img->get_attribute( 'class' ), $matches ) ) {
+			$attributes['id'] = (int) $matches[1];
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/image', $attributes );
+	}
+
+	/**
+	 * Creates a media-text block from a recognized two-column wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Media-text wrapper.
+	 * @param callable                    $handler Recursive raw handler.
+	 * @return array Block array.
+	 */
+	private static function create_media_text_block( $element, $handler ): array {
+		$media       = $element->query_selector( 'img' ) ?: $element->query_selector( 'video' );
+		$content     = $element->query_selector( '.wp-block-media-text__content' );
+		$media_type  = $media && $media->get_tag_name() === 'VIDEO' ? 'video' : 'image';
+		$attributes  = [
+			'mediaUrl'          => self::get_media_src( $media ),
+			'mediaType'         => $media_type,
+			'mediaPosition'     => 'left',
+			'mediaWidth'        => 50,
+			'isStackedOnMobile' => true,
+		];
+
+		if ( $media && $media->has_attribute( 'alt' ) ) {
+			$attributes['mediaAlt'] = $media->get_attribute( 'alt' );
+		}
+		if ( $media && $media->has_attribute( 'class' ) && preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $media->get_attribute( 'class' ), $matches ) ) {
+			$attributes['mediaId'] = (int) $matches[1];
+		}
+		if ( preg_match( '/(?:^|\s)has-media-on-the-right(?:$|\s)/', $element->get_attribute( 'class' ) ?? '' ) ) {
+			$attributes['mediaPosition'] = 'right';
+		}
+
+		if ( ! $content ) {
+			$children = $element->get_child_elements();
+			foreach ( $children as $child ) {
+				if ( ! $child->query_selector( 'img' ) && ! $child->query_selector( 'video' ) ) {
+					$content = $child;
+					break;
+				}
+			}
+		}
+
+		$inner_blocks = $content ? $handler( [ 'HTML' => $content->get_inner_html() ] ) : [];
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/media-text', $attributes, $inner_blocks );
+	}
+
+	/**
+	 * Extracts the best media source from src or nested source tags.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element|null $element Media element.
+	 * @return string
+	 */
+	private static function get_media_src( $element ): string {
+		if ( ! $element ) {
+			return '';
+		}
+		if ( $element->has_attribute( 'src' ) && $element->get_attribute( 'src' ) !== '' ) {
+			return $element->get_attribute( 'src' );
+		}
+
+		$source = $element->query_selector( 'source' );
+		if ( $source && $source->has_attribute( 'src' ) ) {
+			return $source->get_attribute( 'src' );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extracts media attributes from a video/audio element.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Media element.
+	 * @param array                       $keys    Allowed attributes.
+	 * @return array
+	 */
+	private static function get_media_attributes( $element, array $keys ): array {
+		$attributes = [ 'src' => self::get_media_src( $element ) ];
+
+		foreach ( $keys as $key ) {
+			$html_key = $key === 'playsInline' ? 'playsinline' : $key;
+			if ( $key === 'src' || ! $element->has_attribute( $html_key ) ) {
+				continue;
+			}
+
+			$value = $element->get_attribute( $html_key );
+			if ( in_array( $key, [ 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ], true ) ) {
+				$attributes[ $key ] = true;
+			} else {
+				$attributes[ $key ] = $value;
+			}
+		}
+
+		return $attributes;
+	}
+
+	/**
+	 * Checks whether a link points to a document/archive download.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Link element.
+	 * @return bool
+	 */
+	private static function is_file_link( $element ): bool {
+		$href = strtolower( strtok( $element->get_attribute( 'href' ), '?#' ) );
+		if ( preg_match( '/\.(?:pdf|docx?|pptx?|xlsx?|zip|rar|7z|txt|csv|ics|epub)$/', $href ) ) {
+			return true;
+		}
+
+		$class = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+		return $element->has_attribute( 'download' ) && preg_match( '/(?:^|\s)(?:download|file)(?:$|\s)/i', $class ) === 1;
+	}
+
+	/**
+	 * Infers a conservative core/embed provider slug from a URL.
+	 *
+	 * @param string $url Embed URL.
+	 * @return string
+	 */
+	private static function get_embed_provider_slug( string $url ): string {
+		$host = parse_url( $url, PHP_URL_HOST );
+		$host = $host ? strtolower( preg_replace( '/^www\./', '', $host ) ) : '';
+
+		$providers = [
+			'youtube.com'     => 'youtube',
+			'youtu.be'        => 'youtube',
+			'vimeo.com'       => 'vimeo',
+			'soundcloud.com'  => 'soundcloud',
+			'spotify.com'     => 'spotify',
+			'twitter.com'     => 'twitter',
+			'x.com'           => 'twitter',
+			'instagram.com'   => 'instagram',
+			'tiktok.com'      => 'tiktok',
+		];
+
+		foreach ( $providers as $needle => $slug ) {
+			if ( $host === $needle || substr( $host, -strlen( '.' . $needle ) ) === '.' . $needle ) {
+				return $slug;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Converts common iframe embed URLs back to their public oEmbed URL.
+	 *
+	 * @param string $url Iframe URL.
+	 * @return string
+	 */
+	private static function normalise_embed_url( string $url ): string {
+		if ( preg_match( '#youtube\.com/embed/([^?&/]+)#i', $url, $matches ) ) {
+			return 'https://www.youtube.com/watch?v=' . $matches[1];
+		}
+		if ( preg_match( '#player\.vimeo\.com/video/(\d+)#i', $url, $matches ) ) {
+			return 'https://vimeo.com/' . $matches[1];
+		}
+
+		return $url;
 	}
 
 	/**
