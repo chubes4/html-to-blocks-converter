@@ -4,12 +4,12 @@ A WordPress plugin **and Composer package** that converts raw HTML to Gutenberg 
 
 It works in two modes:
 
-- **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads.
-- **Package mode:** `composer require chubes4/html-to-blocks-converter` and call `html_to_blocks_raw_handler()` directly. No hooks are registered in package mode.
+- **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads for public REST-enabled post types.
+- **Package mode:** `composer require chubes4/html-to-blocks-converter` and load WordPress. Composer autoload registers the same conversion library and automatic hooks through the version registry. Consumers can also call `html_to_blocks_raw_handler()` directly.
 
 ## Description
 
-This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor always sees proper blocks even when post_content contains raw HTML.
+This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor sees proper blocks for supported post types even when `post_content` contains raw HTML.
 
 ### Use Cases
 
@@ -20,20 +20,30 @@ This plugin provides server-side HTML-to-blocks conversion using WordPress Core'
 
 ## Supported Block Transforms
 
-The plugin converts the following HTML elements to their corresponding Gutenberg blocks:
+The plugin converts high-confidence static HTML patterns to their corresponding Gutenberg blocks:
 
-| HTML Element | Block Type |
+| HTML signal | Block type |
 |-------------|------------|
 | `<h1>` - `<h6>` | `core/heading` |
-| `<p>` | `core/paragraph` |
+| `<p>` and plain text | `core/paragraph` |
 | `<ul>`, `<ol>` | `core/list` with `core/list-item` children |
 | `<blockquote>` | `core/quote` |
-| `<figure><img>` | `core/image` |
-| `<img>` | `core/image` |
+| `<blockquote class="wp-block-pullquote">` | `core/pullquote` |
+| `<figure><img>`, `<img>` | `core/image` |
+| gallery-like wrappers with multiple images | `core/gallery` with `core/image` children |
+| `<video>` / `<audio>` with a source | `core/video` / `core/audio` |
+| recognized provider `<iframe>` embeds | `core/embed` |
+| downloadable file anchors | `core/file` |
+| media-text wrappers | `core/media-text` |
+| button-like anchors | `core/buttons` with `core/button` children |
+| `<details>` | `core/details` |
+| `<pre class="wp-block-verse">` | `core/verse` |
 | `<pre><code>` | `core/code` |
 | `<pre>` | `core/preformatted` |
 | `<hr>` | `core/separator` |
 | `<table>` | `core/table` |
+| WordPress shortcodes | `core/shortcode` |
+| high-confidence semantic/layout wrappers | `core/group`, `core/columns`, `core/column`, `core/cover`, `core/spacer` |
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
 
@@ -69,12 +79,13 @@ composer require chubes4/html-to-blocks-converter
 ```
 
 Composer autoloads `library.php`, which registers the conversion library
-through an Action-Scheduler-style version registry. It does **not** register
-the plugin's automatic write/read hooks.
+through an Action-Scheduler-style version registry. The winning library version
+loads the raw handler and the automatic write/read hooks so bundled consumers get
+the same HTML → blocks behavior as the standalone plugin.
 
 ## Usage
 
-The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks. No configuration required.
+The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. No configuration required for public REST-enabled post types.
 
 ### Programmatic Usage
 
@@ -119,7 +130,9 @@ The REST filters are registered at `init` priority 20 to ensure all custom post 
 
 ### Package Mode
 
-When loaded by Composer, only the conversion API is available:
+When loaded by Composer inside WordPress, the version registry loads both the
+conversion API and the automatic hooks. Consumers that only need direct
+conversion can call the raw handler without going through the hooks:
 
 ```php
 // Available after Composer autoload runs.
@@ -128,10 +141,9 @@ $blocks = html_to_blocks_raw_handler([
 ]);
 ```
 
-The automatic hook helpers (`html_to_blocks_convert_on_insert()`, REST
-response filters, etc.) are intentionally **not** loaded in package mode.
-Consumers such as `block-format-bridge` own their own hook integration and call
-the raw handler directly.
+Consumers such as `block-format-bridge` call the raw handler directly for their
+own adapter pipeline, but the package still registers h2bc's normal hooks for
+plain HTML write/read paths.
 
 ## Filters
 
@@ -147,6 +159,22 @@ add_filter('html_to_blocks_supported_post_types', function($post_types) {
 ```
 
 Default: all public REST-enabled post types via `get_post_types(['show_in_rest' => true, 'public' => true])`
+
+### `html_to_blocks_unsupported_html_fallback`
+
+Observe unsupported or intentionally ambiguous fragments that are preserved as
+`core/html` instead of guessed.
+
+```php
+add_action('html_to_blocks_unsupported_html_fallback', function($html, $context, $block) {
+    error_log('h2bc fallback: ' . ($context['reason'] ?? 'unknown'));
+}, 10, 3);
+```
+
+### `html_to_blocks_loaded`
+
+Runs after the version registry initializes the winning h2bc copy. Receives the
+loaded version string.
 
 ## Architecture
 
@@ -167,10 +195,10 @@ multiple plugins bundle the package while the standalone plugin is also active;
 everyone gets the newest loaded conversion library and no duplicate class/function
 definitions.
 
-`html-to-blocks-converter.php` is the plugin shell. It loads `library.php`, then
-loads `includes/hooks.php` to register the automatic `wp_insert_post_data` and
-REST editor-read integrations. Composer consumers never load the plugin shell,
-so package mode stays hook-free.
+`html-to-blocks-converter.php` is the plugin shell. It performs the standalone
+plugin's WordPress/PHP guard checks, then loads `library.php`. Composer consumers
+skip the plugin shell but still load the raw handler and automatic hooks through
+the library initializer.
 
 ### Why WordPress HTML API?
 
