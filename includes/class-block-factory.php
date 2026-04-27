@@ -88,6 +88,16 @@ class HTML_To_Blocks_Block_Factory {
                 $content = $attributes['content'] ?? '';
                 return '<li>' . $content . '</li>';
 
+            case 'core/button':
+                return self::generate_button_html( $attributes );
+
+            case 'core/pullquote':
+                return self::generate_pullquote_html( $attributes );
+
+            case 'core/verse':
+                $content = $attributes['content'] ?? '';
+                return '<pre class="wp-block-verse">' . $content . '</pre>';
+
             case 'core/image':
                 return self::generate_image_html( $attributes );
 
@@ -117,6 +127,39 @@ class HTML_To_Blocks_Block_Factory {
                 return '';
         }
     }
+
+	/**
+	 * Generates HTML for button block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Button HTML.
+	 */
+	private static function generate_button_html( $attributes ) {
+		$text       = $attributes['text'] ?? '';
+		$url        = $attributes['url'] ?? '';
+		$rel        = ! empty( $attributes['rel'] ) ? ' rel="' . esc_attr( $attributes['rel'] ) . '"' : '';
+		$target     = ! empty( $attributes['linkTarget'] ) ? ' target="' . esc_attr( $attributes['linkTarget'] ) . '"' : '';
+		$class_name = 'wp-block-button';
+
+		if ( ! empty( $attributes['className'] ) ) {
+			$class_name .= ' ' . $attributes['className'];
+		}
+
+		return '<div class="' . esc_attr( $class_name ) . '"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $url ) . '"' . $target . $rel . '>' . $text . '</a></div>';
+	}
+
+	/**
+	 * Generates HTML for pullquote block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Pullquote HTML.
+	 */
+	private static function generate_pullquote_html( $attributes ) {
+		$value    = $attributes['value'] ?? '';
+		$citation = ! empty( $attributes['citation'] ) ? '<cite>' . $attributes['citation'] . '</cite>' : '';
+
+		return '<figure class="wp-block-pullquote"><blockquote>' . $value . $citation . '</blockquote></figure>';
+	}
 
     /**
      * Generates HTML for image block
@@ -240,6 +283,19 @@ class HTML_To_Blocks_Block_Factory {
                 return [
                     'opening' => '<blockquote class="wp-block-quote">',
                     'closing' => '</blockquote>',
+                ];
+
+            case 'core/buttons':
+                return [
+                    'opening' => '<div class="wp-block-buttons">',
+                    'closing' => '</div>',
+                ];
+
+            case 'core/details':
+                $summary = $attributes['summary'] ?? '';
+                return [
+                    'opening' => '<details class="wp-block-details"><summary>' . $summary . '</summary>',
+                    'closing' => '</details>',
                 ];
 
             case 'core/group':
