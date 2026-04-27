@@ -1390,7 +1390,11 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( ! in_array( $tag, [ 'DIV', 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER' ], true ) ) {
+		if ( in_array( $tag, [ 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'NAV' ], true ) ) {
+			return true;
+		}
+
+		if ( $tag !== 'DIV' ) {
 			return false;
 		}
 
