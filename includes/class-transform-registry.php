@@ -34,6 +34,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_preformatted_transforms(),
 			self::get_separator_transforms(),
 			self::get_table_transforms(),
+			self::get_layout_transforms(),
 			self::get_paragraph_transforms()
 		);
 
@@ -651,6 +652,270 @@ class HTML_To_Blocks_Transform_Registry {
 			$inner_html = substr( $content, 0, $close_pos );
 			$offset    += $matches[0][1] + strlen( $matches[0][0] ) - strlen( $content ) + $close_pos + strlen( $close_tag );
 			return trim( $inner_html );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Layout transforms - conservative wrappers only.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_layout_transforms() {
+		return [
+			[
+				'blockName' => 'core/spacer',
+				'priority'  => 11,
+				'isMatch'   => function ( $element ) {
+					return self::is_spacer_element( $element );
+				},
+				'transform' => function ( $element ) {
+					$attributes = [];
+					$height     = self::extract_height_value( $element );
+
+					if ( $height !== '' ) {
+						$attributes['height'] = $height;
+					}
+
+					if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
+						$attributes['anchor'] = $element->get_attribute( 'id' );
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/spacer', $attributes );
+				},
+			],
+			[
+				'blockName' => 'core/cover',
+				'priority'  => 12,
+				'isMatch'   => function ( $element ) {
+					return self::is_cover_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					$attributes   = self::get_common_layout_attributes( $element );
+					$style        = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
+					$inner_blocks = $handler( [ 'HTML' => $element->get_inner_html() ] );
+
+					if ( preg_match( '/background-image:\s*url\((["\']?)([^)"\']+)\1\)/i', $style, $matches ) ) {
+						$attributes['url'] = trim( $matches[2] );
+					}
+
+					$background_color = self::extract_background_color( $style );
+					if ( $background_color !== '' ) {
+						$attributes['customOverlayColor'] = $background_color;
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/cover', $attributes, $inner_blocks );
+				},
+			],
+			[
+				'blockName' => 'core/columns',
+				'priority'  => 13,
+				'isMatch'   => function ( $element ) {
+					return self::is_columns_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					$inner_blocks = [];
+					foreach ( $element->get_child_elements() as $child ) {
+						if ( ! self::is_column_element( $child ) ) {
+							continue;
+						}
+
+						$column_attributes = self::get_common_layout_attributes( $child );
+						$column_blocks     = $handler( [ 'HTML' => $child->get_inner_html() ] );
+						$inner_blocks[]    = HTML_To_Blocks_Block_Factory::create_block( 'core/column', $column_attributes, $column_blocks );
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/columns', self::get_common_layout_attributes( $element ), $inner_blocks );
+				},
+			],
+			[
+				'blockName' => 'core/column',
+				'priority'  => 14,
+				'isMatch'   => function ( $element ) {
+					return self::is_column_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/column',
+						self::get_common_layout_attributes( $element ),
+						$handler( [ 'HTML' => $element->get_inner_html() ] )
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
+				'priority'  => 15,
+				'isMatch'   => function ( $element ) {
+					return self::is_group_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						$handler( [ 'HTML' => $element->get_inner_html() ] )
+					);
+				},
+			],
+		];
+	}
+
+	/**
+	 * Gets attributes shared by layout blocks.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return array Block attributes.
+	 */
+	private static function get_common_layout_attributes( $element ): array {
+		$attributes = [];
+
+		if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
+			$attributes['anchor'] = $element->get_attribute( 'id' );
+		}
+
+		if ( $element->has_attribute( 'class' ) && $element->get_attribute( 'class' ) !== '' ) {
+			$attributes['className'] = $element->get_attribute( 'class' );
+		}
+
+		return $attributes;
+	}
+
+	/**
+	 * Checks whether an element is a safe group wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element should become core/group.
+	 */
+	private static function is_group_element( $element ): bool {
+		$tag = $element->get_tag_name();
+		if ( $tag === 'SECTION' ) {
+			return true;
+		}
+
+		if ( ! in_array( $tag, [ 'DIV', 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER' ], true ) ) {
+			return false;
+		}
+
+		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|content|main|article|aside|header|footer)(?:$|[-_\s])/i' );
+	}
+
+	/**
+	 * Checks whether an element is a cover/hero wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element should become core/cover.
+	 */
+	private static function is_cover_element( $element ): bool {
+		$style = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
+		if ( $style === '' ) {
+			return false;
+		}
+
+		$has_background_image = preg_match( '/background-image:\s*url\(/i', $style ) === 1;
+		$has_background_color = self::extract_background_color( $style ) !== '';
+		$is_hero_like         = self::class_matches( $element, '/(?:^|[-_\s])(hero|cover|banner|masthead)(?:$|[-_\s])/i' );
+
+		if ( ! $has_background_image && ! $has_background_color ) {
+			return false;
+		}
+
+		return $is_hero_like || ( $has_background_image && $element->get_tag_name() === 'SECTION' );
+	}
+
+	/**
+	 * Checks whether an element is a columns wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element should become core/columns.
+	 */
+	private static function is_columns_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION' ], true ) ) {
+			return false;
+		}
+
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(columns|row|grid|flex)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		$column_count = 0;
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( ! self::is_column_element( $child ) ) {
+				return false;
+			}
+			$column_count++;
+		}
+
+		return $column_count >= 2;
+	}
+
+	/**
+	 * Checks whether an element is an individual column.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element should become core/column.
+	 */
+	private static function is_column_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION', 'ARTICLE', 'ASIDE' ], true ) ) {
+			return false;
+		}
+
+		return self::class_matches( $element, '/(?:^|[-_\s])(column|col|cell)(?:$|[-_\s]|\d)/i' );
+	}
+
+	/**
+	 * Checks whether an element is an empty explicit spacer.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element should become core/spacer.
+	 */
+	private static function is_spacer_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+			return false;
+		}
+
+		if ( trim( wp_strip_all_tags( $element->get_inner_html() ) ) !== '' ) {
+			return false;
+		}
+
+		return self::class_matches( $element, '/(?:^|[-_\s])(spacer|gap|separator-space)(?:$|[-_\s])/i' ) && self::extract_height_value( $element ) !== '';
+	}
+
+	/**
+	 * Checks a source element class attribute against a pattern.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @param string                      $pattern Regex pattern.
+	 * @return bool True when the class matches.
+	 */
+	private static function class_matches( $element, string $pattern ): bool {
+		$class_name = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+		return $class_name !== '' && preg_match( $pattern, $class_name ) === 1;
+	}
+
+	/**
+	 * Extracts an explicit height CSS value.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return string CSS height value or empty string.
+	 */
+	private static function extract_height_value( $element ): string {
+		$style = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
+		if ( preg_match( '/(?:^|;)\s*height:\s*([^;]+)/i', $style, $matches ) ) {
+			return trim( $matches[1] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extracts a background-color CSS value.
+	 *
+	 * @param string $style CSS style attribute.
+	 * @return string CSS color value or empty string.
+	 */
+	private static function extract_background_color( string $style ): string {
+		if ( preg_match( '/(?:^|;)\s*background(?:-color)?:\s*(?![^;]*url\()([^;]+)/i', $style, $matches ) ) {
+			return trim( $matches[1] );
 		}
 
 		return '';
