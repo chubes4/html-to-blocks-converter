@@ -42,6 +42,7 @@ The plugin converts high-confidence static HTML patterns to their corresponding 
 | `<pre>` | `core/preformatted` |
 | `<hr>` | `core/separator` |
 | `<table>` | `core/table` |
+| WordPress shortcodes | `core/shortcode` |
 | high-confidence semantic/layout wrappers | `core/group`, `core/columns`, `core/column`, `core/cover`, `core/spacer` |
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
@@ -159,6 +160,22 @@ add_filter('html_to_blocks_supported_post_types', function($post_types) {
 
 Default: all public REST-enabled post types via `get_post_types(['show_in_rest' => true, 'public' => true])`
 
+### `html_to_blocks_unsupported_html_fallback`
+
+Observe unsupported or intentionally ambiguous fragments that are preserved as
+`core/html` instead of guessed.
+
+```php
+add_action('html_to_blocks_unsupported_html_fallback', function($html, $context, $block) {
+    error_log('h2bc fallback: ' . ($context['reason'] ?? 'unknown'));
+}, 10, 3);
+```
+
+### `html_to_blocks_loaded`
+
+Runs after the version registry initializes the winning h2bc copy. Receives the
+loaded version string.
+
 ## Architecture
 
 The plugin uses WordPress Core's HTML API for parsing:
@@ -178,10 +195,10 @@ multiple plugins bundle the package while the standalone plugin is also active;
 everyone gets the newest loaded conversion library and no duplicate class/function
 definitions.
 
-`html-to-blocks-converter.php` is the plugin shell. It loads `library.php`, then
-loads `includes/hooks.php` to register the automatic `wp_insert_post_data` and
-REST editor-read integrations. Composer consumers never load the plugin shell,
-so package mode stays hook-free.
+`html-to-blocks-converter.php` is the plugin shell. It performs the standalone
+plugin's WordPress/PHP guard checks, then loads `library.php`. Composer consumers
+skip the plugin shell but still load the raw handler and automatic hooks through
+the library initializer.
 
 ### Why WordPress HTML API?
 
