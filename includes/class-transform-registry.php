@@ -133,18 +133,20 @@ class HTML_To_Blocks_Transform_Registry {
 						&& self::is_file_link( $element );
 				},
 				'transform' => function ( $element ) {
-					$attributes = [
-						'href'               => $element->get_attribute( 'href' ),
-						'textLinkHref'       => $element->get_attribute( 'href' ),
-						'fileName'           => $element->get_inner_html(),
-						'showDownloadButton' => true,
-					];
-
-					if ( $element->has_attribute( 'target' ) ) {
-						$attributes['textLinkTarget'] = $element->get_attribute( 'target' );
-					}
-
-					return HTML_To_Blocks_Block_Factory::create_block( 'core/file', $attributes );
+					return self::create_file_block_from_anchor( $element );
+				},
+			],
+			[
+				'blockName' => 'core/file',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					$anchor = $element->get_tag_name() === 'P' ? $element->query_selector( 'a' ) : null;
+					return $anchor
+						&& self::is_file_link( $anchor )
+						&& trim( $element->get_inner_html() ) === trim( $anchor->get_outer_html() );
+				},
+				'transform' => function ( $element ) {
+					return self::create_file_block_from_anchor( $element->query_selector( 'a' ) );
 				},
 			],
 			[
@@ -351,6 +353,27 @@ class HTML_To_Blocks_Transform_Registry {
 
 		$class = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
 		return $element->has_attribute( 'download' ) && preg_match( '/(?:^|\s)(?:download|file)(?:$|\s)/i', $class ) === 1;
+	}
+
+	/**
+	 * Creates a file block from a downloadable anchor.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $anchor Link element.
+	 * @return array Block array.
+	 */
+	private static function create_file_block_from_anchor( $anchor ): array {
+		$attributes = [
+			'href'               => $anchor->get_attribute( 'href' ),
+			'textLinkHref'       => $anchor->get_attribute( 'href' ),
+			'fileName'           => $anchor->get_inner_html(),
+			'showDownloadButton' => true,
+		];
+
+		if ( $anchor->has_attribute( 'target' ) ) {
+			$attributes['textLinkTarget'] = $anchor->get_attribute( 'target' );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/file', $attributes );
 	}
 
 	/**
