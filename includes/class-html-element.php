@@ -303,7 +303,7 @@ class HTML_To_Blocks_HTML_Element {
 
 			if ( $class_match ) {
 				$class_attr = $processor->get_attribute( 'class' );
-				if ( ! $class_attr || ! preg_match( '/(?:^|\s)' . preg_quote( $class_match, '/' ) . '(?:$|\s)/', $class_attr ) ) {
+				if ( ! is_string( $class_attr ) || ! preg_match( '/(?:^|\s)' . preg_quote( $class_match, '/' ) . '(?:$|\s)/', $class_attr ) ) {
 					continue;
 				}
 			}
@@ -325,72 +325,6 @@ class HTML_To_Blocks_HTML_Element {
 		}
 
 		return $results;
-	}
-
-	/**
-	 * Extracts the full HTML of an element at the processor's current position
-	 *
-	 * @param string            $html      Source HTML
-	 * @param WP_HTML_Processor $processor Processor at target element
-	 * @return string|null Element HTML or null
-	 */
-	private static function extract_element_html_at_position( string $html, WP_HTML_Processor $processor ): ?string {
-		$tag_name = $processor->get_tag();
-		if ( ! $tag_name ) {
-			return null;
-		}
-
-		$bookmark_name = 'element_start_' . wp_unique_id();
-		if ( ! $processor->set_bookmark( $bookmark_name ) ) {
-			return null;
-		}
-
-		$void_elements = [
-			'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT',
-			'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR',
-		];
-
-		if ( in_array( strtoupper( $tag_name ), $void_elements, true ) ) {
-			$processor->release_bookmark( $bookmark_name );
-			$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?\/?>/i';
-			if ( preg_match( $pattern, $html, $matches ) ) {
-				return $matches[0];
-			}
-			return null;
-		}
-
-		$start_depth = $processor->get_current_depth();
-		$found_close = false;
-
-		while ( $processor->next_tag( [ 'tag_closers' => 'visit' ] ) ) {
-			if ( $processor->get_current_depth() < $start_depth ) {
-				$found_close = true;
-				break;
-			}
-			if ( $processor->is_tag_closer() && 
-				 strtoupper( $processor->get_tag() ) === strtoupper( $tag_name ) && 
-				 $processor->get_current_depth() === $start_depth - 1 ) {
-				$found_close = true;
-				break;
-			}
-		}
-
-		$processor->seek( $bookmark_name );
-		$processor->release_bookmark( $bookmark_name );
-
-		if ( ! $found_close ) {
-			$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>.*?<\/' . preg_quote( $tag_name, '/' ) . '>/is';
-			if ( preg_match( $pattern, $html, $matches ) ) {
-				return $matches[0];
-			}
-		}
-
-		$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>.*?<\/' . preg_quote( $tag_name, '/' ) . '>/is';
-		if ( preg_match( $pattern, $html, $matches ) ) {
-			return $matches[0];
-		}
-
-		return null;
 	}
 
 	/**
@@ -439,43 +373,6 @@ class HTML_To_Blocks_HTML_Element {
 		}
 
 		return $children;
-	}
-
-	/**
-	 * Extracts element HTML from a fragment at current processor position
-	 *
-	 * @param string            $fragment_html Source fragment HTML
-	 * @param WP_HTML_Processor $processor     Processor at target element
-	 * @param string            $tag_name      Tag name of the element
-	 * @return string|null Element HTML or null
-	 */
-	private static function extract_element_html_from_fragment( string $fragment_html, WP_HTML_Processor $processor, string $tag_name ): ?string {
-		$void_elements = [
-			'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT',
-			'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR',
-		];
-
-		$tag_upper = strtoupper( $tag_name );
-
-		if ( in_array( $tag_upper, $void_elements, true ) ) {
-			$attributes = self::extract_attributes( $processor );
-			$attr_string = '';
-			foreach ( $attributes as $name => $value ) {
-				if ( $value === true || $value === '' ) {
-					$attr_string .= ' ' . $name;
-				} else {
-					$attr_string .= ' ' . $name . '="' . esc_attr( $value ) . '"';
-				}
-			}
-			return '<' . strtolower( $tag_name ) . $attr_string . '>';
-		}
-
-		$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>.*?<\/' . preg_quote( $tag_name, '/' ) . '>/is';
-		if ( preg_match( $pattern, $fragment_html, $matches ) ) {
-			return $matches[0];
-		}
-
-		return null;
 	}
 
 	/**
