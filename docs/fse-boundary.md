@@ -38,8 +38,9 @@ candidates, and context-required block families lives in the
 | `core/table` | Raw-transformable | `<table>` maps to a static table block. |
 | `core/html` | Safe fallback | Unknown or intentionally unsupported fragments are preserved as custom HTML instead of guessed. |
 | Layout-only static containers | Raw-transformable with conservative heuristics | Groups, columns, covers, buttons, and similar layout blocks may be added only when the HTML pattern is unambiguous and the fallback remains lossless. |
+| `core/pattern` | Explicit-marker raw-transformable | Requires `data-bfb-pattern="namespace/slug"`. Similar-looking layout is not enough. |
+| `core/template-part` | Explicit-marker raw-transformable | Requires `data-bfb-template-part="area-or-slug"`. Header/footer-looking layout is not enough. |
 | Static `core/navigation` | Explicit-marker raw-transformable | `<nav>` may become inline `core/navigation` only when it contains exactly one direct static list of links. h2bc never attaches a persistent `ref`. |
-| `core/template-part` | Context-required | Requires header, footer, sidebar, or other template-part role. |
 | Persistent `core/navigation*` | Context-required | Requires menu intent, site route knowledge, menu-location policy, and `wp_navigation` post lifecycle ownership. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Context-required | Requires site identity metadata. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | Context-required | Requires current template and post context. |
@@ -89,12 +90,13 @@ owns the `wp_navigation` entity lifecycle and site policy decisions.
 | Block family | Classification | Why |
 |---|---|---|
 | Static `core/navigation` list links | Explicit-marker supported | The fragment carries the exact link tree and requires no site state. |
+| `core/pattern` | Explicit-marker supported | Requires `data-bfb-pattern="namespace/slug"`; h2bc does not choose patterns by visual similarity. |
+| `core/template-part` | Explicit-marker supported | Requires `data-bfb-template-part="area-or-slug"`; h2bc does not split regions by visual similarity. |
 | Persistent `core/navigation` refs | Compiler-only | Requires `wp_navigation` post lifecycle, route knowledge, and menu policy. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Compiler-only | Requires site identity metadata; rendered HTML is only static output. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | Compiler-only | Requires current post/template context. |
 | `core/query`, `core/post-template`, query pagination/title blocks | Compiler-only | Requires query args, loop intent, and content-model context. |
 | `core/comments` and `core/comment-*` blocks | Compiler-only | Requires comment-query context and per-comment state. |
-| `core/template-part` | Compiler-only | Requires named template-part role and theme file placement. |
 | Dynamic utility blocks | Unsupported | Raw HTML does not carry site-data intent for archives, latest posts, RSS, search, calendars, login state, or tag clouds. |
 
 ## Future FSE Compiler Layer
