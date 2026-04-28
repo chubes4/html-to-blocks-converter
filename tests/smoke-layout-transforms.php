@@ -139,13 +139,16 @@ $handler = static function ( $args ) {
 // recurse through the normal raw handler.
 // --------------------------------------------------------------------------
 
-$section         = new Layout_Smoke_Element( 'section', [ 'id' => 'intro', 'class' => 'intro-section' ], '<h2>Intro</h2><p>Hello</p>' );
+$section         = new Layout_Smoke_Element( 'section', [ 'id' => 'intro', 'class' => 'intro-section alignwide', 'aria-label' => 'Introduction' ], '<h2>Intro</h2><p>Hello</p>' );
 $group_transform = $find_transform( $section, 'core/group' );
 $group           = $group_transform ? call_user_func( $group_transform['transform'], $section, $handler ) : null;
 
 $smoke_assert( $group && $group['blockName'] === 'core/group', 'section-to-group' );
 $smoke_assert( ( $group['attrs']['anchor'] ?? '' ) === 'intro', 'group-preserves-anchor' );
 $smoke_assert( strpos( $group['attrs']['className'] ?? '', 'intro-section' ) !== false, 'group-preserves-class' );
+$smoke_assert( ( $group['attrs']['align'] ?? '' ) === 'wide', 'group-preserves-align' );
+$smoke_assert( ( $group['attrs']['tagName'] ?? '' ) === 'section', 'group-preserves-tag-name' );
+$smoke_assert( ( $group['attrs']['ariaLabel'] ?? '' ) === 'Introduction', 'group-preserves-aria-label' );
 $smoke_assert( count( $group['innerBlocks'] ?? [] ) === 1, 'group-preserves-inner-blocks' );
 $smoke_assert( ( $group['innerBlocks'][0]['blockName'] ?? '' ) === 'core/heading', 'group-inner-heading' );
 
@@ -194,6 +197,7 @@ $cover           = $cover_transform ? call_user_func( $cover_transform['transfor
 
 $smoke_assert( $cover && $cover['blockName'] === 'core/cover', 'hero-to-cover' );
 $smoke_assert( ( $cover['attrs']['anchor'] ?? '' ) === 'hero', 'cover-preserves-anchor' );
+$smoke_assert( ( $cover['attrs']['tagName'] ?? '' ) === 'section', 'cover-preserves-tag-name' );
 $smoke_assert( ( $cover['attrs']['url'] ?? '' ) === '/hero.jpg', 'cover-preserves-background-image' );
 $smoke_assert( ( $cover['attrs']['customOverlayColor'] ?? '' ) === '#123456', 'cover-preserves-background-color' );
 $smoke_assert( ( $cover['innerBlocks'][0]['blockName'] ?? '' ) === 'core/heading', 'cover-preserves-inner-heading' );
