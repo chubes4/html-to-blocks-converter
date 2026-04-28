@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-28
+
+### Added
+- preserve explicit block support signals
+- support explicit Site Editor markers
+- convert static navigation HTML
+- map mechanical block supports from HTML
+
+### Changed
+- cover explicit Site Editor primitive markers
+
 ## [0.5.1] - 2026-04-28
 
 ### Changed
