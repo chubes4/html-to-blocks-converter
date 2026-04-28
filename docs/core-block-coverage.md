@@ -48,6 +48,8 @@ fragments are preserved as `core/html` rather than guessed.
 | `core/media-text` | `supported` | `.wp-block-media-text` or `media-text` wrapper containing image or video media plus content | `tests/smoke-media-embed-transforms.php` | Inner text content recurses through the raw handler. |
 | `core/file` | `supported` | Anchor whose `href` has a recognized downloadable file extension | `tests/smoke-media-embed-transforms.php` | Ordinary CTA or navigation links do not become file blocks. |
 | `core/embed` | `supported` | `<iframe src>` for a recognized provider URL | `tests/smoke-media-embed-transforms.php` | Recognized providers are normalized into static embed URLs; unknown iframes fall back. |
+| `core/pattern` | `explicit-marker supported` | `data-bfb-pattern="namespace/slug"` | `tests/smoke-site-editor-marker-transforms.php` | Pattern markers require explicit namespaced slugs. h2bc does not infer reusable patterns from repeated or named layout. |
+| `core/template-part` | `explicit-marker supported` | `data-bfb-template-part="area-or-slug"` | `tests/smoke-site-editor-marker-transforms.php` | Template-part markers are explicit declarations. Standard areas set `area`; custom values are treated as slugs. |
 | `core/navigation`, `core/navigation-link`, `core/navigation-submenu` | `explicit-marker supported` | One `<nav>` with exactly one direct `<ul>` or `<ol>` whose direct `<li>` children contain one `<a href>` plus an optional nested list | `tests/smoke-static-navigation-transforms.php` | Static inline navigation only. h2bc never sets `ref`, creates `wp_navigation` posts, chooses menu locations, or infers site routes. Mixed-content nav falls back. |
 
 ## Mechanical Block Support Mappings
@@ -92,7 +94,6 @@ intent, then delegate static fragments back to h2bc.
 
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
 |---|---|---|---|---|
-| `core/template-part` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Requires header, footer, sidebar, or named template-part role. Explicit markers belong to a higher-level FSE compiler, not the raw handler. |
 | Persistent `core/navigation` entities | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Requires menu intent, route knowledge, menu-location selection, and `wp_navigation` post lifecycle. h2bc supports only inline static nav markup listed above. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Site identity blocks require site metadata. A rendered heading or image is not enough. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, and content blocks require current post/template context. |
@@ -110,12 +111,13 @@ rendered output.
 | Block family | Classification | h2bc boundary |
 |---|---|---|
 | Static `core/navigation` with `core/navigation-link` / `core/navigation-submenu` children | `explicit-marker supported` | Supported only for one direct list inside `<nav>`. Output is inline block markup with no `ref` and no `wp_navigation` persistence. |
+| `core/pattern` | `explicit-marker supported` | Supported only from `data-bfb-pattern="namespace/slug"`. Repeated or pattern-looking static layout remains ordinary static blocks. |
+| `core/template-part` | `explicit-marker supported` | Supported only from `data-bfb-template-part="area-or-slug"`. Region detection remains compiler-only without the explicit marker. |
 | Persistent `core/navigation` refs | `compiler-only` | Requires a higher-level integration that owns `wp_navigation` creation/reuse and menu-location policy. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | Requires site identity metadata. Explicit HTML markers should be consumed by an FSE compiler that knows the target site. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | `compiler-only` | Requires current post/template context. Rendered headings, images, and excerpts remain static blocks in h2bc. |
 | `core/query`, `core/post-template`, query pagination/title blocks | `compiler-only` | Requires loop intent, query args, and content-model context. Repeated cards remain static layout/content blocks. |
 | `core/comments` and `core/comment-*` blocks | `compiler-only` | Requires comment-query context and per-comment state. Rendered comment HTML is not enough. |
-| `core/template-part` | `compiler-only` | Requires named template-part role and theme file placement. Region splitting belongs above h2bc. |
 | Dynamic utility blocks (`core/latest-posts`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`) | `unsupported` | h2bc has no site-data intent or runtime state. A separate product contract must choose these blocks deliberately. |
 
 ## Future Candidates

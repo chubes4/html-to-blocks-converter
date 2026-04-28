@@ -26,6 +26,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		self::$transforms = array_merge(
+			self::get_site_editor_marker_transforms(),
 			self::get_heading_transforms(),
 			self::get_navigation_transforms(),
 			self::get_list_transforms(),
@@ -52,6 +53,76 @@ class HTML_To_Blocks_Transform_Registry {
 		);
 
 		return self::$transforms;
+	}
+
+	/**
+	 * Explicit Site Editor primitive marker transforms.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_site_editor_marker_transforms() {
+		return [
+			[
+				'blockName' => 'core/pattern',
+				'priority'  => 1,
+				'isMatch'   => function ( $element ) {
+					return self::get_pattern_marker_slug( $element ) !== '';
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/pattern',
+						[ 'slug' => self::get_pattern_marker_slug( $element ) ]
+					);
+				},
+			],
+			[
+				'blockName' => 'core/template-part',
+				'priority'  => 1,
+				'isMatch'   => function ( $element ) {
+					return self::get_template_part_marker_slug( $element ) !== '';
+				},
+				'transform' => function ( $element ) {
+					$slug       = self::get_template_part_marker_slug( $element );
+					$attributes = [ 'slug' => $slug ];
+
+					if ( in_array( $slug, [ 'header', 'footer', 'sidebar' ], true ) ) {
+						$attributes['area'] = $slug;
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/template-part', $attributes );
+				},
+			],
+		];
+	}
+
+	/**
+	 * Gets a valid explicit pattern marker slug.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return string Pattern slug or empty string.
+	 */
+	private static function get_pattern_marker_slug( $element ): string {
+		if ( ! $element->has_attribute( 'data-bfb-pattern' ) ) {
+			return '';
+		}
+
+		$slug = trim( (string) $element->get_attribute( 'data-bfb-pattern' ) );
+		return preg_match( '/^[a-z0-9_.-]+\/[a-z0-9_.\/-]+$/i', $slug ) === 1 ? $slug : '';
+	}
+
+	/**
+	 * Gets a valid explicit template-part marker slug.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return string Template-part slug or empty string.
+	 */
+	private static function get_template_part_marker_slug( $element ): string {
+		if ( ! $element->has_attribute( 'data-bfb-template-part' ) ) {
+			return '';
+		}
+
+		$slug = trim( (string) $element->get_attribute( 'data-bfb-template-part' ) );
+		return preg_match( '/^[a-z0-9_.-]+$/i', $slug ) === 1 ? $slug : '';
 	}
 
 	/**

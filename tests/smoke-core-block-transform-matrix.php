@@ -107,7 +107,6 @@ foreach ( $observed_fallbacks as $fallback_label ) {
 }
 
 $context_required_blocks = [
-	'core/template-part',
 	'core/site-title',
 	'core/site-logo',
 	'core/site-tagline',
@@ -133,9 +132,14 @@ foreach ( $context_required_blocks as $block_name ) {
 	$assert( ! isset( $raw_transform_blocks[ $block_name ] ), 'no-raw-transform-for-context-required-' . $block_name );
 }
 
-foreach ( [ 'core/template-part', 'core/site-title', 'core/post-title', 'core/query', 'core/comments' ] as $doc_example ) {
+foreach ( [ 'core/site-title', 'core/post-title', 'core/query', 'core/comments' ] as $doc_example ) {
 	$assert_contains( $coverage_doc, '`' . $doc_example, 'coverage-doc-names-context-required-' . $doc_example );
 	$assert_contains( $fse_doc, '`' . $doc_example, 'fse-doc-names-context-required-' . $doc_example );
+}
+
+foreach ( [ 'core/pattern', 'core/template-part' ] as $doc_example ) {
+	$assert_contains( $coverage_doc, '`' . $doc_example, 'coverage-doc-names-explicit-marker-' . $doc_example );
+	$assert_contains( $fse_doc, '`' . $doc_example, 'fse-doc-names-explicit-marker-' . $doc_example );
 }
 
 foreach ( [ 'core/navigation', 'core/navigation-link', 'core/navigation-submenu' ] as $doc_example ) {
