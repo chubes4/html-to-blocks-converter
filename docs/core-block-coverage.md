@@ -1,7 +1,20 @@
 # Core Block Coverage Matrix
 
-This matrix is the source of truth for which WordPress core blocks
-`html-to-blocks-converter` may infer from raw HTML.
+This matrix is the human-readable summary of which WordPress core blocks
+`html-to-blocks-converter` may infer from raw HTML. The machine-readable gate
+lives in:
+
+- `docs/core-block-inventory.json` — generated from WordPress core
+  `wp-includes/blocks/*/block.json` metadata.
+- `docs/core-block-classification.json` — the committed classification map that
+  must cover every generated core block.
+
+Run `php tests/smoke-core-block-inventory.php` after changing either file. To
+refresh the inventory fixture from a local WordPress checkout, run:
+
+```bash
+php tools/generate-core-block-inventory.php /path/to/wp-includes/blocks > docs/core-block-inventory.json
+```
 
 `html-to-blocks-converter` is a deterministic raw-transform layer. It converts
 HTML only when the fragment itself contains enough signal to choose a block
