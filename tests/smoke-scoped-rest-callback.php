@@ -66,7 +66,7 @@ function html_to_blocks_convert_content( string $content ): string {
 
 $source         = file_get_contents( dirname( __DIR__ ) . '/includes/hooks.php' );
 $test_namespace = __NAMESPACE__;
-$source         = preg_replace( '/^<\?php\s*/', "<?php\nnamespace {$test_namespace};\n", $source, 1 );
+$source         = preg_replace( '/^<\?php\s*(?:namespace\s+[^;]+;\s*)?/', "<?php\nnamespace {$test_namespace};\n", $source, 1 );
 
 $tmp = tempnam( sys_get_temp_dir(), 'h2bc-scoped-hooks-' );
 file_put_contents( $tmp, $source );
