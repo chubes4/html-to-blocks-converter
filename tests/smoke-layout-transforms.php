@@ -152,6 +152,17 @@ $smoke_assert( ( $group['attrs']['ariaLabel'] ?? '' ) === 'Introduction', 'group
 $smoke_assert( count( $group['innerBlocks'] ?? [] ) === 1, 'group-preserves-inner-blocks' );
 $smoke_assert( ( $group['innerBlocks'][0]['blockName'] ?? '' ) === 'core/heading', 'group-inner-heading' );
 
+$stack_group_element   = new Layout_Smoke_Element( 'div', [ 'class' => 'wp-block-group is-layout-flex is-vertical is-nowrap is-content-justification-space-between custom-stack' ], '<p>Stacked copy</p>' );
+$stack_group_transform = $find_transform( $stack_group_element, 'core/group' );
+$stack_group           = $stack_group_transform ? call_user_func( $stack_group_transform['transform'], $stack_group_element, $handler ) : null;
+
+$smoke_assert( $stack_group && $stack_group['blockName'] === 'core/group', 'explicit-wp-layout-group-to-group' );
+$smoke_assert( ( $stack_group['attrs']['layout']['type'] ?? '' ) === 'flex', 'group-preserves-layout-type' );
+$smoke_assert( ( $stack_group['attrs']['layout']['orientation'] ?? '' ) === 'vertical', 'group-preserves-layout-orientation' );
+$smoke_assert( ( $stack_group['attrs']['layout']['flexWrap'] ?? '' ) === 'nowrap', 'group-preserves-layout-nowrap' );
+$smoke_assert( ( $stack_group['attrs']['layout']['justifyContent'] ?? '' ) === 'space-between', 'group-preserves-layout-justification' );
+$smoke_assert( ( $stack_group['attrs']['className'] ?? '' ) === 'custom-stack', 'group-filters-generated-layout-classes' );
+
 $main             = new Layout_Smoke_Element( 'main', [ 'class' => 'site-shell' ], '<section class="hero"><h1>FSE Template Smoke</h1><p>Template raw HTML should become blocks.</p></section>' );
 $main_transform   = $find_transform( $main, 'core/group' );
 $main_group       = $main_transform ? call_user_func( $main_transform['transform'], $main, $handler ) : null;
@@ -218,11 +229,14 @@ $smoke_assert( ( $spacer['attrs']['height'] ?? '' ) === '48px', 'spacer-preserve
 // --------------------------------------------------------------------------
 
 $ambiguous = new Layout_Smoke_Element( 'div', [], '<p>Ambiguous</p>' );
+$ambiguous_flex = new Layout_Smoke_Element( 'div', [ 'style' => 'display:flex; gap: 2rem;' ], '<p>Ambiguous flex</p>' );
 
 $smoke_assert( $find_transform( $ambiguous, 'core/group' ) === null, 'ambiguous-div-not-group' );
 $smoke_assert( $find_transform( $ambiguous, 'core/columns' ) === null, 'ambiguous-div-not-columns' );
 $smoke_assert( $find_transform( $ambiguous, 'core/cover' ) === null, 'ambiguous-div-not-cover' );
 $smoke_assert( $find_transform( $ambiguous, 'core/spacer' ) === null, 'ambiguous-div-not-spacer' );
+$smoke_assert( $find_transform( $ambiguous_flex, 'core/group' ) === null, 'display-flex-div-not-group' );
+$smoke_assert( $find_transform( $ambiguous_flex, 'core/columns' ) === null, 'display-flex-div-not-columns' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {

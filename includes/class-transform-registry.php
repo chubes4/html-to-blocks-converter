@@ -698,7 +698,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					$level      = (int) substr( $element->get_tag_name(), 1 );
 					$content    = $element->get_inner_html();
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
+					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
 					$attributes = array_merge( $attributes, [
 						'level'   => $level,
 						'content' => $content,
@@ -1608,8 +1608,10 @@ class HTML_To_Blocks_Transform_Registry {
 			'class_name'   => true,
 			'align'        => true,
 			'colors'       => true,
+			'typography'   => true,
 			'spacing'      => true,
 			'border'       => true,
+			'layout'       => true,
 			'tag_name'     => $element->get_tag_name() !== 'DIV',
 			'aria_label'   => true,
 		];
@@ -1655,16 +1657,20 @@ class HTML_To_Blocks_Transform_Registry {
 			$attributes['ariaLabel'] = $element->get_attribute( 'aria-label' );
 		}
 
+		if ( ! empty( $options['colors'] ) ) {
+			self::apply_color_support_attributes( $attributes, $style, $classes );
+		}
+
+		if ( ! empty( $options['typography'] ) ) {
+			self::apply_typography_support_attributes( $attributes, $style, $classes );
+		}
+
 		if ( $style !== '' ) {
 			if ( ! empty( $options['text_align'] ) ) {
 				$text_align = self::extract_css_property( $style, 'text-align' );
 				if ( in_array( strtolower( $text_align ), [ 'left', 'center', 'right' ], true ) ) {
 					$attributes['textAlign'] = strtolower( $text_align );
 				}
-			}
-
-			if ( ! empty( $options['colors'] ) ) {
-				self::apply_color_support_attributes( $attributes, $style );
 			}
 
 			if ( ! empty( $options['spacing'] ) ) {
@@ -1674,6 +1680,10 @@ class HTML_To_Blocks_Transform_Registry {
 			if ( ! empty( $options['border'] ) ) {
 				self::apply_border_support_attributes( $attributes, $style );
 			}
+		}
+
+		if ( ! empty( $options['layout'] ) ) {
+			self::apply_layout_support_attributes( $attributes, $classes );
 		}
 
 		return $attributes;
@@ -1693,6 +1703,8 @@ class HTML_To_Blocks_Transform_Registry {
 				return $class !== ''
 					&& preg_match( '/^[A-Za-z0-9_-]+$/', $class ) === 1
 					&& preg_match( '/^align(?:wide|full|left|center|right)$/i', $class ) !== 1
+					&& preg_match( '/^has-(?:[A-Za-z0-9_-]+-(?:color|background-color|font-size)|text-color|background|custom-font-size)$/i', $class ) !== 1
+					&& preg_match( '/^is-(?:layout-(?:flow|constrained|flex)|vertical|horizontal|nowrap|content-justification-[A-Za-z0-9_-]+)$/i', $class ) !== 1
 					&& stripos( $class, 'wp-block-' ) !== 0;
 			}
 		);
@@ -1712,12 +1724,23 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Applies direct color declarations to block support style attributes.
+	 * Applies direct color declarations and explicit WordPress color preset classes.
 	 *
 	 * @param array  $attributes Block attributes.
 	 * @param string $style Source style attribute.
+	 * @param string $classes Source class attribute.
 	 */
-	private static function apply_color_support_attributes( array &$attributes, string $style ): void {
+	private static function apply_color_support_attributes( array &$attributes, string $style, string $classes = '' ): void {
+		$text_color = self::extract_preset_class_slug( $classes, 'color' );
+		if ( $text_color !== '' ) {
+			$attributes['textColor'] = $text_color;
+		}
+
+		$background_color = self::extract_preset_class_slug( $classes, 'background-color' );
+		if ( $background_color !== '' ) {
+			$attributes['backgroundColor'] = $background_color;
+		}
+
 		$color = self::extract_css_property( $style, 'color' );
 		if ( $color !== '' ) {
 			$attributes['style']['color']['text'] = $color;
@@ -1726,6 +1749,27 @@ class HTML_To_Blocks_Transform_Registry {
 		$background = self::extract_background_color( $style );
 		if ( $background !== '' ) {
 			$attributes['style']['color']['background'] = $background;
+		}
+	}
+
+	/**
+	 * Applies explicit WordPress typography preset classes/vars.
+	 *
+	 * @param array  $attributes Block attributes.
+	 * @param string $style Source style attribute.
+	 * @param string $classes Source class attribute.
+	 */
+	private static function apply_typography_support_attributes( array &$attributes, string $style, string $classes = '' ): void {
+		$font_size = self::extract_preset_class_slug( $classes, 'font-size' );
+		if ( $font_size !== '' ) {
+			$attributes['fontSize'] = $font_size;
+			return;
+		}
+
+		$font_size_value = self::extract_css_property( $style, 'font-size' );
+		$font_size_token = self::normalise_wp_preset_var( $font_size_value, 'font-size' );
+		if ( $font_size_token !== '' ) {
+			$attributes['fontSize'] = $font_size_token;
 		}
 	}
 
@@ -1747,13 +1791,41 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 
 			if ( ! empty( $side_values ) ) {
+				foreach ( $side_values as $side => $side_value ) {
+					$side_values[ $side ] = self::normalise_wp_preset_var( $side_value, 'spacing' ) ?: $side_value;
+				}
 				$attributes['style']['spacing'][ $kind ] = $side_values;
 				continue;
 			}
 
 			if ( $value !== '' ) {
-				$attributes['style']['spacing'][ $kind ] = $value;
+				$attributes['style']['spacing'][ $kind ] = self::normalise_wp_preset_var( $value, 'spacing' ) ?: $value;
 			}
+		}
+	}
+
+	/**
+	 * Applies explicit WordPress layout classes emitted by block supports.
+	 *
+	 * @param array  $attributes Block attributes.
+	 * @param string $classes Source class attribute.
+	 */
+	private static function apply_layout_support_attributes( array &$attributes, string $classes ): void {
+		if ( preg_match( '/(?:^|\s)is-layout-(flow|constrained|flex)(?:\s|$)/i', $classes, $matches ) ) {
+			$type = strtolower( $matches[1] );
+			$attributes['layout']['type'] = $type === 'flow' ? 'default' : $type;
+		}
+
+		if ( preg_match( '/(?:^|\s)is-(vertical|horizontal)(?:\s|$)/i', $classes, $matches ) ) {
+			$attributes['layout']['orientation'] = strtolower( $matches[1] );
+		}
+
+		if ( preg_match( '/(?:^|\s)is-content-justification-(left|right|center|space-between)(?:\s|$)/i', $classes, $matches ) ) {
+			$attributes['layout']['justifyContent'] = strtolower( $matches[1] );
+		}
+
+		if ( preg_match( '/(?:^|\s)is-nowrap(?:\s|$)/i', $classes ) ) {
+			$attributes['layout']['flexWrap'] = 'nowrap';
 		}
 	}
 
@@ -1787,6 +1859,38 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function extract_css_property( string $style, string $name ): string {
 		$pattern = '/(?:^|;)\s*' . preg_quote( $name, '/' ) . '\s*:\s*([^;]+)/i';
 		return preg_match( $pattern, $style, $matches ) ? trim( $matches[1] ) : '';
+	}
+
+	/**
+	 * Extracts a WordPress preset slug from generated block-support classes.
+	 *
+	 * @param string $classes Source class attribute.
+	 * @param string $kind Preset class kind: color, background-color, or font-size.
+	 * @return string Preset slug or empty string.
+	 */
+	private static function extract_preset_class_slug( string $classes, string $kind ): string {
+		$pattern = $kind === 'background-color'
+			? '/(?:^|\s)has-([A-Za-z0-9_-]+)-background-color(?:\s|$)/i'
+			: '/(?:^|\s)has-([A-Za-z0-9_-]+)-' . preg_quote( $kind, '/' ) . '(?:\s|$)/i';
+
+		if ( ! preg_match( $pattern, $classes, $matches ) ) {
+			return '';
+		}
+
+		$slug = strtolower( $matches[1] );
+		return in_array( $slug, [ 'text', 'background', 'custom' ], true ) ? '' : $slug;
+	}
+
+	/**
+	 * Converts explicit WordPress preset CSS vars to block attribute token syntax.
+	 *
+	 * @param string $value CSS value.
+	 * @param string $kind Preset kind, such as spacing or font-size.
+	 * @return string Block preset token or empty string.
+	 */
+	private static function normalise_wp_preset_var( string $value, string $kind ): string {
+		$pattern = '/^var\(\s*--wp--preset--' . preg_quote( $kind, '/' ) . '--([A-Za-z0-9_-]+)\s*\)$/i';
+		return preg_match( $pattern, trim( $value ), $matches ) ? 'var:preset|' . $kind . '|' . strtolower( $matches[1] ) : '';
 	}
 
 	/**
@@ -1950,7 +2054,7 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$content    = $element->get_inner_html();
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
+					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
 					$attributes['content'] = $content;
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );

@@ -125,8 +125,8 @@ $heading = new Block_Supports_Smoke_Element(
 	'h2',
 	[
 		'id'    => 'intro',
-		'class' => 'wp-block-heading alignwide custom-heading unsafe@class',
-		'style' => 'text-align: center; color: #123456; background-color: rgba(1, 2, 3, .4); margin-top: 1rem; padding: 2rem; border-color: red; border-style: solid; border-width: 2px; border-radius: 4px; transform: rotate(1deg);',
+		'class' => 'wp-block-heading alignwide custom-heading unsafe@class has-primary-color has-secondary-background-color has-large-font-size has-text-color has-background',
+		'style' => 'text-align: center; color: #123456; background-color: rgba(1, 2, 3, .4); margin-top: var(--wp--preset--spacing--40); padding: 2rem; border-color: red; border-style: solid; border-width: 2px; border-radius: 4px; transform: rotate(1deg); display: grid; position: absolute;',
 	],
 	'Heading'
 );
@@ -138,15 +138,35 @@ $assert( ( $heading_block['attrs']['anchor'] ?? '' ) === 'intro', 'heading-ancho
 $assert( ( $heading_block['attrs']['align'] ?? '' ) === 'wide', 'heading-align-wide' );
 $assert( ( $heading_block['attrs']['textAlign'] ?? '' ) === 'center', 'heading-text-align' );
 $assert( ( $heading_block['attrs']['className'] ?? '' ) === 'custom-heading', 'heading-safe-class-filter' );
+$assert( ( $heading_block['attrs']['textColor'] ?? '' ) === 'primary', 'heading-preset-text-color' );
+$assert( ( $heading_block['attrs']['backgroundColor'] ?? '' ) === 'secondary', 'heading-preset-background-color' );
+$assert( ( $heading_block['attrs']['fontSize'] ?? '' ) === 'large', 'heading-preset-font-size' );
 $assert( ( $heading_block['attrs']['style']['color']['text'] ?? '' ) === '#123456', 'heading-text-color' );
 $assert( ( $heading_block['attrs']['style']['color']['background'] ?? '' ) === 'rgba(1, 2, 3, .4)', 'heading-background-color' );
-$assert( ( $heading_block['attrs']['style']['spacing']['margin']['top'] ?? '' ) === '1rem', 'heading-margin-top' );
+$assert( ( $heading_block['attrs']['style']['spacing']['margin']['top'] ?? '' ) === 'var:preset|spacing|40', 'heading-margin-top-preset-var' );
 $assert( ( $heading_block['attrs']['style']['spacing']['padding'] ?? '' ) === '2rem', 'heading-padding' );
 $assert( ( $heading_block['attrs']['style']['border']['color'] ?? '' ) === 'red', 'heading-border-color' );
 $assert( ( $heading_block['attrs']['style']['border']['style'] ?? '' ) === 'solid', 'heading-border-style' );
 $assert( ( $heading_block['attrs']['style']['border']['width'] ?? '' ) === '2px', 'heading-border-width' );
 $assert( ( $heading_block['attrs']['style']['border']['radius'] ?? '' ) === '4px', 'heading-border-radius' );
 $assert( ! isset( $heading_block['attrs']['style']['transform'] ), 'heading-ignores-noisy-style' );
+$assert( ! isset( $heading_block['attrs']['style']['display'] ), 'heading-ignores-display-style' );
+$assert( ! isset( $heading_block['attrs']['style']['position'] ), 'heading-ignores-position-style' );
+
+$paragraph = new Block_Supports_Smoke_Element(
+	'p',
+	[
+		'class' => 'has-heading-2-font-size readable-copy',
+		'style' => 'font-size: var(--wp--preset--font-size--heading-2);',
+	],
+	'Paragraph'
+);
+$paragraph_transform = $find_transform( $paragraph, 'core/paragraph' );
+$paragraph_block     = $paragraph_transform ? call_user_func( $paragraph_transform['transform'], $paragraph ) : null;
+
+$assert( $paragraph_block && $paragraph_block['blockName'] === 'core/paragraph', 'paragraph-transform-found' );
+$assert( ( $paragraph_block['attrs']['fontSize'] ?? '' ) === 'heading-2', 'paragraph-preset-font-size-class-wins' );
+$assert( ( $paragraph_block['attrs']['className'] ?? '' ) === 'readable-copy', 'paragraph-filters-preset-font-class' );
 
 $group = new Block_Supports_Smoke_Element(
 	'section',
