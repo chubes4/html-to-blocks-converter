@@ -228,6 +228,9 @@ class HTML_To_Blocks_Attribute_Parser {
         }
 
         $selector_groups = preg_split( '/\s*,\s*/', trim( $selector ) );
+        if ( false === $selector_groups ) {
+            return [];
+        }
         $all_matches     = [];
 
         foreach ( $selector_groups as $group ) {
@@ -258,6 +261,9 @@ class HTML_To_Blocks_Attribute_Parser {
      */
     private static function query_selector_chain( $root, $selector ) {
         $tokens = preg_split( '/\s+/', trim( str_replace( '>', ' > ', $selector ) ) );
+        if ( false === $tokens ) {
+            return [];
+        }
         $tokens = array_values( array_filter( $tokens, static function ( $token ) {
             return $token !== '';
         } ) );

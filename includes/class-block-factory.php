@@ -581,7 +581,7 @@ class HTML_To_Blocks_Block_Factory {
 	/**
 	 * Gets the inner HTML content from an element
 	 *
-	 * @param HTML_To_Blocks_HTML_Element|string $element Element or HTML string
+	 * @param mixed $element Element or HTML string
 	 * @return string Inner HTML
 	 */
 	public static function get_inner_html( $element ) {
@@ -600,7 +600,7 @@ class HTML_To_Blocks_Block_Factory {
 	/**
 	 * Gets text content from an element
 	 *
-	 * @param HTML_To_Blocks_HTML_Element|string $element Element or HTML string
+	 * @param mixed $element Element or HTML string
 	 * @return string Text content
 	 */
 	public static function get_text_content( $element ) {
