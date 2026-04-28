@@ -86,6 +86,13 @@ through an Action-Scheduler-style version registry. The winning library version
 loads the raw handler and the automatic write/read hooks so bundled consumers get
 the same HTML → blocks behavior as the standalone plugin.
 
+The package is also safe when bundled by another plugin through php-scoper, such
+as Block Format Bridge. Any callback string handed to WordPress hook APIs must be
+namespace-aware because WordPress invokes those callbacks later, after the source
+has been rewritten into the consumer's vendor namespace. h2bc builds hook
+callbacks from `__NAMESPACE__` so the same source works as the standalone plugin
+and as a scoped dependency.
+
 ## Usage
 
 The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. No configuration required for public REST-enabled post types.
@@ -131,6 +138,11 @@ This means the block editor always shows proper blocks — even when `post_conte
 
 The REST filters are registered at `init` priority 20 to ensure all custom post types are available.
 
+REST callbacks are registered with fully-qualified function names in scoped
+package mode. Do not pass bare callback strings across WordPress APIs unless they
+are derived from `__NAMESPACE__`; php-scoper rewrites function declarations but
+WordPress stores and invokes the callback string later.
+
 ### Package Mode
 
 When loaded by Composer inside WordPress, the version registry loads both the
@@ -147,6 +159,18 @@ $blocks = html_to_blocks_raw_handler([
 Consumers such as `block-format-bridge` call the raw handler directly for their
 own adapter pipeline, but the package still registers h2bc's normal hooks for
 plain HTML write/read paths.
+
+When adding new hooks in package mode, follow the existing namespace-safe pattern:
+
+```php
+$callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_example' : 'html_to_blocks_example';
+add_filter( 'some_wordpress_hook', $callback );
+```
+
+Avoid callback registration that depends on root-global function names or file
+globals staying unchanged after scoping. A scoped consumer may load the same file
+under a vendor namespace, and WordPress will only call the exact callback string
+that was registered.
 
 ## Filters
 

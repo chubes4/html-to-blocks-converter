@@ -6,6 +6,10 @@
  * Composer-package mode. Guards keep older standalone plugin copies and
  * bundled package copies from double-registering callbacks.
  *
+ * Callback strings that cross WordPress hook APIs are built from
+ * __NAMESPACE__. That keeps the same source valid as a root-global standalone
+ * plugin and as a php-scoped dependency bundled by another plugin.
+ *
  * @package HTML_To_Blocks_Converter
  */
 
@@ -71,6 +75,11 @@ $html_to_blocks_convert_rest_callback  = __NAMESPACE__ ? __NAMESPACE__ . '\\html
  *
  * Runs at priority 10 — after any upstream filters (e.g. markdown → HTML
  * at priority 5) have already converted to HTML.
+ *
+ * The registered REST callback is recomputed from __NAMESPACE__ inside this
+ * function because WordPress stores the callback string and invokes it later.
+ * Bare root-global names work in standalone mode but become empty or missing
+ * callbacks after php-scoper rewrites the functions into a vendor namespace.
  */
 if ( ! function_exists( $html_to_blocks_register_rest_callback ) ) {
 	function html_to_blocks_register_rest_filters() {
