@@ -38,8 +38,9 @@ candidates, and context-required block families lives in the
 | `core/table` | Raw-transformable | `<table>` maps to a static table block. |
 | `core/html` | Safe fallback | Unknown or intentionally unsupported fragments are preserved as custom HTML instead of guessed. |
 | Layout-only static containers | Raw-transformable with conservative heuristics | Groups, columns, covers, buttons, and similar layout blocks may be added only when the HTML pattern is unambiguous and the fallback remains lossless. |
+| Static `core/navigation` | Explicit-marker raw-transformable | `<nav>` may become inline `core/navigation` only when it contains exactly one direct static list of links. h2bc never attaches a persistent `ref`. |
 | `core/template-part` | Context-required | Requires header, footer, sidebar, or other template-part role. |
-| `core/navigation*` | Context-required | Requires menu intent, link hierarchy, and site route knowledge. |
+| Persistent `core/navigation*` | Context-required | Requires menu intent, site route knowledge, menu-location policy, and `wp_navigation` post lifecycle ownership. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Context-required | Requires site identity metadata. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | Context-required | Requires current template and post context. |
 | `core/query*`, `core/post-template` | Context-required | Requires content model and loop intent. |
@@ -50,6 +51,51 @@ candidates, and context-required block families lives in the
 The important rule is that rendered HTML is not identity. The same `<h1>` could
 be a static heading, site title, post title, or query title. This package should
 choose `core/heading` because that is the only answer proven by the fragment.
+
+## Static Navigation Boundary
+
+Static navigation is the one navigation shape h2bc can convert safely because
+the source fragment fully describes the output and requires no persistence:
+
+```html
+<nav aria-label="Primary">
+  <ul>
+    <li><a href="/about/">About</a></li>
+    <li><a href="/products/">Products</a>
+      <ul>
+        <li><a href="/products/a/">Product A</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+```
+
+This converts to inline `core/navigation` block markup with
+`core/navigation-link` and `core/navigation-submenu` children. The conversion is
+mechanical and side-effect free:
+
+- No `wp_navigation` posts are created, queried, or reused.
+- No `ref` attribute is set on `core/navigation`.
+- No menu location, current menu, site route, homepage, or global navigation
+  intent is inferred.
+- Mixed-content nav, branding-plus-menu nav, search/action nav, or list items
+  without direct links fall back instead of being guessed.
+
+Persistent navigation belongs to a higher-level WordPress integration layer that
+owns the `wp_navigation` entity lifecycle and site policy decisions.
+
+## Theme Block Classification
+
+| Block family | Classification | Why |
+|---|---|---|
+| Static `core/navigation` list links | Explicit-marker supported | The fragment carries the exact link tree and requires no site state. |
+| Persistent `core/navigation` refs | Compiler-only | Requires `wp_navigation` post lifecycle, route knowledge, and menu policy. |
+| `core/site-title`, `core/site-logo`, `core/site-tagline` | Compiler-only | Requires site identity metadata; rendered HTML is only static output. |
+| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | Compiler-only | Requires current post/template context. |
+| `core/query`, `core/post-template`, query pagination/title blocks | Compiler-only | Requires query args, loop intent, and content-model context. |
+| `core/comments` and `core/comment-*` blocks | Compiler-only | Requires comment-query context and per-comment state. |
+| `core/template-part` | Compiler-only | Requires named template-part role and theme file placement. |
+| Dynamic utility blocks | Unsupported | Raw HTML does not carry site-data intent for archives, latest posts, RSS, search, calendars, login state, or tag clouds. |
 
 ## Future FSE Compiler Layer
 

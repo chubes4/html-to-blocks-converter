@@ -73,6 +73,9 @@ $supported_matrix = [
 	'core/media-text'   => 'raw-transform',
 	'core/file'         => 'raw-transform',
 	'core/embed'        => 'raw-transform',
+	'core/navigation'   => 'raw-transform',
+	'core/navigation-link' => 'generated-inner-block',
+	'core/navigation-submenu' => 'generated-inner-block',
 ];
 
 foreach ( $supported_matrix as $block_name => $coverage_kind ) {
@@ -96,6 +99,7 @@ $observed_fallbacks = [
 	'Unknown `<iframe>` providers',
 	'Arbitrary wrappers',
 	'Ordinary links',
+	'Mixed-content navigation',
 ];
 
 foreach ( $observed_fallbacks as $fallback_label ) {
@@ -104,7 +108,6 @@ foreach ( $observed_fallbacks as $fallback_label ) {
 
 $context_required_blocks = [
 	'core/template-part',
-	'core/navigation',
 	'core/site-title',
 	'core/site-logo',
 	'core/site-tagline',
@@ -130,10 +133,19 @@ foreach ( $context_required_blocks as $block_name ) {
 	$assert( ! isset( $raw_transform_blocks[ $block_name ] ), 'no-raw-transform-for-context-required-' . $block_name );
 }
 
-foreach ( [ 'core/template-part', 'core/navigation', 'core/site-title', 'core/post-title', 'core/query', 'core/comments' ] as $doc_example ) {
+foreach ( [ 'core/template-part', 'core/site-title', 'core/post-title', 'core/query', 'core/comments' ] as $doc_example ) {
 	$assert_contains( $coverage_doc, '`' . $doc_example, 'coverage-doc-names-context-required-' . $doc_example );
 	$assert_contains( $fse_doc, '`' . $doc_example, 'fse-doc-names-context-required-' . $doc_example );
 }
+
+foreach ( [ 'core/navigation', 'core/navigation-link', 'core/navigation-submenu' ] as $doc_example ) {
+	$assert_contains( $coverage_doc, '`' . $doc_example, 'coverage-doc-names-static-navigation-' . $doc_example );
+}
+
+$assert_contains( $coverage_doc, 'Persistent `core/navigation` entities', 'coverage-doc-names-persistent-navigation-boundary' );
+$assert_contains( $fse_doc, 'Persistent `core/navigation', 'fse-doc-names-persistent-navigation-boundary' );
+$assert_contains( $coverage_doc, 'Theme And Context Block Classification', 'coverage-doc-classifies-theme-context-blocks' );
+$assert_contains( $fse_doc, 'Theme Block Classification', 'fse-doc-classifies-theme-blocks' );
 
 $future_candidates = [
 	'Additional embed providers',
@@ -145,7 +157,7 @@ foreach ( $future_candidates as $future_candidate ) {
 	$assert_contains( $coverage_doc, $future_candidate, 'doc-names-future-candidate-' . $future_candidate );
 }
 
-foreach ( [ 'supported', 'fallback-observed', 'context-required', 'future candidate' ] as $status ) {
+foreach ( [ 'supported', 'fallback-observed', 'context-required', 'explicit-marker supported', 'compiler-only', 'unsupported', 'future candidate' ] as $status ) {
 	$assert_contains( $coverage_doc, '`' . $status . '`', 'doc-defines-status-' . $status );
 }
 
