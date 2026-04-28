@@ -86,6 +86,11 @@ through an Action-Scheduler-style version registry. The winning library version
 loads the raw handler and the automatic write/read hooks so bundled consumers get
 the same HTML → blocks behavior as the standalone plugin.
 
+When h2bc is bundled through php-scoper, callbacks registered with WordPress hook
+APIs must resolve inside the scoped namespace. Build hook callback strings from
+`__NAMESPACE__` so the same source works as the standalone plugin and as a scoped
+dependency.
+
 ## Usage
 
 The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. No configuration required for public REST-enabled post types.
@@ -144,9 +149,8 @@ $blocks = html_to_blocks_raw_handler([
 ]);
 ```
 
-Consumers such as `block-format-bridge` call the raw handler directly for their
-own adapter pipeline, but the package still registers h2bc's normal hooks for
-plain HTML write/read paths.
+Package consumers can call the raw handler directly for adapter pipelines, while
+h2bc still registers its normal hooks for plain HTML write/read paths.
 
 ## Filters
 

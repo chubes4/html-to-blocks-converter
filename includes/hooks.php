@@ -6,6 +6,9 @@
  * Composer-package mode. Guards keep older standalone plugin copies and
  * bundled package copies from double-registering callbacks.
  *
+ * Callback strings passed to WordPress hook APIs are built from __NAMESPACE__
+ * so scoped package copies register callable names that still exist later.
+ *
  * @package HTML_To_Blocks_Converter
  */
 
@@ -71,6 +74,9 @@ $html_to_blocks_convert_rest_callback  = __NAMESPACE__ ? __NAMESPACE__ . '\\html
  *
  * Runs at priority 10 — after any upstream filters (e.g. markdown → HTML
  * at priority 5) have already converted to HTML.
+ *
+ * The REST callback is computed from __NAMESPACE__ because WordPress stores the
+ * callback string and invokes it later.
  */
 if ( ! function_exists( $html_to_blocks_register_rest_callback ) ) {
 	function html_to_blocks_register_rest_filters() {
@@ -87,10 +93,8 @@ if ( ! function_exists( $html_to_blocks_register_rest_callback ) ) {
 	}
 }
 
-// Priority 20: run after all plugins have registered their custom post types
-// at the default init priority (10). Without this, CPTs registered by other
-// plugins (e.g. Intelligence's wiki post type) won't exist yet when
-// get_post_types() is called, and their REST response filter won't be added.
+// Priority 20: run after plugins have registered custom post types at the
+// default init priority (10), so get_post_types() sees the full REST surface.
 if ( function_exists( 'add_action' ) && ( ! function_exists( 'has_action' ) || false === has_action( 'init', $html_to_blocks_register_rest_callback ) ) ) {
 	add_action( 'init', $html_to_blocks_register_rest_callback, 20 );
 }
