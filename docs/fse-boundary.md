@@ -41,7 +41,7 @@ candidates, and context-required block families lives in the
 | `core/template-part` | Context-required | Requires header, footer, sidebar, or other template-part role. |
 | `core/navigation*` | Context-required | Requires menu intent, link hierarchy, and site route knowledge. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Context-required | Requires site identity metadata. |
-| `core/post-*` | Context-required | Requires current template and post context. |
+| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | Context-required | Requires current template and post context. |
 | `core/query*`, `core/post-template` | Context-required | Requires content model and loop intent. |
 | `core/comments*`, `core/comment-*` | Context-required | Requires comment-template context. |
 | Dynamic utility blocks | Context-required | Archives, categories, latest posts, RSS, tag cloud, loginout, and similar blocks require site data intent. |
