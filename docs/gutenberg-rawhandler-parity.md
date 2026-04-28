@@ -47,8 +47,8 @@ claim support until a separate fixture and implementation lands:
 - Google Docs, Microsoft Word, Apple Pages, LibreOffice, Slack, and Evernote
   cleanup passes.
 - Browser clipboard image data.
-- Markdown paste conversion as a source format. Block Format Bridge owns
-  Markdown input orchestration through its Markdown adapter.
+- Markdown paste conversion as a source format. h2bc consumes HTML; format
+  orchestration belongs to callers.
 - Dynamic, contextual, or FSE block inference such as navigation, template
   parts, query loops, site identity blocks, post data blocks, comments, and
   dynamic utility blocks.
