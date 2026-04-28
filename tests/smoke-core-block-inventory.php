@@ -2,7 +2,7 @@
 /**
  * Smoke test: generated core block inventory and classification gate.
  *
- * Run: php tests/smoke-core-block-inventory.php
+ * Run: H2BC_CORE_BLOCKS_DIR=/path/to/wp-includes/blocks php tests/smoke-core-block-inventory.php
  */
 
 // phpcs:disable
@@ -10,6 +10,8 @@
 $repo_root  = dirname( __DIR__ );
 $failures   = [];
 $assertions = 0;
+
+require_once $repo_root . '/tools/generate-core-block-inventory.php';
 
 $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 	$assertions++;
@@ -35,7 +37,10 @@ $read_required_file = static function ( string $path ) use ( $assert ): string {
 	return is_string( $contents ) ? $contents : '';
 };
 
-$inventory      = $read_json( $repo_root . '/docs/core-block-inventory.json' );
+$blocks_dir = getenv( 'H2BC_CORE_BLOCKS_DIR' );
+$assert( is_string( $blocks_dir ) && is_dir( $blocks_dir ), 'core-blocks-dir-configured', 'Set H2BC_CORE_BLOCKS_DIR=/path/to/wp-includes/blocks' );
+
+$inventory      = is_string( $blocks_dir ) && is_dir( $blocks_dir ) ? html_to_blocks_generate_core_block_inventory( $blocks_dir ) : [];
 $classification = $read_json( $repo_root . '/docs/core-block-classification.json' );
 $registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' );
 $raw_source      = $read_required_file( $repo_root . '/raw-handler.php' );
@@ -74,7 +79,8 @@ foreach ( $inventory_blocks as $block_name => $block ) {
 
 foreach ( $classifications as $block_name => $entry ) {
 	$is_historical = ! empty( $entry['historical'] );
-	$assert( isset( $inventory_blocks[ $block_name ] ) || $is_historical, 'classification-not-stale-' . $block_name );
+	$is_forward_compatible = ! empty( $entry['introduced_after'] );
+	$assert( isset( $inventory_blocks[ $block_name ] ) || $is_historical || $is_forward_compatible, 'classification-not-stale-' . $block_name );
 
 	$bucket = $entry['bucket'] ?? '';
 	$assert( isset( $valid_buckets[ $bucket ] ), 'classification-valid-bucket-' . $block_name, (string) $bucket );

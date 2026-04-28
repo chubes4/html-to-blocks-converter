@@ -11,11 +11,20 @@
 class CoreBlockInventoryUnitTest extends WP_UnitTestCase {
 
 	/**
+	 * Loads the inventory generator.
+	 */
+	public static function set_up_before_class(): void {
+		parent::set_up_before_class();
+
+		require_once dirname( __DIR__ ) . '/tools/generate-core-block-inventory.php';
+	}
+
+	/**
 	 * Every inventory block must have one valid classification, and stale entries
 	 * must be intentionally marked historical.
 	 */
 	public function test_inventory_and_classification_are_aligned(): void {
-		$inventory       = $this->read_json( dirname( __DIR__ ) . '/docs/core-block-inventory.json' );
+		$inventory       = html_to_blocks_generate_core_block_inventory( ABSPATH . WPINC . '/blocks' );
 		$classification  = $this->read_json( dirname( __DIR__ ) . '/docs/core-block-classification.json' );
 		$inventory_names = array();
 
@@ -42,8 +51,8 @@ class CoreBlockInventoryUnitTest extends WP_UnitTestCase {
 
 		foreach ( $classifications as $block_name => $entry ) {
 			$this->assertTrue(
-				isset( $inventory_names[ $block_name ] ) || ! empty( $entry['historical'] ),
-				$block_name . ' is not in the inventory and is not marked historical.'
+				isset( $inventory_names[ $block_name ] ) || ! empty( $entry['historical'] ) || ! empty( $entry['introduced_after'] ),
+				$block_name . ' is not in the inventory and is not marked historical or forward-compatible.'
 			);
 
 			$this->assertArrayHasKey( $entry['bucket'] ?? '', $valid_buckets, $block_name . ' must use a valid bucket.' );

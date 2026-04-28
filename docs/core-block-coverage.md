@@ -2,18 +2,17 @@
 
 This matrix is the human-readable summary of which WordPress core blocks
 `html-to-blocks-converter` may infer from raw HTML. The machine-readable gate
-lives in:
+is:
 
-- `docs/core-block-inventory.json` — generated from WordPress core
-  `wp-includes/blocks/*/block.json` metadata.
-- `docs/core-block-classification.json` — the committed classification map that
-  must cover every generated core block.
+- Runtime-generated inventory from the WordPress core under test:
+  `wp-includes/blocks/*/block.json`.
+- `docs/core-block-classification.json` — the committed h2bc classification map
+  that must cover every generated core block.
 
-Run `php tests/smoke-core-block-inventory.php` after changing either file. To
-refresh the inventory fixture from a local WordPress checkout, run:
+Run this after changing the classification map or generator:
 
 ```bash
-php tools/generate-core-block-inventory.php /path/to/wp-includes/blocks > docs/core-block-inventory.json
+H2BC_CORE_BLOCKS_DIR=/path/to/wp-includes/blocks php tests/smoke-core-block-inventory.php
 ```
 
 `html-to-blocks-converter` is a deterministic raw-transform layer. It converts
