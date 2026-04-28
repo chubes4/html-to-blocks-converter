@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-28
+
+### Added
+- expose unsupported html fallback hook
+- add media embed raw transforms
+- add action text raw transforms
+- add conservative layout raw transforms
+- support dual-mode package loading
+
+### Changed
+- isolate scoped REST smoke globals
+- make scoped REST smoke prefix-safe
+- keep scoped REST smoke namespace-safe
+- add Gutenberg rawHandler parity fixtures
+- run smoke tests on pull requests
+- cover raw handler fixture fallbacks
+
+### Fixed
+- register scoped REST callback safely
+- support landmark containers
+- namespace-safe callback for php-scoper compatibility
+- register hooks in package mode
+- make package autoload no-op outside WordPress
+
 ## [0.4.0] - 2026-04-15
 
 ### Added
