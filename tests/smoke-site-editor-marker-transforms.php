@@ -117,6 +117,9 @@ $assert( $pattern_block['attrs']['slug'] === 'theme/pricing-table', 'pattern-mar
 $invalid_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => 'pricing-table' ], '<h2>Pricing</h2>' );
 $assert( $find_transform( $invalid_pattern, 'core/pattern' ) === null, 'pattern-marker-requires-namespace' );
 
+$blank_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => '   ' ], '<h2>Pricing</h2>' );
+$assert( $find_transform( $blank_pattern, 'core/pattern' ) === null, 'blank-pattern-marker-falls-through' );
+
 $header_element   = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-bfb-template-part' => 'header' ], '<h1>Site</h1>' );
 $header_transform = $find_transform( $header_element, 'core/template-part' );
 $header_block     = $header_transform ? call_user_func( $header_transform['transform'], $header_element ) : null;
@@ -126,6 +129,16 @@ $assert( $header_block['blockName'] === 'core/template-part', 'template-part-mar
 $assert( $header_block['attrs']['slug'] === 'header', 'template-part-marker-slug' );
 $assert( $header_block['attrs']['area'] === 'header', 'template-part-marker-area' );
 
+foreach ( [ 'footer', 'sidebar' ] as $area ) {
+	$area_element   = new Site_Editor_Marker_Smoke_Element( $area === 'sidebar' ? 'aside' : $area, [ 'data-bfb-template-part' => $area ], '<p>' . $area . '</p>' );
+	$area_transform = $find_transform( $area_element, 'core/template-part' );
+	$area_block     = $area_transform ? call_user_func( $area_transform['transform'], $area_element ) : null;
+
+	$assert( $area_transform !== null, $area . '-template-part-transform-selected' );
+	$assert( $area_block['attrs']['slug'] === $area, $area . '-template-part-marker-slug' );
+	$assert( $area_block['attrs']['area'] === $area, $area . '-template-part-marker-area' );
+}
+
 $custom_template = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-template-part' => 'landing-hero' ], '<h1>Hero</h1>' );
 $custom_block    = call_user_func( $find_transform( $custom_template, 'core/template-part' )['transform'], $custom_template );
 $assert( $custom_block['attrs']['slug'] === 'landing-hero', 'custom-template-part-slug' );
@@ -134,8 +147,22 @@ $assert( ! isset( $custom_block['attrs']['area'] ), 'custom-template-part-has-no
 $unmarked_header = new Site_Editor_Marker_Smoke_Element( 'header', [], '<h1>Site</h1>' );
 $assert( $find_transform( $unmarked_header, 'core/template-part' ) === null, 'unmarked-header-not-template-part' );
 
+foreach ( [ 'footer', 'aside' ] as $tag_name ) {
+	$unmarked_template_part = new Site_Editor_Marker_Smoke_Element( $tag_name, [], '<p>Content</p>' );
+	$assert( $find_transform( $unmarked_template_part, 'core/template-part' ) === null, 'unmarked-' . $tag_name . '-not-template-part' );
+}
+
 $unmarked_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'class' => 'pricing-table' ], '<h2>Pricing</h2>' );
 $assert( $find_transform( $unmarked_pattern, 'core/pattern' ) === null, 'unmarked-pattern-lookalike-not-pattern' );
+
+$wp_pattern_alias = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-wp-pattern' => 'theme/pricing-table' ], '<h2>Pricing</h2>' );
+$assert( $find_transform( $wp_pattern_alias, 'core/pattern' ) === null, 'wp-pattern-alias-not-accepted' );
+
+$wp_template_part_alias = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-wp-template-part' => 'header' ], '<h1>Site</h1>' );
+$assert( $find_transform( $wp_template_part_alias, 'core/template-part' ) === null, 'wp-template-part-alias-not-accepted' );
+
+$malformed_template_part = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-template-part' => 'template/part' ], '<h1>Hero</h1>' );
+$assert( $find_transform( $malformed_template_part, 'core/template-part' ) === null, 'malformed-template-part-falls-through' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
