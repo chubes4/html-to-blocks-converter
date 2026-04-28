@@ -65,8 +65,8 @@ intent, then delegate static fragments back to h2bc.
 |---|---|---|---|---|
 | `core/template-part` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Requires header, footer, sidebar, or named template-part role. |
 | `core/navigation*` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Requires menu intent, route knowledge, link hierarchy, and often persistent navigation entities. |
-| `core/site-*` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Site title, logo, and tagline require site identity metadata. A rendered heading or image is not enough. |
-| `core/post-*` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, and content blocks require current post/template context. |
+| `core/site-title`, `core/site-logo`, `core/site-tagline` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Site identity blocks require site metadata. A rendered heading or image is not enough. |
+| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, and content blocks require current post/template context. |
 | `core/query*` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Query, query title, post template, pagination, and related blocks require loop intent and content-model context. |
 | `core/comments*` | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Comment template blocks require comment-query context and per-comment state. |
 | Dynamic utility blocks | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Latest posts, archives, categories, RSS, tag cloud, loginout, search, calendar, and similar blocks require site data intent. |
