@@ -135,6 +135,9 @@ class HTML_To_Blocks_Block_Factory {
 			case 'core/embed':
 				return self::generate_embed_html( $attributes );
 
+			case 'core/navigation-link':
+				return self::generate_navigation_link_html( $attributes );
+
 			case 'core/shortcode':
 				return $attributes['text'] ?? '';
 
@@ -379,6 +382,32 @@ class HTML_To_Blocks_Block_Factory {
 		return '<figure class="' . esc_attr( $class ) . '"><div class="wp-block-embed__wrapper">' . esc_url( $url ) . '</div></figure>';
 	}
 
+	/**
+	 * Generates HTML for a static navigation-link block.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML.
+	 */
+	private static function generate_navigation_link_html( $attributes ) {
+		return '<li class="wp-block-navigation-item wp-block-navigation-link">' . self::generate_navigation_link_anchor_html( $attributes ) . '</li>';
+	}
+
+	/**
+	 * Generates the anchor HTML shared by navigation-link and navigation-submenu.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Anchor HTML.
+	 */
+	private static function generate_navigation_link_anchor_html( $attributes ) {
+		$url    = $attributes['url'] ?? '';
+		$label  = $attributes['label'] ?? '';
+		$target = ! empty( $attributes['opensInNewTab'] ) ? ' target="_blank"' : '';
+		$rel    = ! empty( $attributes['rel'] ) ? ' rel="' . esc_attr( $attributes['rel'] ) . '"' : '';
+		$title  = ! empty( $attributes['title'] ) ? ' title="' . esc_attr( $attributes['title'] ) . '"' : '';
+
+		return '<a class="wp-block-navigation-item__content" href="' . esc_url( $url ) . '"' . $target . $rel . $title . '><span class="wp-block-navigation-item__label">' . $label . '</span></a>';
+	}
+
     /**
      * Generates wrapper HTML for blocks with inner blocks
      *
@@ -464,6 +493,20 @@ class HTML_To_Blocks_Block_Factory {
 				return [
 					'opening' => '<div class="' . esc_attr( $class ) . '"><figure class="wp-block-media-text__media">' . $media_html . '</figure><div class="wp-block-media-text__content">',
 					'closing' => '</div></div>',
+				];
+
+			case 'core/navigation':
+				$aria_label = ! empty( $attributes['ariaLabel'] ) ? ' aria-label="' . esc_attr( $attributes['ariaLabel'] ) . '"' : '';
+				return [
+					'opening' => '<nav class="wp-block-navigation"' . $aria_label . '><ul class="wp-block-navigation__container wp-block-navigation">',
+					'closing' => '</ul></nav>',
+				];
+
+			case 'core/navigation-submenu':
+				$link = self::generate_navigation_link_anchor_html( $attributes );
+				return [
+					'opening' => '<li class="wp-block-navigation-item has-child wp-block-navigation-submenu">' . $link . '<ul class="wp-block-navigation__submenu-container">',
+					'closing' => '</ul></li>',
 				];
 
 			default:
