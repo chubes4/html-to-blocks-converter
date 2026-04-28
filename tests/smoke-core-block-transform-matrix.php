@@ -14,11 +14,6 @@
 // phpcs:disable
 
 $repo_root       = dirname( __DIR__ );
-$registry_source = file_get_contents( $repo_root . '/includes/class-transform-registry.php' );
-$raw_source      = file_get_contents( $repo_root . '/raw-handler.php' );
-$coverage_doc    = file_get_contents( $repo_root . '/docs/core-block-coverage.md' );
-$fse_doc         = file_get_contents( $repo_root . '/docs/fse-boundary.md' );
-
 $failures   = [];
 $assertions = 0;
 
@@ -32,6 +27,18 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 $assert_contains = static function ( string $haystack, string $needle, string $label ) use ( $assert ) {
 	$assert( strpos( $haystack, $needle ) !== false, $label, 'Missing ' . $needle );
 };
+
+$read_required_file = static function ( string $path ) use ( $assert ): string {
+	$contents = file_get_contents( $path );
+	$assert( is_string( $contents ) && $contents !== '', basename( $path ) . '-readable', 'Unable to read ' . $path );
+
+	return is_string( $contents ) ? $contents : '';
+};
+
+$registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' );
+$raw_source      = $read_required_file( $repo_root . '/raw-handler.php' );
+$coverage_doc    = $read_required_file( $repo_root . '/docs/core-block-coverage.md' );
+$fse_doc         = $read_required_file( $repo_root . '/docs/fse-boundary.md' );
 
 $raw_transform_blocks = [];
 preg_match_all( "/'blockName'\s*=>\s*'([^']+)'/", $registry_source, $matches );
