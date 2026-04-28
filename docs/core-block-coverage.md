@@ -46,6 +46,30 @@ fragments are preserved as `core/html` rather than guessed.
 | `core/file` | `supported` | Anchor whose `href` has a recognized downloadable file extension | `tests/smoke-media-embed-transforms.php` | Ordinary CTA or navigation links do not become file blocks. |
 | `core/embed` | `supported` | `<iframe src>` for a recognized provider URL | `tests/smoke-media-embed-transforms.php` | Recognized providers are normalized into static embed URLs; unknown iframes fall back. |
 
+## Mechanical Block Support Mappings
+
+h2bc maps only direct, mechanical HTML attributes into block support attributes.
+It does not infer theme tokens, palette slugs, typography presets, or creative
+layout intent.
+
+Supported direct mappings:
+
+- `alignwide`, `alignfull`, `alignleft`, `aligncenter`, and `alignright` classes map to `align` where the target transform opts in.
+- Safe source classes map to `className`; generated `wp-block-*` classes, alignment classes, and invalid class names are discarded.
+- `id` maps to `anchor` where the target block supports anchors.
+- `text-align: left|center|right` maps to `textAlign` on text transforms.
+- `color` and `background` / `background-color` map to `style.color` custom values.
+- `margin`, `margin-*`, `padding`, and `padding-*` map to `style.spacing` custom values.
+- `border-color`, `border-style`, `border-width`, and `border-radius` map to `style.border` custom values.
+- Semantic container tags (`section`, `main`, `article`, `aside`, `header`, `footer`, `nav`) map to `tagName` on group-like transforms that support wrapper semantics.
+- Safe supported ARIA wrapper attributes (`aria-label`) are preserved on group-like transforms.
+
+Intentionally deferred mappings:
+
+- Theme palette, spacing, typography, or border preset token inference.
+- Arbitrary CSS properties such as transforms, positioning, display, and custom properties.
+- Layout intent that is not already explicit in the selected transform's source signal.
+
 ## Observed Fallbacks
 
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
