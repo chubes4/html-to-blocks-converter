@@ -65,14 +65,16 @@ Supported direct mappings:
 - `id` maps to `anchor` where the target block supports anchors.
 - `text-align: left|center|right` maps to `textAlign` on text transforms.
 - `color` and `background` / `background-color` map to `style.color` custom values.
-- `margin`, `margin-*`, `padding`, and `padding-*` map to `style.spacing` custom values.
+- Explicit WordPress preset classes such as `has-primary-color`, `has-primary-background-color`, and `has-large-font-size` map back to their block-support preset slugs.
+- `margin`, `margin-*`, `padding`, and `padding-*` map to `style.spacing` custom values; exact WordPress spacing preset vars such as `var(--wp--preset--spacing--40)` map to `var:preset|spacing|40`.
 - `border-color`, `border-style`, `border-width`, and `border-radius` map to `style.border` custom values.
 - Semantic container tags (`section`, `main`, `article`, `aside`, `header`, `footer`, `nav`) map to `tagName` on group-like transforms that support wrapper semantics.
 - Safe supported ARIA wrapper attributes (`aria-label`) are preserved on group-like transforms.
+- Explicit WordPress layout classes such as `is-layout-flex`, `is-vertical`, `is-nowrap`, and `is-content-justification-*` map to `layout` attributes on group-like transforms.
 
 Intentionally deferred mappings:
 
-- Theme palette, spacing, typography, or border preset token inference.
+- Theme palette, spacing, typography, or border preset token inference when the source does not already contain an exact WordPress preset class or var.
 - Arbitrary CSS properties such as transforms, positioning, display, and custom properties.
 - Layout intent that is not already explicit in the selected transform's source signal.
 
