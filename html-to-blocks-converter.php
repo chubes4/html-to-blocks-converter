@@ -31,7 +31,7 @@ if ( version_compare( get_bloginfo( 'version' ), HTML_TO_BLOCKS_CONVERTER_MIN_WP
 			printf(
 				/* translators: %s: minimum WordPress version */
 				esc_html__( 'HTML to Blocks Converter requires WordPress %s or higher.', 'html-to-blocks-converter' ),
-				HTML_TO_BLOCKS_CONVERTER_MIN_WP
+				esc_html( HTML_TO_BLOCKS_CONVERTER_MIN_WP )
 			);
 			echo '</p></div>';
 		}
