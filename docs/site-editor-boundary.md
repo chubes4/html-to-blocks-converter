@@ -1,8 +1,9 @@
-# FSE Boundary
+# Site Editor Boundary
 
 `html-to-blocks-converter` is a raw-transform library. It converts deterministic
 HTML fragments into Gutenberg block arrays and falls back safely when a fragment
-does not match a known transform. It is not a full-site-editing compiler.
+does not match a known transform. It is not a block theme or Site Editor
+compiler.
 
 ## Raw Handler Pattern
 
@@ -99,18 +100,18 @@ owns the `wp_navigation` entity lifecycle and site policy decisions.
 | `core/comments` and `core/comment-*` blocks | Compiler-only | Requires comment-query context and per-comment state. |
 | Dynamic utility blocks | Unsupported | Raw HTML does not carry site-data intent for archives, latest posts, RSS, search, calendars, login state, or tag clouds. |
 
-## Future FSE Compiler Layer
+## Future Block Theme Compiler Layer
 
-Full-site-editing generation belongs above this package and above format bridges
-that use it. A site compiler can carry the intent that raw HTML lacks:
+Block theme generation belongs above this package and above format bridges that
+use it. A site compiler can carry the intent that raw HTML lacks:
 
 ```text
 static HTML/CSS/site spec
-  -> FSE compiler
+  -> block theme compiler
       -> split regions: header, footer, main, templates, parts
       -> infer theme.json tokens: palette, typography, spacing
       -> call h2bc for static fragments
-      -> insert explicit FSE blocks where intent is known
+      -> insert explicit Site Editor blocks where intent is known
   -> block theme files
       -> theme.json
       -> templates/*.html
@@ -126,6 +127,6 @@ made those intent-aware decisions, it can still delegate static fragments to
 
 Keep h2bc focused on deterministic raw transforms. Template identity, query
 semantics, navigation intent, and theme design-token extraction should live in a
-separate FSE compiler package or plugin layered above h2bc and Block Format
+separate block theme compiler package or plugin layered above h2bc and Block Format
 Bridge. That keeps this package small, predictable, and safe as a reusable
 conversion primitive.

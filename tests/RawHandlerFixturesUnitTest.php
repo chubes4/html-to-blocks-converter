@@ -122,10 +122,10 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/paragraph' ),
 				'snippets'       => array( 'Grouped copy' ),
 			),
-			'fse-landmark'     => array(
-				'html'           => '<main class="site-shell"><section class="hero"><h1>FSE Template Smoke</h1><p>Template raw HTML should become blocks.</p></section></main>',
+			'site-editor-landmark' => array(
+				'html'           => '<main class="site-shell"><section class="hero"><h1>Site Editor Template Smoke</h1><p>Template raw HTML should become blocks.</p></section></main>',
 				'expected_names' => array( 'core/group', 'core/group', 'core/heading', 'core/paragraph' ),
-				'snippets'       => array( 'site-shell', 'hero', 'FSE Template Smoke', 'Template raw HTML should become blocks.' ),
+				'snippets'       => array( 'site-shell', 'hero', 'Site Editor Template Smoke', 'Template raw HTML should become blocks.' ),
 			),
 			'columns'          => array(
 				'html'           => '<div class="wp-block-columns"><div class="wp-block-column"><p>Left</p></div><div class="wp-block-column"><p>Right</p></div></div>',
