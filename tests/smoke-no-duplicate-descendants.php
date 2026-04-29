@@ -105,12 +105,14 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 		$output = '';
 		foreach ( $blocks as $block ) {
 			$name = $block['blockName'] ?? '';
+			$attrs = array_diff_key( $block['attrs'] ?? [], [ 'content' => true ] );
+			$attrs_json = empty( $attrs ) ? '' : ' ' . json_encode( $attrs, JSON_UNESCAPED_SLASHES );
 			if ( $name === 'core/html' ) {
 				$output .= '<!-- wp:html -->' . ( $block['attrs']['content'] ?? $block['innerHTML'] ?? '' ) . '<!-- /wp:html -->';
 				continue;
 			}
 
-			$output .= '<!-- wp:' . substr( $name, 5 ) . ' -->';
+			$output .= '<!-- wp:' . substr( $name, 5 ) . $attrs_json . ' -->';
 			$output .= $block['innerHTML'] ?? '';
 			$output .= serialize_blocks( $block['innerBlocks'] ?? [] );
 			$output .= '<!-- /wp:' . substr( $name, 5 ) . ' -->';
@@ -190,6 +192,7 @@ $assert_occurs_once( $serialized, 'WordPress <span class="tag">', 'compare-headi
 $assert_occurs_once( $serialized, 'May 27, 2003', 'dates-once' );
 $assert_occurs_once( $serialized, 'It is rare that a piece of software earns the right to be eulogized.', 'eulogy-copy-once' );
 $assert_occurs_once( $serialized, 'The CMS was a workaround for not being able to write HTML.', 'manifesto-copy-once' );
+$assert_occurs_once( $serialized, 'manifesto-list', 'classed-list-wrapper-once' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
