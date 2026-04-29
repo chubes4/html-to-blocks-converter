@@ -178,7 +178,7 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 			),
 			'media-text'       => array(
 				'html'           => '<div class="wp-block-media-text"><figure><img src="hero.jpg" alt="Hero"></figure><div class="wp-block-media-text__content"><p>Media copy</p></div></div>',
-				'expected_names' => array( 'core/media-text', 'core/image', 'core/group', 'core/paragraph' ),
+				'expected_names' => array( 'core/media-text', 'core/paragraph' ),
 				'snippets'       => array( 'hero.jpg', 'Media copy' ),
 			),
 			'file'             => array(
