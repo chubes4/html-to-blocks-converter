@@ -779,7 +779,12 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 		}
 
-		return HTML_To_Blocks_Block_Factory::create_block( 'core/list', $list_attributes, $inner_blocks );
+		$block = HTML_To_Blocks_Block_Factory::create_block( 'core/list', $list_attributes, $inner_blocks );
+
+		// The source class is already preserved in the static list wrapper markup.
+		unset( $block['attrs']['className'] );
+
+		return $block;
 	}
 
 	/**
