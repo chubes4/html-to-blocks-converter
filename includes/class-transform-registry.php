@@ -1345,9 +1345,6 @@ class HTML_To_Blocks_Transform_Registry {
 						)
 					);
 					$attributes['content'] = $content;
-					if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
-						$attributes['anchor'] = $element->get_attribute( 'id' );
-					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
 				},
