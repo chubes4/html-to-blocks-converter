@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-04-29
+
+### Changed
+- align media-text fixture expectations
+- gate core block coverage docs
+- gate core block inventory classification
+- tighten smoke harness lint contracts
+
+### Fixed
+- avoid duplicate descendants in raw conversion
+- honor block attrs during static serialization
+- clean production PHPStan findings
+
 ## [0.6.0] - 2026-04-28
 
 ### Added
