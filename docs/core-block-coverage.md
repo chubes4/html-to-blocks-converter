@@ -13,6 +13,7 @@ Run this after changing the classification map or generator:
 
 ```bash
 H2BC_CORE_BLOCKS_DIR=/path/to/wp-includes/blocks php tests/smoke-core-block-inventory.php
+H2BC_CORE_BLOCKS_DIR=/path/to/wp-includes/blocks php tests/core-block-coverage-docs-smoke.php
 ```
 
 `html-to-blocks-converter` is a deterministic raw-transform layer. It converts
@@ -99,6 +100,7 @@ Intentionally deferred mappings:
 | Arbitrary wrappers | `fallback-observed` | Generic `<div>` or wrapper markup without a high-confidence layout signal | `tests/smoke-layout-transforms.php` | Avoids treating every wrapper as a group, columns, cover, or spacer block. |
 | Ordinary links | `fallback-observed` | `<a href>` without button or downloadable-file signal | `tests/smoke-action-text-transforms.php`, `tests/smoke-media-embed-transforms.php` | Links usually remain inline paragraph HTML or custom HTML depending on their surrounding fragment. |
 | Mixed-content navigation | `fallback-observed` | `<nav>` that contains anything beyond one direct static list, or list items without direct links | `tests/smoke-static-navigation-transforms.php` | Preserving the fragment is safer than guessing whether non-list content is branding, search, actions, or persistent menu state. |
+| Legacy and recovery blocks (`core/freeform`, `core/legacy-widget`, `core/missing`, `core/more`, `core/nextpage`, `core/text-columns`, `core/widget-group`) | `fallback-observed` | Legacy editor state or recovery markers, not raw rendered HTML structures | `docs/core-block-classification.json` | h2bc may preserve their rendered output as static blocks or `core/html`, but it does not create new legacy/editor-internal block state from raw HTML. |
 
 ## Context-Required And FSE Blocks
 
@@ -109,11 +111,17 @@ intent, then delegate static fragments back to h2bc.
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
 |---|---|---|---|---|
 | Persistent `core/navigation` entities | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Requires menu intent, route knowledge, menu-location selection, and `wp_navigation` post lifecycle. h2bc supports only inline static nav markup listed above. |
-| `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Site identity blocks require site metadata. A rendered heading or image is not enough. |
-| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, and content blocks require current post/template context. |
+| `core/navigation-overlay-close` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Overlay controls require navigation UI state chosen by an editor or compiler, not rendered-content inference. |
+| `core/site-title`, `core/site-logo`, `core/site-tagline`, `core/home-link` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Site identity blocks and home links require site metadata and URL context. A rendered heading, image, or link is not enough. |
+| `core/avatar` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Avatar output requires author or commenter identity context. Static images stay `core/image`. |
+| `core/block` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Reusable block references require a persistent ref chosen outside raw HTML. |
+| `core/footnotes` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Footnotes require document-level references and editor-managed anchors. |
+| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, `core/post-*`, `core/read-more` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, read-more links, and related post-data blocks require current post/template context. |
 | `core/query*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Query, query title, post template, pagination, and related blocks require loop intent and content-model context. |
 | `core/comments*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Comment template blocks require comment-query context and per-comment state. |
-| Dynamic utility blocks | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | Latest posts, archives, categories, RSS, tag cloud, loginout, search, calendar, and similar blocks require site data intent. |
+| Dynamic utility blocks (`core/latest-posts`, `core/latest-comments`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`, `core/page-list`, `core/page-list-item`) | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | These blocks require runtime site data, taxonomy/page hierarchy, authentication state, feed state, or search interaction intent. |
+| `core/breadcrumbs` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Breadcrumbs require route, hierarchy, and site navigation context. |
+| `core/terms-query`, `core/term-*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Term query and term display blocks require taxonomy query intent and current term context. |
 
 ## Theme And Context Block Classification
 
@@ -140,4 +148,7 @@ rendered output.
 |---|---|---|---|---|
 | Additional embed providers | `future candidate` | Provider-specific URL pattern that can be normalized safely | None | Add only when provider detection is deterministic and fallback remains lossless for unknown providers. |
 | Additional static layout patterns | `future candidate` | Explicit class, ARIA, or structural signal that is not shared by generic wrappers | None | Must not regress arbitrary wrapper fallback behavior. |
-| Static social links | `future candidate` | Explicit social-links wrapper plus provider-identifiable anchors | None | Needs a conservative signal so ordinary navigation does not become social links. |
+| Static social links (`core/social-links`, `core/social-link`) | `future candidate` | Explicit social-links wrapper plus provider-identifiable anchors | None | Source-signal note: needs a conservative wrapper and provider-identifiable anchors so ordinary navigation does not become social links. |
+| Static accordion (`core/accordion*`) | `future candidate` | Native disclosure or accordion wrapper with stable heading/item/panel structure | None | Source-signal note: needs a parent accordion contract before child accordion blocks can be emitted safely. |
+| Static icons (`core/icon`) | `future candidate` | Explicit icon provider/name metadata or stable inline SVG identity | None | Source-signal note: needs deterministic provider and icon identity rules before h2bc can emit an icon block. |
+| Static math (`core/math`) | `future candidate` | Stable math markup with an explicit language/source contract | None | Source-signal note: needs a stable source-signal contract before h2bc can distinguish math from generic code or inline HTML. |
