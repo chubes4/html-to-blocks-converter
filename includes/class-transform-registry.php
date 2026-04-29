@@ -1332,7 +1332,14 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					$content = $element->get_inner_html();
 
-					$attributes = [ 'content' => $content ];
+					$attributes = self::get_block_support_attributes(
+						$element,
+						array(
+							'anchor'     => true,
+							'class_name' => true,
+						)
+					);
+					$attributes['content'] = $content;
 					if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
 						$attributes['anchor'] = $element->get_attribute( 'id' );
 					}
@@ -1930,7 +1937,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|content|main|article|aside|header|footer)(?:$|[-_\s])/i' );
+		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|content|main|article|aside|header|footer|inner|row)(?:$|[-_\s])/i' );
 	}
 
 	/**
@@ -2056,7 +2063,7 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * core/paragraph transforms - p elements (lowest priority, fallback)
+	 * core/paragraph transforms - p elements and text-only divs (lowest priority, fallback)
 	 *
 	 * @return array Transform definitions
 	 */
@@ -2065,9 +2072,15 @@ class HTML_To_Blocks_Transform_Registry {
 			[
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
-				'selector'  => 'p',
+				'selector'  => 'p,div',
 				'isMatch'   => function ( $element ) {
-					return $element->get_tag_name() === 'P';
+					if ( $element->get_tag_name() === 'P' ) {
+						return true;
+					}
+
+					return $element->get_tag_name() === 'DIV'
+						&& array() === $element->get_child_elements()
+						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
 					$content    = $element->get_inner_html();
