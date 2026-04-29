@@ -30,7 +30,7 @@ fragments are preserved as `core/html` rather than guessed.
 | `context-required` | The block needs site, template, query, post, comment, navigation, or theme context that raw HTML does not carry. |
 | `explicit-marker supported` | h2bc may produce this block only when explicit source markup names the exact static structure. |
 | `compiler-only` | A higher-level compiler may produce this block after it has site, template, or content-model intent; h2bc must not infer it from rendered HTML. |
-| `unsupported` | h2bc and the FSE compiler should not produce this block from raw HTML without a separate product/design contract. |
+| `unsupported` | h2bc and a block theme compiler should not produce this block from raw HTML without a separate product/design contract. |
 | `future candidate` | A deterministic transform may be possible later, but no transform ships today. |
 
 ## Supported Static Transforms
@@ -102,26 +102,26 @@ Intentionally deferred mappings:
 | Mixed-content navigation | `fallback-observed` | `<nav>` that contains anything beyond one direct static list, or list items without direct links | `tests/smoke-static-navigation-transforms.php` | Preserving the fragment is safer than guessing whether non-list content is branding, search, actions, or persistent menu state. |
 | Legacy and recovery blocks (`core/freeform`, `core/legacy-widget`, `core/missing`, `core/more`, `core/nextpage`, `core/text-columns`, `core/widget-group`) | `fallback-observed` | Legacy editor state or recovery markers, not raw rendered HTML structures | `docs/core-block-classification.json` | h2bc may preserve their rendered output as static blocks or `core/html`, but it does not create new legacy/editor-internal block state from raw HTML. |
 
-## Context-Required And FSE Blocks
+## Context-Required And Site Editor Blocks
 
 These block families are intentionally outside h2bc's raw-transform boundary. A
-future full-site-editing compiler can choose them after it has site or template
-intent, then delegate static fragments back to h2bc.
+future block theme compiler can choose them after it has site or template intent,
+then delegate static fragments back to h2bc.
 
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
 |---|---|---|---|---|
-| Persistent `core/navigation` entities | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Requires menu intent, route knowledge, menu-location selection, and `wp_navigation` post lifecycle. h2bc supports only inline static nav markup listed above. |
-| `core/navigation-overlay-close` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Overlay controls require navigation UI state chosen by an editor or compiler, not rendered-content inference. |
-| `core/site-title`, `core/site-logo`, `core/site-tagline`, `core/home-link` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Site identity blocks and home links require site metadata and URL context. A rendered heading, image, or link is not enough. |
-| `core/avatar` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Avatar output requires author or commenter identity context. Static images stay `core/image`. |
-| `core/block` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Reusable block references require a persistent ref chosen outside raw HTML. |
-| `core/footnotes` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Footnotes require document-level references and editor-managed anchors. |
-| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, `core/post-*`, `core/read-more` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Post title, date, author, excerpt, featured image, read-more links, and related post-data blocks require current post/template context. |
-| `core/query*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Query, query title, post template, pagination, and related blocks require loop intent and content-model context. |
-| `core/comments*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Comment template blocks require comment-query context and per-comment state. |
-| Dynamic utility blocks (`core/latest-posts`, `core/latest-comments`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`, `core/page-list`, `core/page-list-item`) | `context-required` | None in raw HTML alone | `docs/fse-boundary.md` | These blocks require runtime site data, taxonomy/page hierarchy, authentication state, feed state, or search interaction intent. |
-| `core/breadcrumbs` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Breadcrumbs require route, hierarchy, and site navigation context. |
-| `core/terms-query`, `core/term-*` | `compiler-only` | None in raw HTML alone | `docs/fse-boundary.md` | Term query and term display blocks require taxonomy query intent and current term context. |
+| Persistent `core/navigation` entities | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Requires menu intent, route knowledge, menu-location selection, and `wp_navigation` post lifecycle. h2bc supports only inline static nav markup listed above. |
+| `core/navigation-overlay-close` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Overlay controls require navigation UI state chosen by an editor or compiler, not rendered-content inference. |
+| `core/site-title`, `core/site-logo`, `core/site-tagline`, `core/home-link` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Site identity blocks and home links require site metadata and URL context. A rendered heading, image, or link is not enough. |
+| `core/avatar` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Avatar output requires author or commenter identity context. Static images stay `core/image`. |
+| `core/block` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Reusable block references require a persistent ref chosen outside raw HTML. |
+| `core/footnotes` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Footnotes require document-level references and editor-managed anchors. |
+| `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, `core/post-*`, `core/read-more` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Post title, date, author, excerpt, featured image, read-more links, and related post-data blocks require current post/template context. |
+| `core/query*` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Query, query title, post template, pagination, and related blocks require loop intent and content-model context. |
+| `core/comments*` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Comment template blocks require comment-query context and per-comment state. |
+| Dynamic utility blocks (`core/latest-posts`, `core/latest-comments`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`, `core/page-list`, `core/page-list-item`) | `context-required` | None in raw HTML alone | `docs/site-editor-boundary.md` | These blocks require runtime site data, taxonomy/page hierarchy, authentication state, feed state, or search interaction intent. |
+| `core/breadcrumbs` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Breadcrumbs require route, hierarchy, and site navigation context. |
+| `core/terms-query`, `core/term-*` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Term query and term display blocks require taxonomy query intent and current term context. |
 
 ## Theme And Context Block Classification
 
@@ -136,7 +136,7 @@ rendered output.
 | `core/pattern` | `explicit-marker supported` | Supported only from `data-bfb-pattern="namespace/slug"`. Repeated or pattern-looking static layout remains ordinary static blocks. |
 | `core/template-part` | `explicit-marker supported` | Supported only from `data-bfb-template-part="area-or-slug"`. Region detection remains compiler-only without the explicit marker. |
 | Persistent `core/navigation` refs | `compiler-only` | Requires a higher-level integration that owns `wp_navigation` creation/reuse and menu-location policy. |
-| `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | Requires site identity metadata. Explicit HTML markers should be consumed by an FSE compiler that knows the target site. |
+| `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | Requires site identity metadata. Explicit HTML markers should be consumed by a block theme compiler that knows the target site. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | `compiler-only` | Requires current post/template context. Rendered headings, images, and excerpts remain static blocks in h2bc. |
 | `core/query`, `core/post-template`, query pagination/title blocks | `compiler-only` | Requires loop intent, query args, and content-model context. Repeated cards remain static layout/content blocks. |
 | `core/comments` and `core/comment-*` blocks | `compiler-only` | Requires comment-query context and per-comment state. Rendered comment HTML is not enough. |
