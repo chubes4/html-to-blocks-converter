@@ -141,6 +141,9 @@ class HTML_To_Blocks_Block_Factory {
 			case 'core/shortcode':
 				return $attributes['text'] ?? '';
 
+			case 'core/html':
+				return $attributes['content'] ?? '';
+
             default:
                 return '';
         }
