@@ -283,6 +283,11 @@ class HTML_To_Blocks_HTML_Element {
 				continue;
 			}
 
+			$tag = $processor->get_tag();
+			$tag_lower = strtolower( $tag );
+			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
+			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
+
 			if ( $root_depth === null ) {
 				$root_depth = $processor->get_current_depth();
 				continue;
@@ -291,11 +296,6 @@ class HTML_To_Blocks_HTML_Element {
 			if ( $processor->get_current_depth() <= $root_depth ) {
 				continue;
 			}
-
-			$tag = $processor->get_tag();
-			$tag_lower = strtolower( $tag );
-			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
-			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
 
 			if ( $tag_match && strtoupper( $tag ) !== $tag_match ) {
 				continue;
