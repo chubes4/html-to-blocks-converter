@@ -185,6 +185,12 @@ class HTML_To_Blocks_Transform_Registry {
 		if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
 			$attributes['anchor'] = $element->get_attribute( 'id' );
 		}
+		if ( $element->has_attribute( 'class' ) ) {
+			$class_name = self::safe_block_class_name( $element->get_attribute( 'class' ) );
+			if ( $class_name !== '' ) {
+				$attributes['className'] = $class_name;
+			}
+		}
 
 		return HTML_To_Blocks_Block_Factory::create_block(
 			'core/navigation',
