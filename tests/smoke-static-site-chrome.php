@@ -1,6 +1,6 @@
 <?php
 /**
- * Smoke test: common static-site chrome converts without core/html fallback.
+ * Smoke test: common static-site chrome uses native blocks only where valid.
  *
  * Run: php tests/smoke-static-site-chrome.php
  */
@@ -66,8 +66,6 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 					'core/html',
 					'core/list',
 					'core/list-item',
-					'core/navigation',
-					'core/navigation-link',
 					'core/paragraph',
 					'core/preformatted',
 				],
@@ -161,9 +159,9 @@ HTML;
 
 $serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $html ] ) );
 
-$assert( ! str_contains( $serialized, 'wp:html' ), 'static-chrome-avoids-core-html-fallback', $serialized );
 $assert( str_contains( $serialized, 'wp:group' ), 'static-chrome-uses-group-blocks' );
-$assert( str_contains( $serialized, 'wp:navigation' ), 'static-nav-uses-navigation-block' );
+$assert( ! str_contains( $serialized, 'wp:navigation' ), 'static-nav-avoids-invalid-navigation-blocks', $serialized );
+$assert( str_contains( $serialized, '<!-- wp:html --><nav class="primary">' ), 'static-nav-falls-back-to-core-html', $serialized );
 $assert( str_contains( $serialized, 'wp:list' ), 'footer-links-use-list-block' );
 $assert( str_contains( $serialized, 'The Prompt Liberation Front' ), 'text-only-div-preserves-footer-copy' );
 $assert( str_contains( $serialized, 'class="wp-block-preformatted prompt"' ), 'preformatted-rendered-html-preserves-source-class', $serialized );

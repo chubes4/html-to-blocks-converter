@@ -63,7 +63,6 @@ fragments are preserved as `core/html` rather than guessed.
 | `core/embed` | `supported` | `<iframe src>` for a recognized provider URL | `tests/smoke-media-embed-transforms.php` | Recognized providers are normalized into static embed URLs; unknown iframes fall back. |
 | `core/pattern` | `explicit-marker supported` | `data-bfb-pattern="namespace/slug"` | `tests/smoke-site-editor-marker-transforms.php` | Pattern markers require explicit namespaced slugs. h2bc does not infer reusable patterns from repeated or named layout. |
 | `core/template-part` | `explicit-marker supported` | `data-bfb-template-part="area-or-slug"` | `tests/smoke-site-editor-marker-transforms.php` | Template-part markers are explicit declarations. Standard areas set `area`; custom values are treated as slugs. |
-| `core/navigation`, `core/navigation-link`, `core/navigation-submenu` | `explicit-marker supported` | One `<nav>` with exactly one direct `<ul>` or `<ol>` whose direct `<li>` children contain one `<a href>` plus an optional nested list | `tests/smoke-static-navigation-transforms.php` | Static inline navigation only. h2bc never sets `ref`, creates `wp_navigation` posts, chooses menu locations, or infers site routes. Mixed-content nav falls back. |
 
 ## Mechanical Block Support Mappings
 
@@ -81,7 +80,7 @@ Supported direct mappings:
 - Explicit WordPress preset classes such as `has-primary-color`, `has-primary-background-color`, and `has-large-font-size` map back to their block-support preset slugs.
 - `margin`, `margin-*`, `padding`, and `padding-*` map to `style.spacing` custom values; exact WordPress spacing preset vars such as `var(--wp--preset--spacing--40)` map to `var:preset|spacing|40`.
 - `border-color`, `border-style`, `border-width`, and `border-radius` map to `style.border` custom values.
-- Semantic container tags (`section`, `main`, `article`, `aside`, `header`, `footer`, `nav`) map to `tagName` on group-like transforms that support wrapper semantics.
+- Semantic container tags (`section`, `main`, `article`, `aside`, `header`, `footer`) map to `tagName` on group-like transforms that support wrapper semantics. `nav` is excluded because rendered navigation falls back as preserved HTML.
 - Safe supported ARIA wrapper attributes (`aria-label`) are preserved on group-like transforms.
 - Explicit WordPress layout classes such as `is-layout-flex`, `is-vertical`, `is-nowrap`, and `is-content-justification-*` map to `layout` attributes on group-like transforms.
 
@@ -99,7 +98,7 @@ Intentionally deferred mappings:
 | Unknown `<iframe>` providers | `fallback-observed` | `<iframe src>` whose provider cannot be mapped to a supported embed provider | `tests/smoke-media-embed-transforms.php`, `tests/smoke-unsupported-html-fallback-hook.php` | Preserving the iframe as custom HTML is safer than inventing an embed provider. |
 | Arbitrary wrappers | `fallback-observed` | Generic `<div>` or wrapper markup without a high-confidence layout signal | `tests/smoke-layout-transforms.php` | Avoids treating every wrapper as a group, columns, cover, or spacer block. |
 | Ordinary links | `fallback-observed` | `<a href>` without button or downloadable-file signal | `tests/smoke-action-text-transforms.php`, `tests/smoke-media-embed-transforms.php` | Links usually remain inline paragraph HTML or custom HTML depending on their surrounding fragment. |
-| Mixed-content navigation | `fallback-observed` | `<nav>` that contains anything beyond one direct static list, or list items without direct links | `tests/smoke-static-navigation-transforms.php` | Preserving the fragment is safer than guessing whether non-list content is branding, search, actions, or persistent menu state. |
+| Navigation markup | `fallback-observed` | `<nav>` fragments, including simple static lists | `tests/smoke-static-navigation-transforms.php`, `tests/smoke-static-site-chrome.php` | Native `core/navigation` and `core/navigation-link` save output is not a valid static serialization boundary for default raw conversion. Preserving the fragment as `core/html` is safer than emitting editor-invalid navigation blocks. |
 | Legacy and recovery blocks (`core/freeform`, `core/legacy-widget`, `core/missing`, `core/more`, `core/nextpage`, `core/text-columns`, `core/widget-group`) | `fallback-observed` | Legacy editor state or recovery markers, not raw rendered HTML structures | `docs/core-block-classification.json` | h2bc may preserve their rendered output as static blocks or `core/html`, but it does not create new legacy/editor-internal block state from raw HTML. |
 
 ## Context-Required And Site Editor Blocks
@@ -110,7 +109,7 @@ then delegate static fragments back to h2bc.
 
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
 |---|---|---|---|---|
-| Persistent `core/navigation` entities | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Requires menu intent, route knowledge, menu-location selection, and `wp_navigation` post lifecycle. h2bc supports only inline static nav markup listed above. |
+| Native `core/navigation` blocks | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Requires editor-valid serialization, menu intent, route knowledge, menu-location selection, and optional `wp_navigation` post lifecycle. h2bc preserves rendered navigation markup as `core/html` by default. |
 | `core/navigation-overlay-close` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Overlay controls require navigation UI state chosen by an editor or compiler, not rendered-content inference. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline`, `core/home-link` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Site identity blocks and home links require site metadata and URL context. A rendered heading, image, or link is not enough. |
 | `core/avatar` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Avatar output requires author or commenter identity context. Static images stay `core/image`. |
@@ -132,10 +131,10 @@ rendered output.
 
 | Block family | Classification | h2bc boundary |
 |---|---|---|
-| Static `core/navigation` with `core/navigation-link` / `core/navigation-submenu` children | `explicit-marker supported` | Supported only for one direct list inside `<nav>`. Output is inline block markup with no `ref` and no `wp_navigation` persistence. |
+| Static rendered navigation markup | `fallback-observed` | Preserved as `core/html` because default raw conversion must not emit editor-invalid native navigation blocks. |
 | `core/pattern` | `explicit-marker supported` | Supported only from `data-bfb-pattern="namespace/slug"`. Repeated or pattern-looking static layout remains ordinary static blocks. |
 | `core/template-part` | `explicit-marker supported` | Supported only from `data-bfb-template-part="area-or-slug"`. Region detection remains compiler-only without the explicit marker. |
-| Persistent `core/navigation` refs | `compiler-only` | Requires a higher-level integration that owns `wp_navigation` creation/reuse and menu-location policy. |
+| Native `core/navigation` blocks | `compiler-only` | Requires a higher-level integration that owns editor-valid serialization, route knowledge, and optional `wp_navigation` creation/reuse policy. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | Requires site identity metadata. Explicit HTML markers should be consumed by a block theme compiler that knows the target site. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | `compiler-only` | Requires current post/template context. Rendered headings, images, and excerpts remain static blocks in h2bc. |
 | `core/query`, `core/post-template`, query pagination/title blocks | `compiler-only` | Requires loop intent, query args, and content-model context. Repeated cards remain static layout/content blocks. |

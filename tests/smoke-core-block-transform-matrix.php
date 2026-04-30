@@ -80,9 +80,6 @@ $supported_matrix = [
 	'core/media-text'   => 'raw-transform',
 	'core/file'         => 'raw-transform',
 	'core/embed'        => 'raw-transform',
-	'core/navigation'   => 'raw-transform',
-	'core/navigation-link' => 'generated-inner-block',
-	'core/navigation-submenu' => 'generated-inner-block',
 ];
 
 foreach ( $supported_matrix as $block_name => $coverage_kind ) {
@@ -106,7 +103,7 @@ $observed_fallbacks = [
 	'Unknown `<iframe>` providers',
 	'Arbitrary wrappers',
 	'Ordinary links',
-	'Mixed-content navigation',
+	'Navigation markup',
 ];
 
 foreach ( $observed_fallbacks as $fallback_label ) {
@@ -149,12 +146,8 @@ foreach ( [ 'core/pattern', 'core/template-part' ] as $doc_example ) {
 	$assert_contains( $site_editor_doc, '`' . $doc_example, 'site-editor-doc-names-explicit-marker-' . $doc_example );
 }
 
-foreach ( [ 'core/navigation', 'core/navigation-link', 'core/navigation-submenu' ] as $doc_example ) {
-	$assert_contains( $coverage_doc, '`' . $doc_example, 'coverage-doc-names-static-navigation-' . $doc_example );
-}
-
-$assert_contains( $coverage_doc, 'Persistent `core/navigation` entities', 'coverage-doc-names-persistent-navigation-boundary' );
-$assert_contains( $site_editor_doc, 'Persistent `core/navigation', 'site-editor-doc-names-persistent-navigation-boundary' );
+$assert_contains( $coverage_doc, 'Native `core/navigation` blocks', 'coverage-doc-names-navigation-boundary' );
+$assert_contains( $site_editor_doc, 'Native `core/navigation', 'site-editor-doc-names-navigation-boundary' );
 $assert_contains( $coverage_doc, 'Theme And Context Block Classification', 'coverage-doc-classifies-theme-context-blocks' );
 $assert_contains( $site_editor_doc, 'Theme Block Classification', 'site-editor-doc-classifies-theme-blocks' );
 
