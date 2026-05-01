@@ -871,7 +871,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$class_name = $element->get_attribute( 'class' ) ?? '';
-		return preg_match( '/(?:^|\s)(?:wp-block-button__link|wp-element-button)(?:$|\s)/i', $class_name ) === 1;
+		return preg_match( '/(?:^|\s)(?:wp-block-button__link|wp-element-button|[A-Za-z0-9_-]*btn[A-Za-z0-9_-]*)(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
@@ -1874,7 +1874,19 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(actions?|buttons?|cta|group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(actions?|buttons?|cta|group|section|container|wrapper|wrap|content|main|page|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|text|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
+			return true;
+		}
+
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(code|code[-_\s]?window)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		if ( $element->has_attribute( 'data-widget' ) ) {
+			return false;
+		}
+
+		if ( array() !== $element->get_child_elements() ) {
 			return true;
 		}
 
