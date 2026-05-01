@@ -1150,6 +1150,39 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_quote_transforms() {
 		return [
 			[
+				'blockName' => 'core/group',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					if ( $element->get_tag_name() !== 'FIGURE' ) {
+						return false;
+					}
+
+					$children = $element->get_child_elements();
+					return count( $children ) === 2
+						&& $children[0]->get_tag_name() === 'BLOCKQUOTE'
+						&& $children[1]->get_tag_name() === 'FIGCAPTION';
+				},
+				'transform' => function ( $element, $handler ) {
+					$children       = $element->get_child_elements();
+					$blockquote     = $children[0];
+					$figcaption     = $children[1];
+					$inner_blocks   = $handler( [ 'HTML' => $blockquote->get_outer_html() ] );
+					$caption_attrs  = self::get_block_support_attributes( $figcaption, [ 'class_name' => true ] );
+					$caption_markup = trim( $figcaption->get_inner_html() );
+
+					if ( $caption_markup !== '' ) {
+						$caption_attrs['content'] = $caption_markup;
+						$inner_blocks[]           = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs );
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						$inner_blocks
+					);
+				},
+			],
+			[
 				'blockName' => 'core/quote',
 				'priority'  => 10,
 				'selector'  => 'blockquote',
