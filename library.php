@@ -35,6 +35,9 @@ $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_p
 	if ( ! class_exists( 'HTML_To_Blocks_Attribute_Parser', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-attribute-parser.php';
 	}
+	if ( ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
+		require_once $html_to_blocks_library_path . '/includes/class-svg-icon-classifier.php';
+	}
 	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-transform-registry.php';
 	}

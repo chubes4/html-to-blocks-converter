@@ -27,6 +27,7 @@ class HTML_To_Blocks_Transform_Registry {
 
 		self::$transforms = array_merge(
 			self::get_site_editor_marker_transforms(),
+			self::get_svg_icon_transforms(),
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
 			self::get_button_transforms(),
@@ -53,6 +54,47 @@ class HTML_To_Blocks_Transform_Registry {
 		);
 
 		return self::$transforms;
+	}
+
+	/**
+	 * Safe inline SVG icon transform.
+	 *
+	 * h2bc exposes these as explicit placeholders rather than final core/html so
+	 * stricter downstream pipelines can replace them with native assets.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_svg_icon_transforms() {
+		return [
+			[
+				'blockName' => 'html-to-blocks/svg-icon',
+				'priority'  => 2,
+				'isMatch'   => function ( $element ) {
+					if ( $element->get_tag_name() !== 'SVG' || ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
+						return false;
+					}
+
+					$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( $element->get_outer_html() );
+					return ! empty( $classification['is_safe'] );
+				},
+				'transform' => function ( $element ) {
+					$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( $element->get_outer_html() );
+					$svg            = $classification['svg'] ?? '';
+					$metadata       = $classification['metadata'] ?? [];
+
+					return [
+						'blockName'    => 'html-to-blocks/svg-icon',
+						'attrs'        => [
+							'svg'      => $svg,
+							'metadata' => $metadata,
+						],
+						'innerBlocks'  => [],
+						'innerHTML'    => $svg,
+						'innerContent' => [ $svg ],
+					];
+				},
+			],
+		];
 	}
 
 	/**
