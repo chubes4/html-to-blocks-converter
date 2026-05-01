@@ -1318,7 +1318,11 @@ class HTML_To_Blocks_Transform_Registry {
 						return false;
 					}
 
-					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*)(?:$|\s)/i' ) ) {
+					if ( self::has_unsafe_code_display_markup( $element ) ) {
+						return false;
+					}
+
+					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*|code[-_]?pane)(?:$|\s)/i' ) ) {
 						return true;
 					}
 
@@ -1350,7 +1354,7 @@ class HTML_To_Blocks_Transform_Registry {
 				continue;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|pane[-_]?header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_text_group( $child );
 				continue;
 			}
@@ -1524,6 +1528,14 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
+		if ( self::has_unsafe_code_display_markup( $element ) ) {
+			return false;
+		}
+
+		if ( self::class_matches( $element, '/(?:^|[-_\s])ws[-_]?code(?:$|[-_\s])/i' ) ) {
+			return trim( $element->get_text_content() ) !== '';
+		}
+
 		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:snippet|block))(?:$|[-_\s])/i' ) ) {
 			return false;
 		}
@@ -1545,6 +1557,16 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function normalise_code_snippet_content( string $inner_html ): string {
 		$content = preg_replace( '/<br\s*\/?\s*>/i', "\n", $inner_html );
 		return trim( $content );
+	}
+
+	/**
+	 * Checks whether display-code markup contains executable/style content.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when this generic transform should not claim it.
+	 */
+	private static function has_unsafe_code_display_markup( $element ): bool {
+		return preg_match( '/<\/?(?:script|style)\b/i', $element->get_inner_html() ) === 1;
 	}
 
 	/**
