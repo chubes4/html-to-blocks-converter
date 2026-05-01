@@ -128,6 +128,8 @@ $html = <<<HTML
   <div class="ss-hero-scroll-line"></div>
   <span>Scroll</span>
 </div>
+<div class="hero-bg"></div>
+<div class="hero-pattern"></div>
 <div class="ss-hero-grain"></div>
 <div class="ss-product-divider"></div>
 HTML;
@@ -164,9 +166,11 @@ $assert( in_array( 'core/paragraph', $names, true ), 'scroll-label-uses-paragrap
 $assert( str_contains( $contents, 'Scroll' ), 'scroll-label-text-survives', $contents );
 $assert( in_array( 'ss-hero-scroll', $class_names, true ), 'hero-scroll-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'ss-hero-scroll-line', $class_names, true ), 'hero-scroll-line-class-survives', implode( ', ', $class_names ) );
+$assert( in_array( 'hero-bg', $class_names, true ), 'empty-background-class-survives', implode( ', ', $class_names ) );
+$assert( in_array( 'hero-pattern', $class_names, true ), 'empty-pattern-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'ss-hero-grain', $class_names, true ), 'empty-grain-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'ss-product-divider', $class_names, true ), 'empty-divider-class-survives', implode( ', ', $class_names ) );
-$assert( count( $blocks ) === 3, 'empty-decorative-divs-are-not-dropped', (string) count( $blocks ) );
+$assert( count( $blocks ) === 5, 'empty-decorative-divs-are-not-dropped', (string) count( $blocks ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
