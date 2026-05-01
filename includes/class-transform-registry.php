@@ -1870,7 +1870,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|compare|feature|visual|pin|location|detail|chrome|scroll)(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|detail|chrome|scroll)(?:$|[-_\s])/i' ) ) {
 			return true;
 		}
 
