@@ -245,6 +245,40 @@ $assert( str_contains( $serialized, 'Studio Code' ) && str_contains( $serialized
 $assert( str_contains( $serialized, '&lt;!-- WordPress stores --&gt;' ), 'escaped-code-survives', $serialized );
 $assert( str_contains( $serialized, 'sc-tag' ) && str_contains( $serialized, 'sc-attr' ), 'syntax-span-classes-survive', $serialized );
 
+$generic_html = <<<'HTML'
+<div class="workflow-code reveal hidden">
+  <div class="code-window">
+    <div class="code-titlebar">
+      <div class="code-dot code-dot-r"></div>
+      <div class="code-dot code-dot-y"></div>
+      <div class="code-dot code-dot-g"></div>
+      <span class="code-filename">import-command.sh</span>
+    </div>
+    <div class="code-block">
+      <div><span class="prompt">$</span> studio import ./site</div>
+      <div><span class="comment"># Converts static snippets to blocks</span></div>
+    </div>
+  </div>
+</div>
+HTML;
+
+$generic_blocks       = html_to_blocks_raw_handler( [ 'HTML' => $generic_html ] );
+$generic_serialized   = serialize_blocks( $generic_blocks );
+$generic_fallbacks    = $collect_blocks( $generic_blocks, 'core/html' );
+$generic_groups       = $collect_blocks( $generic_blocks, 'core/group' );
+$generic_paragraphs   = $collect_blocks( $generic_blocks, 'core/paragraph' );
+$generic_preformatted = $collect_blocks( $generic_blocks, 'core/preformatted' );
+
+$assert( count( $generic_fallbacks ) === 0, 'generic-code-window-does-not-fallback-to-html', $generic_serialized );
+$assert( count( $generic_groups ) >= 3, 'generic-code-window-wrappers-become-groups', $generic_serialized );
+$assert( count( $generic_paragraphs ) === 1, 'generic-code-titlebar-becomes-one-paragraph', $generic_serialized );
+$assert( count( $generic_preformatted ) === 1, 'generic-code-block-becomes-preformatted', $generic_serialized );
+$assert( str_contains( $generic_serialized, 'workflow-code reveal hidden' ), 'generic-outer-wrapper-classes-survive', $generic_serialized );
+$assert( str_contains( $generic_serialized, 'code-window' ) && str_contains( $generic_serialized, 'code-titlebar' ), 'generic-code-window-classes-survive', $generic_serialized );
+$assert( str_contains( $generic_serialized, 'import-command.sh' ), 'generic-filename-survives', $generic_serialized );
+$assert( str_contains( $generic_serialized, 'studio import ./site' ) && str_contains( $generic_serialized, 'Converts static snippets to blocks' ), 'generic-code-text-survives', $generic_serialized );
+$assert( ! str_contains( $generic_serialized, 'code-dot' ), 'generic-decorative-dots-are-dropped', $generic_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;

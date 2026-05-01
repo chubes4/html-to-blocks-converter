@@ -1314,8 +1314,16 @@ class HTML_To_Blocks_Transform_Registry {
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
-					return $element->get_tag_name() === 'DIV'
-						&& self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*)(?:$|\s)/i' );
+					if ( 'DIV' !== $element->get_tag_name() ) {
+						return false;
+					}
+
+					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*)(?:$|\s)/i' ) ) {
+						return true;
+					}
+
+					return self::class_matches( $element, '/(?:^|[-_\s])(?:code|workflow[-_\s]?code)(?:$|[-_\s])/i' )
+						&& 1 === preg_match( '/class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*[^"\']*["\']/i', $element->get_inner_html() );
 				},
 				'transform' => function ( $element, $handler ) {
 					return self::create_code_window_block( $element, $handler );
@@ -1337,12 +1345,12 @@ class HTML_To_Blocks_Transform_Registry {
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?body[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?(?:body|block)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_body_block( $child );
 				continue;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?bar|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_text_group( $child );
 				continue;
 			}
@@ -1386,7 +1394,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_code_window_text_group( $element ): array {
-		$content = trim( $element->get_inner_html() );
+		$content = self::get_code_window_chrome_content( $element );
 		$attrs   = self::get_common_layout_attributes( $element );
 
 		if ( $content === '' ) {
@@ -1406,6 +1414,23 @@ class HTML_To_Blocks_Transform_Registry {
 				),
 			]
 		);
+	}
+
+	/**
+	 * Extracts meaningful visible text from code-window chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Chrome element.
+	 * @return string Editable chrome text, excluding decorative dots.
+	 */
+	private static function get_code_window_chrome_content( $element ): string {
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( self::class_matches( $child, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*(?:$|\s)/i' ) ) {
+				$content = preg_replace( '/<div\b[^>]*class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*[^"\']*["\'][^>]*>\s*<\/div>/i', '', $element->get_inner_html() );
+				return trim( (string) $content );
+			}
+		}
+
+		return trim( $element->get_inner_html() );
 	}
 
 	/**
