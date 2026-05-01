@@ -1196,6 +1196,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$code    = $element->query_selector( 'code' );
+					if ( $code && array() !== $code->get_child_elements() ) {
+						$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+						$attributes['content'] = $code->get_inner_html();
+
+						if ( $code->has_attribute( 'class' ) ) {
+							$attributes['className'] = self::merge_class_names( $attributes['className'] ?? '', $code->get_attribute( 'class' ) );
+						}
+
+						return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
+					}
+
 					$content = $code ? $code->get_text_content() : $element->get_text_content();
 
 					$attributes = [ 'content' => $content ];
@@ -1980,7 +1991,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(actions?|buttons?|cta|group|section|container|wrapper|wrap|content|main|page|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|text|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(actions?|buttons?|cta|group|section|container|wrapper|wrap|content|main|page|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|text|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info|demo|panel|arrow)(?:$|[-_\s])/i' ) ) {
 			return true;
 		}
 
