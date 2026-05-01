@@ -36,6 +36,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_pullquote_transforms(),
 			self::get_quote_transforms(),
 			self::get_code_transforms(),
+			self::get_code_window_transforms(),
 			self::get_verse_transforms(),
 			self::get_preformatted_transforms(),
 			self::get_separator_transforms(),
@@ -1214,6 +1215,111 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			],
 		];
+	}
+
+	/**
+	 * Visual code-window/demo transforms.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_code_window_transforms() {
+		return [
+			[
+				'blockName' => 'core/group',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'DIV'
+						&& self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*)(?:$|\s)/i' );
+				},
+				'transform' => function ( $element, $handler ) {
+					return self::create_code_window_block( $element, $handler );
+				},
+			],
+		];
+	}
+
+	/**
+	 * Creates a native group for a visual code-window wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Code-window wrapper.
+	 * @param callable                    $handler Recursive raw handler.
+	 * @return array Block array.
+	 */
+	private static function create_code_window_block( $element, $handler ): array {
+		$inner_blocks = [];
+
+		foreach ( $element->get_child_elements() as $child ) {
+			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
+
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?body[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+				$inner_blocks[] = self::create_code_window_body_block( $child );
+				continue;
+			}
+
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?bar|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+				$inner_blocks[] = self::create_code_window_text_group( $child );
+				continue;
+			}
+
+			$inner_blocks = array_merge( $inner_blocks, $handler( [ 'HTML' => $child->get_outer_html() ] ) );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Creates a preformatted block from code-window line wrappers.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Code body element.
+	 * @return array Block array.
+	 */
+	private static function create_code_window_body_block( $element ): array {
+		$lines = [];
+
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( $child->get_tag_name() === 'DIV' ) {
+				$lines[] = $child->get_inner_html();
+			}
+		}
+
+		$content = ! empty( $lines ) ? implode( "\n", $lines ) : $element->get_inner_html();
+		$attrs   = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+		$attrs['content'] = $content;
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attrs );
+	}
+
+	/**
+	 * Creates a native group for non-code chrome around a code-window.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Chrome element.
+	 * @return array Block array.
+	 */
+	private static function create_code_window_text_group( $element ): array {
+		$content = trim( $element->get_inner_html() );
+		$attrs   = self::get_common_layout_attributes( $element );
+
+		if ( $content === '' ) {
+			return HTML_To_Blocks_Block_Factory::create_block( 'core/group', $attrs );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			$attrs,
+			[
+				HTML_To_Blocks_Block_Factory::create_block(
+					'core/paragraph',
+					[
+						'className' => $attrs['className'] ?? '',
+						'content'   => $content,
+					]
+				),
+			]
+		);
 	}
 
 	/**

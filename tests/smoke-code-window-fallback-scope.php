@@ -76,6 +76,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 					'core/heading',
 					'core/html',
 					'core/paragraph',
+					'core/preformatted',
 				],
 				true
 			);
@@ -222,6 +223,7 @@ $serialized = serialize_blocks( $blocks );
 $groups     = $collect_blocks( $blocks, 'core/group' );
 $fallbacks  = $collect_blocks( $blocks, 'core/html' );
 $buttons    = $collect_blocks( $blocks, 'core/button' );
+$preformatted = $collect_blocks( $blocks, 'core/preformatted' );
 
 $assert( count( $blocks ) === 1 && ( $blocks[0]['blockName'] ?? '' ) === 'core/group', 'root-page-becomes-group', $serialized );
 $assert( count( $groups ) >= 6, 'normal-wrappers-become-groups', $serialized );
@@ -233,13 +235,15 @@ $assert( str_contains( $serialized, '<!-- wp:paragraph' ), 'normal-copy-is-nativ
 $assert( count( $buttons ) === 2, 'cta-links-become-native-buttons', $serialized );
 $assert( str_contains( $serialized, '#get-started' ) && str_contains( $serialized, 'Start Building Free' ), 'cta-primary-preserves-href-and-text', $serialized );
 $assert( str_contains( $serialized, 'sc-btn-primary' ) && str_contains( $serialized, 'sc-btn-secondary' ), 'cta-classes-survive', $serialized );
-$assert( count( $fallbacks ) === 1, 'only-code-window-falls-back-to-html', $serialized );
-
-$fallback_content = $fallbacks[0]['attrs']['content'] ?? '';
-$assert( str_contains( $fallback_content, 'sc-code-window' ), 'fallback-is-code-window', $fallback_content );
-$assert( ! str_contains( $fallback_content, 'sc-page' ), 'fallback-does-not-wrap-root-page', $fallback_content );
-$assert( ! str_contains( $fallback_content, 'sc-workflow' ), 'fallback-does-not-wrap-normal-section', $fallback_content );
-$assert( str_contains( $fallback_content, '&lt;!-- WordPress stores --&gt;' ), 'fallback-preserves-escaped-code', $fallback_content );
+$assert( count( $fallbacks ) === 0, 'code-window-does-not-fallback-to-html', $serialized );
+$assert( count( $preformatted ) === 2, 'code-bodies-become-preformatted', $serialized );
+$assert( str_contains( $serialized, 'sc-code-window' ), 'code-window-class-survives', $serialized );
+$assert( str_contains( $serialized, 'sc-code-bar' ), 'code-bar-class-survives', $serialized );
+$assert( str_contains( $serialized, 'sc-arrow-row' ), 'arrow-row-class-survives', $serialized );
+$assert( str_contains( $serialized, 'index.html &rarr; WordPress blocks' ), 'filename-survives', $serialized );
+$assert( str_contains( $serialized, 'Studio Code' ) && str_contains( $serialized, 'WordPress Blocks' ), 'arrow-row-text-survives', $serialized );
+$assert( str_contains( $serialized, '&lt;!-- WordPress stores --&gt;' ), 'escaped-code-survives', $serialized );
+$assert( str_contains( $serialized, 'sc-tag' ) && str_contains( $serialized, 'sc-attr' ), 'syntax-span-classes-survive', $serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
