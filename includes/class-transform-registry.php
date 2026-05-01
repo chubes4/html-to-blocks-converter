@@ -1602,7 +1602,7 @@ class HTML_To_Blocks_Transform_Registry {
 
 		if ( ! empty( $options['tag_name'] ) ) {
 			$tag_name = strtolower( $element->get_tag_name() );
-			if ( in_array( $tag_name, [ 'section', 'main', 'article', 'aside', 'header', 'footer' ], true ) ) {
+			if ( in_array( $tag_name, [ 'section', 'main', 'article', 'aside', 'header', 'footer', 'nav' ], true ) ) {
 				$attributes['tagName'] = $tag_name;
 			}
 		}
@@ -1862,7 +1862,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( in_array( $tag, [ 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER' ], true ) ) {
+		if ( in_array( $tag, [ 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'NAV' ], true ) ) {
 			return true;
 		}
 
