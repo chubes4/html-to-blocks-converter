@@ -1875,7 +1875,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(divider|separator|rule|line)(?:$|[-_\s])/i' );
+			&& self::class_matches( $element, '/(?:^|[-_\s])(divider|separator|rule|line|overlay|grain)(?:$|[-_\s])/i' );
 	}
 
 	/**
