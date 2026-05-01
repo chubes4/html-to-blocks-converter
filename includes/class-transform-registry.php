@@ -2088,7 +2088,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|rule|line|overlay|grain|noise)(?:$|[-_\s])/i' );
+			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|rule|line|overlay|grain|noise|glow)(?:$|[-_\s])/i' );
 	}
 
 	/**
