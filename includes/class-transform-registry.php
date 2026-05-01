@@ -1870,7 +1870,23 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|compare|feature|visual|pin|location|detail)(?:$|[-_\s])/i' );
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|compare|feature|visual|pin|location|detail|chrome|scroll)(?:$|[-_\s])/i' ) ) {
+			return true;
+		}
+
+		return self::is_empty_element( $element )
+			&& self::class_matches( $element, '/(?:^|[-_\s])(divider|separator|rule|line)(?:$|[-_\s])/i' );
+	}
+
+	/**
+	 * Checks whether an element has no meaningful text or child elements.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element is empty layout chrome.
+	 */
+	private static function is_empty_element( $element ): bool {
+		return trim( wp_strip_all_tags( $element->get_inner_html() ) ) === ''
+			&& array() === $element->get_child_elements();
 	}
 
 	/**
