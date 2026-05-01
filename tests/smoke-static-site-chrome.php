@@ -199,6 +199,39 @@ $assert( str_contains( $inline_footer_serialized, 'Hand-Coded' ), 'inline-footer
 $assert( str_contains( $inline_footer_serialized, 'No Block Editor Was Harmed' ), 'inline-footer-preserves-middle-text', $inline_footer_serialized );
 $assert( str_contains( $inline_footer_serialized, 'Made With <span class="heart">🔥</span> And Spite' ), 'inline-footer-preserves-mixed-inline-content', $inline_footer_serialized );
 
+$text_div_footer_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<footer class="footer"><div class="footer-brand">Studio Code by Automattic</div><div class="footer-copy">Copyright 2026 Automattic Inc. All rights reserved.</div></footer>',
+		]
+	)
+);
+$assert( str_contains( $text_div_footer_serialized, 'Studio Code by Automattic' ), 'footer-brand-div-text-survives', $text_div_footer_serialized );
+$assert( str_contains( $text_div_footer_serialized, 'Copyright 2026 Automattic Inc. All rights reserved.' ), 'footer-copy-div-text-survives', $text_div_footer_serialized );
+$assert( str_contains( $text_div_footer_serialized, 'wp:paragraph' ), 'footer-text-divs-become-paragraphs', $text_div_footer_serialized );
+$assert( ! str_contains( $text_div_footer_serialized, '<div class="wp-block-group footer-brand">' ), 'footer-brand-div-does-not-become-empty-wrapper', $text_div_footer_serialized );
+
+$badge_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div class="hero-badge"><span class="hero-badge-dot"></span>Now in Beta - Studio by Automattic</div>',
+		]
+	)
+);
+$assert( ! str_contains( $badge_serialized, '<!-- wp:html -->' ), 'badge-cluster-avoids-core-html-fallback', $badge_serialized );
+$assert( str_contains( $badge_serialized, 'hero-badge-dot' ), 'badge-dot-class-survives', $badge_serialized );
+$assert( str_contains( $badge_serialized, 'Now in Beta' ), 'badge-text-survives', $badge_serialized );
+
+$dot_cluster_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div class="diagram-dots"><div class="diagram-dot"></div><div class="diagram-dot"></div><div class="diagram-dot"></div></div>',
+		]
+	)
+);
+$assert( ! str_contains( $dot_cluster_serialized, '<!-- wp:html -->' ), 'empty-dot-cluster-avoids-core-html-fallback', $dot_cluster_serialized );
+$assert( substr_count( $dot_cluster_serialized, '<!-- wp:group' ) >= 4, 'empty-dot-cluster-uses-native-groups', $dot_cluster_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;

@@ -2063,7 +2063,19 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
+		if ( $tag === 'SPAN' ) {
+			return self::is_empty_decorative_element( $element );
+		}
+
 		if ( $tag !== 'DIV' ) {
+			return false;
+		}
+
+		if (
+			array() === $element->get_child_elements()
+			&& trim( $element->get_text_content() ) !== ''
+			&& trim( $element->get_inner_html() ) === trim( wp_strip_all_tags( $element->get_inner_html() ) )
+		) {
 			return false;
 		}
 
@@ -2087,8 +2099,18 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
+		return self::is_empty_decorative_element( $element );
+	}
+
+	/**
+	 * Checks whether an empty element is safe to preserve as native visual chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the element is empty decorative layout chrome.
+	 */
+	private static function is_empty_decorative_element( $element ): bool {
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|rule|line|overlay|grain|noise|glow)(?:$|[-_\s])/i' );
+			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|rule|line|overlay|grain|noise|glow|dot|mark|bullet|orb|blob)(?:$|[-_\s]|\d)/i' );
 	}
 
 	/**
