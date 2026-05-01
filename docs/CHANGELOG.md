@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2026-05-01
+
+### Changed
+- cover quote author avatar metadata conversion
+- cover scoped inline script fallbacks
+- cover step timeline connector conversion
+
+### Fixed
+- convert code display divs natively
+- convert code-window snippets natively
+- expose safe SVG icon classification
+- preserve rich static chrome clusters
+- convert empty glow decorative divs
+- convert div code snippets natively
+- convert testimonial figure quotes natively
+- convert code demo widgets natively
+- convert empty BEM decorative divs
+- convert code-window demos natively
+- isolate code-window fallbacks
+- preserve custom CTA anchor styling
+- convert static nav wrappers
+- convert empty background decorative divs
+- convert address wrappers natively
+- convert empty decorative overlays
+- convert quote attribution wrappers
+- convert info contact blocks natively
+- convert decorative visual clusters
+- convert product card bodies natively
+- convert decorative div chrome to native blocks
+- convert detail wrappers to groups
+- isolate inline SVG fallbacks
+- preserve nested landing-page layout content
+- preserve inline text in footer groups
+
 ## [0.6.7] - 2026-04-30
 
 ### Fixed
