@@ -196,11 +196,15 @@ function html_to_blocks_convert( $html ) {
 		) );
 	}
 
-	// Check for significant content loss (input had content but output is empty/minimal)
-	$output_content_length = 0;
-	foreach ( $blocks as $block ) {
-		$output_content_length += strlen( $block['innerHTML'] ?? '' );
+	if ( empty( $blocks ) && trim( wp_strip_all_tags( $html ) ) !== '' && trim( $html ) === trim( wp_strip_all_tags( $html ) ) ) {
+		$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+			'core/paragraph',
+			[ 'content' => trim( $html ) ]
+		);
 	}
+
+	// Check for significant content loss (input had content but output is empty/minimal)
+	$output_content_length = html_to_blocks_measure_block_content_length( $blocks );
 	
 	if ( $original_html_length > 100 && $output_content_length < ( $original_html_length * 0.1 ) ) {
 		error_log( sprintf(
@@ -214,6 +218,34 @@ function html_to_blocks_convert( $html ) {
 	}
 
 	return $blocks;
+}
+
+/**
+ * Measures converted block content, including nested layout descendants.
+ *
+ * @param array $blocks Converted block arrays.
+ * @return int Approximate HTML content length.
+ */
+function html_to_blocks_measure_block_content_length( array $blocks ): int {
+	$length = 0;
+
+	foreach ( $blocks as $block ) {
+		if ( ! is_array( $block ) ) {
+			continue;
+		}
+
+		$length += strlen( (string) ( $block['innerHTML'] ?? '' ) );
+
+		if ( isset( $block['attrs']['content'] ) && is_string( $block['attrs']['content'] ) ) {
+			$length += strlen( $block['attrs']['content'] );
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+			$length += html_to_blocks_measure_block_content_length( $block['innerBlocks'] );
+		}
+	}
+
+	return $length;
 }
 
 /**
