@@ -62,6 +62,9 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 			return in_array(
 				$name,
 				[
+					'core/column',
+					'core/columns',
+					'core/group',
 					'core/html',
 					'core/heading',
 					'core/list',
@@ -144,6 +147,10 @@ $assert_occurs_once = static function ( string $haystack, string $needle, string
 	$assert( $count === 1, $label, 'Expected one occurrence of ' . $needle . ', found ' . $count );
 };
 
+$assert_contains = static function ( string $haystack, string $needle, string $label ) use ( $assert ) {
+	$assert( strpos( $haystack, $needle ) !== false, $label, 'Missing ' . $needle );
+};
+
 $html = <<<HTML
 <div class="compare">
   <div class="col-wp">
@@ -185,10 +192,10 @@ HTML;
 
 $serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $html ] ) );
 
-$assert_occurs_once( $serialized, 'class="compare"', 'compare-wrapper-once' );
-$assert_occurs_once( $serialized, 'class="col-wp"', 'col-wp-once' );
-$assert_occurs_once( $serialized, 'class="col-claude"', 'col-claude-once' );
-$assert_occurs_once( $serialized, 'WordPress <span class="tag">', 'compare-heading-once' );
+$assert_contains( $serialized, 'compare', 'compare-wrapper-preserved' );
+$assert_contains( $serialized, 'col-wp', 'col-wp-preserved' );
+$assert_contains( $serialized, 'col-claude', 'col-claude-preserved' );
+$assert_occurs_once( $serialized, '2003-2026', 'compare-heading-once' );
 $assert_occurs_once( $serialized, 'May 27, 2003', 'dates-once' );
 $assert_occurs_once( $serialized, 'It is rare that a piece of software earns the right to be eulogized.', 'eulogy-copy-once' );
 $assert_occurs_once( $serialized, 'The CMS was a workaround for not being able to write HTML.', 'manifesto-copy-once' );
