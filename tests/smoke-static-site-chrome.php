@@ -161,10 +161,32 @@ $serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $html ] 
 
 $assert( str_contains( $serialized, 'wp:group' ), 'static-chrome-uses-group-blocks' );
 $assert( ! str_contains( $serialized, 'wp:navigation' ), 'static-nav-avoids-invalid-navigation-blocks', $serialized );
-$assert( str_contains( $serialized, '<!-- wp:html --><nav class="primary">' ), 'static-nav-falls-back-to-core-html', $serialized );
+$assert( ! str_contains( $serialized, '<!-- wp:html --><nav class="primary">' ), 'static-nav-avoids-core-html-fallback', $serialized );
+$assert( str_contains( $serialized, '<nav class="wp-block-group primary">' ), 'static-nav-uses-group-nav-tag', $serialized );
 $assert( str_contains( $serialized, 'wp:list' ), 'footer-links-use-list-block' );
 $assert( str_contains( $serialized, 'The Prompt Liberation Front' ), 'text-only-div-preserves-footer-copy' );
 $assert( str_contains( $serialized, 'class="wp-block-preformatted prompt"' ), 'preformatted-rendered-html-preserves-source-class', $serialized );
+
+$salt_star_html = <<<HTML
+<nav class="site-nav" aria-label="Main navigation">
+  <a href="#" class="nav-logo">Salt &amp; Star</a>
+  <ul class="nav-links">
+    <li><a href="#our-bakes">Our Bakes</a></li>
+    <li><a href="#visit">Visit Us</a></li>
+    <li><a href="#order">Order</a></li>
+  </ul>
+</nav>
+HTML;
+
+$salt_star_serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $salt_star_html ] ) );
+
+$assert( ! str_contains( $salt_star_serialized, 'wp:html' ), 'salt-star-nav-avoids-core-html-fallback', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, '<nav class="wp-block-group site-nav" aria-label="Main navigation">' ), 'salt-star-nav-preserves-wrapper', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, '<a href="#" class="nav-logo">Salt &amp; Star</a>' ), 'salt-star-nav-preserves-logo-link', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, 'class="wp-block-list nav-links"' ), 'salt-star-nav-preserves-list-class', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, 'href="#our-bakes"' ), 'salt-star-nav-preserves-our-bakes-href', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, 'href="#visit"' ), 'salt-star-nav-preserves-visit-href', $salt_star_serialized );
+$assert( str_contains( $salt_star_serialized, 'href="#order"' ), 'salt-star-nav-preserves-order-href', $salt_star_serialized );
 
 $inline_footer_serialized = serialize_blocks(
 	html_to_blocks_raw_handler(
