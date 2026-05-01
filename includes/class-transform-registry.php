@@ -1870,7 +1870,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|compare|feature)(?:$|[-_\s])/i' );
+		return self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|compare|feature|visual|pin)(?:$|[-_\s])/i' );
 	}
 
 	/**
@@ -1996,7 +1996,7 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * core/paragraph transforms - p elements and text-only divs (lowest priority, fallback)
+	 * core/paragraph transforms - p elements and text-only wrappers (lowest priority, fallback)
 	 *
 	 * @return array Transform definitions
 	 */
@@ -2005,13 +2005,13 @@ class HTML_To_Blocks_Transform_Registry {
 			[
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
-				'selector'  => 'p,div',
+				'selector'  => 'p,div,span',
 				'isMatch'   => function ( $element ) {
 					if ( $element->get_tag_name() === 'P' ) {
 						return true;
 					}
 
-					return $element->get_tag_name() === 'DIV'
+					return in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true )
 						&& array() === $element->get_child_elements()
 						&& trim( $element->get_text_content() ) !== '';
 				},
