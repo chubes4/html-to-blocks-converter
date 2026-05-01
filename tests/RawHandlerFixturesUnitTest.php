@@ -108,6 +108,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/preformatted' ),
 				'snippets'       => array( 'Plain preformatted text' ),
 			),
+			'code-window'      => array(
+				'html'           => '<div class="workflow-code reveal hidden"><div class="code-window"><div class="code-titlebar"><div class="code-dot code-dot-r"></div><div class="code-dot code-dot-y"></div><div class="code-dot code-dot-g"></div><span class="code-filename">import-command.sh</span></div><div class="code-block"><div><span class="prompt">$</span> studio import ./site</div><div><span class="comment"># Converts static snippets to blocks</span></div></div></div></div>',
+				'expected_names' => array( 'core/group', 'core/group', 'core/group', 'core/paragraph', 'core/preformatted' ),
+				'snippets'       => array( 'workflow-code reveal hidden', 'code-window', 'code-titlebar', 'import-command.sh', 'studio import ./site', 'Converts static snippets to blocks' ),
+			),
 			'separator'        => array(
 				'html'           => '<hr class="is-style-wide">',
 				'expected_names' => array( 'core/separator' ),
