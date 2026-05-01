@@ -1,8 +1,8 @@
 <?php
 /**
- * Smoke test: inline SVG fallback stays scoped to the SVG node.
+ * Smoke test: safe inline SVG icons expose sanitized placeholder metadata.
  *
- * Run: php tests/smoke-inline-svg-fallback-scope.php
+ * Run: php tests/smoke-inline-svg-icon-classification.php
  */
 
 // phpcs:disable
@@ -59,16 +59,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 		}
 
 		public function is_registered( $name ) {
-			return in_array(
-				$name,
-				[
-					'core/group',
-					'core/html',
-					'core/paragraph',
-					'html-to-blocks/svg-icon',
-				],
-				true
-			);
+			return in_array( $name, [ 'core/html', 'core/paragraph' ], true );
 		}
 
 		public function get_registered( $name ) {
@@ -95,29 +86,13 @@ if ( ! function_exists( 'get_shortcode_regex' ) ) {
 	}
 }
 
+$fallback_events = [];
 if ( ! function_exists( 'do_action' ) ) {
-	function do_action( $hook_name, ...$args ) {}
-}
-
-if ( ! function_exists( 'serialize_blocks' ) ) {
-	function serialize_blocks( array $blocks ): string {
-		$output = '';
-		foreach ( $blocks as $block ) {
-			$name = $block['blockName'] ?? '';
-			if ( $name === 'core/html' ) {
-				$output .= '<!-- wp:html -->' . ( $block['attrs']['content'] ?? $block['innerHTML'] ?? '' ) . '<!-- /wp:html -->';
-				continue;
-			}
-
-			$output .= '<!-- wp:' . substr( $name, 5 ) . ' -->';
-			$output .= $block['innerContent'][0] ?? $block['innerHTML'] ?? '';
-			$output .= serialize_blocks( $block['innerBlocks'] ?? [] );
-			$inner_content = $block['innerContent'] ?? [];
-			$output       .= end( $inner_content ) ?: '';
-			$output .= '<!-- /wp:' . substr( $name, 5 ) . ' -->';
+	function do_action( $hook_name, ...$args ) {
+		global $fallback_events;
+		if ( $hook_name === 'html_to_blocks_unsupported_html_fallback' ) {
+			$fallback_events[] = $args;
 		}
-
-		return $output;
 	}
 }
 
@@ -154,34 +129,35 @@ $collect_blocks = static function ( array $blocks, string $name ) use ( &$collec
 	return $matches;
 };
 
-$html = <<<HTML
-<div class="ss-location-visual ss-reveal ss-reveal-delay-1">
-  <div class="ss-location-pin">
-    <svg class="ss-location-pin-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-    <span class="ss-location-pin-name">Salt &amp; Star</span>
-  </div>
-</div>
-HTML;
+$safe_svg = '<svg class="icon icon-arrow" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Arrow"><title>Arrow</title><path fill="#fff" d="M4 12h14"/><polyline points="14 6 20 12 14 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+$safe     = HTML_To_Blocks_SVG_Icon_Classifier::classify( $safe_svg );
 
-$blocks     = html_to_blocks_raw_handler( [ 'HTML' => $html ] );
-$serialized = serialize_blocks( $blocks );
-$groups     = $collect_blocks( $blocks, 'core/group' );
-$fallbacks  = $collect_blocks( $blocks, 'core/html' );
-$svg_icons  = $collect_blocks( $blocks, 'html-to-blocks/svg-icon' );
+$assert( ! empty( $safe['is_safe'] ), 'classifier-accepts-safe-svg', $safe['reason'] ?? '' );
+$assert( str_contains( $safe['svg'], '<svg' ), 'classifier-returns-sanitized-svg', $safe['svg'] ?? '' );
+$assert( ! str_contains( $safe['svg'], 'xmlns' ), 'classifier-strips-nonessential-attrs', $safe['svg'] ?? '' );
+$assert( ( $safe['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'classifier-returns-kind-metadata' );
+$assert( ( $safe['metadata']['viewBox'] ?? '' ) === '0 0 24 24', 'classifier-returns-viewbox-metadata' );
 
-$assert( count( $groups ) >= 2, 'visual-and-pin-wrappers-become-groups', $serialized );
-$assert( str_contains( $serialized, 'ss-location-visual' ), 'visual-wrapper-class-survives', $serialized );
-$assert( str_contains( $serialized, 'ss-location-pin' ), 'pin-wrapper-class-survives', $serialized );
-$assert( str_contains( $serialized, 'Salt &amp; Star' ), 'pin-text-survives', $serialized );
-$assert( str_contains( $serialized, '<!-- wp:paragraph' ), 'pin-text-becomes-native-paragraph', $serialized );
-$assert( count( $svg_icons ) === 1, 'safe-svg-becomes-placeholder', $serialized );
-$assert( count( $fallbacks ) === 0, 'safe-svg-does-not-fallback-to-html', $serialized );
+$safe_blocks = html_to_blocks_raw_handler( [ 'HTML' => $safe_svg ] );
+$icons       = $collect_blocks( $safe_blocks, 'html-to-blocks/svg-icon' );
+$fallbacks   = $collect_blocks( $safe_blocks, 'core/html' );
 
-$svg_icon = $svg_icons[0]['attrs'] ?? [];
-$assert( str_starts_with( trim( $svg_icon['svg'] ?? '' ), '<svg' ), 'placeholder-has-sanitized-svg', $svg_icon['svg'] ?? '' );
-$assert( ( $svg_icon['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'placeholder-has-icon-metadata' );
-$assert( ! str_contains( $svg_icon['svg'] ?? '', 'ss-location-visual' ), 'placeholder-does-not-wrap-visual', $svg_icon['svg'] ?? '' );
-$assert( ! str_contains( $svg_icon['svg'] ?? '', 'ss-location-pin-name' ), 'placeholder-does-not-wrap-text', $svg_icon['svg'] ?? '' );
+$assert( count( $icons ) === 1, 'safe-svg-emits-placeholder-block' );
+$assert( count( $fallbacks ) === 0, 'safe-svg-emits-no-core-html' );
+$assert( count( $fallback_events ) === 0, 'safe-svg-emits-no-fallback-diagnostic' );
+$assert( ( $icons[0]['attrs']['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'placeholder-exposes-metadata' );
+$assert( str_contains( $icons[0]['attrs']['svg'] ?? '', '<polyline' ), 'placeholder-exposes-sanitized-payload' );
+
+$unsafe_svg     = '<svg viewBox="0 0 24 24"><script>alert(1)</script><path onclick="alert(1)" d="M0 0h24v24H0z"/></svg>';
+$unsafe         = HTML_To_Blocks_SVG_Icon_Classifier::classify( $unsafe_svg );
+$unsafe_blocks  = html_to_blocks_raw_handler( [ 'HTML' => $unsafe_svg ] );
+$unsafe_icons   = $collect_blocks( $unsafe_blocks, 'html-to-blocks/svg-icon' );
+$unsafe_html    = $collect_blocks( $unsafe_blocks, 'core/html' );
+
+$assert( empty( $unsafe['is_safe'] ), 'classifier-rejects-active-svg', $unsafe['reason'] ?? '' );
+$assert( count( $unsafe_icons ) === 0, 'unsafe-svg-emits-no-placeholder' );
+$assert( count( $unsafe_html ) === 1, 'unsafe-svg-stays-on-fallback-path' );
+$assert( count( $fallback_events ) === 1, 'unsafe-svg-emits-fallback-diagnostic' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
