@@ -1401,6 +1401,19 @@ class HTML_To_Blocks_Transform_Registry {
 		return [
 			[
 				'blockName' => 'core/preformatted',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return self::is_div_code_snippet_element( $element );
+				},
+				'transform' => function ( $element ) {
+					$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+					$attributes['content'] = self::normalise_code_snippet_content( $element->get_inner_html() );
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
+				},
+			],
+			[
+				'blockName' => 'core/preformatted',
 				'priority'  => 11,
 				'isMatch'   => function ( $element ) {
 					if ( $element->get_tag_name() !== 'PRE' ) {
@@ -1431,6 +1444,40 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			],
 		];
+	}
+
+	/**
+	 * Checks whether a div is a styled code snippet using inline syntax spans and br line breaks.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the element should become core/preformatted.
+	 */
+	private static function is_div_code_snippet_element( $element ): bool {
+		if ( $element->get_tag_name() !== 'DIV' ) {
+			return false;
+		}
+
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:snippet|block))(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		$inner_html = $element->get_inner_html();
+		if ( preg_match( '/<br\s*\/?\s*>/i', $inner_html ) !== 1 ) {
+			return false;
+		}
+
+		return preg_match( '/(?:&lt;|&gt;|\/\/|\x{2192}|&rarr;|=&quot;|=\")/iu', $inner_html ) === 1;
+	}
+
+	/**
+	 * Converts snippet div line-break markup into preformatted content.
+	 *
+	 * @param string $inner_html Source snippet HTML.
+	 * @return string Preformatted block content.
+	 */
+	private static function normalise_code_snippet_content( string $inner_html ): string {
+		$content = preg_replace( '/<br\s*\/?\s*>/i', "\n", $inner_html );
+		return trim( $content );
 	}
 
 	/**
