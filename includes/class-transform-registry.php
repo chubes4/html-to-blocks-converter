@@ -1870,7 +1870,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|detail|chrome|scroll|thumb|stars?|rating)(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
 			return true;
 		}
 
@@ -2012,7 +2012,7 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * core/paragraph transforms - p elements and text-only wrappers (lowest priority, fallback)
+	 * core/paragraph transforms - p/address/a elements and text-only wrappers (lowest priority, fallback)
 	 *
 	 * @return array Transform definitions
 	 */
@@ -2021,9 +2021,9 @@ class HTML_To_Blocks_Transform_Registry {
 			[
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
-				'selector'  => 'p,div,span',
+				'selector'  => 'p,address,a,div,span',
 				'isMatch'   => function ( $element ) {
-					if ( $element->get_tag_name() === 'P' ) {
+					if ( in_array( $element->get_tag_name(), [ 'P', 'ADDRESS', 'A' ], true ) ) {
 						return true;
 					}
 
@@ -2032,7 +2032,7 @@ class HTML_To_Blocks_Transform_Registry {
 						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
-					$content    = $element->get_inner_html();
+					$content    = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
 					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
 					$attributes['content'] = $content;
 
