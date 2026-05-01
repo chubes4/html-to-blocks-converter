@@ -84,7 +84,7 @@ function html_to_blocks_convert( $html ) {
 		$token_type = $processor->get_token_type();
 		$depth      = $processor->get_current_depth();
 
-		if ( '#text' === $token_type && $depth === $body_depth ) {
+		if ( '#text' === $token_type && $depth === $top_level_depth ) {
 			$text = trim( $processor->get_modifiable_text() );
 			if ( ! empty( $text ) ) {
 				$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
@@ -432,9 +432,12 @@ function html_to_blocks_normalise_blocks( $html ) {
 		$token_type = $processor->get_token_type();
 		$depth      = $processor->get_current_depth();
 
-		if ( '#text' === $token_type && $depth === $body_depth ) {
+		if ( '#text' === $token_type && $depth === $top_level_depth ) {
 			$text = $processor->get_modifiable_text();
 			if ( trim( $text ) === '' ) {
+				if ( $in_paragraph && $paragraph_buffer !== '' ) {
+					$paragraph_buffer .= htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+				}
 				continue;
 			}
 

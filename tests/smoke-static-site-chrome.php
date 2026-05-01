@@ -166,6 +166,17 @@ $assert( str_contains( $serialized, 'wp:list' ), 'footer-links-use-list-block' )
 $assert( str_contains( $serialized, 'The Prompt Liberation Front' ), 'text-only-div-preserves-footer-copy' );
 $assert( str_contains( $serialized, 'class="wp-block-preformatted prompt"' ), 'preformatted-rendered-html-preserves-source-class', $serialized );
 
+$inline_footer_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<footer>Hand-Coded · No Block Editor Was Harmed · Made With <span class="heart">🔥</span> And Spite</footer>',
+		]
+	)
+);
+$assert( str_contains( $inline_footer_serialized, 'Hand-Coded' ), 'inline-footer-preserves-leading-text', $inline_footer_serialized );
+$assert( str_contains( $inline_footer_serialized, 'No Block Editor Was Harmed' ), 'inline-footer-preserves-middle-text', $inline_footer_serialized );
+$assert( str_contains( $inline_footer_serialized, 'Made With <span class="heart">🔥</span> And Spite' ), 'inline-footer-preserves-mixed-inline-content', $inline_footer_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
