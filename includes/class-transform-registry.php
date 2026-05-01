@@ -42,6 +42,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_separator_transforms(),
 			self::get_table_transforms(),
 			self::get_layout_transforms(),
+			self::get_svg_transforms(),
 			self::get_paragraph_transforms()
 		);
 
@@ -139,6 +140,111 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return trim( wp_strip_all_tags( $remaining ) );
+	}
+
+	/**
+	 * Static inline SVG icon transforms.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_svg_transforms() {
+		return [
+			[
+				'blockName' => 'core/html',
+				'priority'  => 25,
+				'isMatch'   => function ( $element ) {
+					return self::is_small_inline_svg_icon( $element );
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/html',
+						[ 'content' => $element->get_outer_html() ]
+					);
+				},
+			],
+		];
+	}
+
+	/**
+	 * Checks whether an SVG is a small static icon that can be preserved as supported raw HTML.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True for small standalone static SVG icons.
+	 */
+	private static function is_small_inline_svg_icon( $element ): bool {
+		if ( $element->get_tag_name() !== 'SVG' ) {
+			return false;
+		}
+
+		$outer_html = $element->get_outer_html();
+		if ( strlen( $outer_html ) > 2000 || trim( wp_strip_all_tags( $outer_html ) ) !== '' ) {
+			return false;
+		}
+
+		if ( preg_match( '/<\s*\/?\s*(script|style|foreignObject|iframe|object|embed|image|use|a|audio|video|canvas|animate(?:Motion|Transform)?|set)\b/i', $outer_html ) === 1 ) {
+			return false;
+		}
+
+		if ( preg_match( '/\s(?:on[a-z]+|href|xlink:href)\s*=|javascript\s*:/i', $outer_html ) === 1 ) {
+			return false;
+		}
+
+		if ( ! self::svg_has_icon_dimensions( $element ) ) {
+			return false;
+		}
+
+		$allowed_tags = [ 'svg', 'g', 'path', 'circle', 'line', 'polyline', 'rect', 'ellipse', 'polygon', 'title', 'desc' ];
+		if ( preg_match_all( '/<\s*\/?\s*([a-z][a-z0-9:-]*)\b/i', $outer_html, $matches ) ) {
+			foreach ( $matches[1] as $tag_name ) {
+				if ( ! in_array( strtolower( $tag_name ), $allowed_tags, true ) ) {
+					return false;
+				}
+			}
+		}
+
+		foreach ( [ 'path', 'circle', 'line', 'polyline', 'rect', 'ellipse', 'polygon' ] as $shape_tag ) {
+			if ( preg_match( '/<\s*' . $shape_tag . '\b/i', $outer_html ) === 1 ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks whether SVG dimensions look like an icon instead of arbitrary artwork.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element SVG element to inspect.
+	 * @return bool True when size signals a small icon.
+	 */
+	private static function svg_has_icon_dimensions( $element ): bool {
+		$view_box = $element->get_attribute( 'viewBox' ) ?? $element->get_attribute( 'viewbox' );
+		if ( is_string( $view_box ) && preg_match( '/^\s*-?\d+(?:\.\d+)?\s+-?\d+(?:\.\d+)?\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*$/', $view_box, $matches ) === 1 ) {
+			return (float) $matches[1] <= 128 && (float) $matches[2] <= 128;
+		}
+
+		$width  = self::parse_svg_dimension( $element->get_attribute( 'width' ) );
+		$height = self::parse_svg_dimension( $element->get_attribute( 'height' ) );
+
+		return $width !== null && $height !== null && $width <= 128 && $height <= 128;
+	}
+
+	/**
+	 * Parses a simple SVG dimension into a numeric value.
+	 *
+	 * @param string|null $value Dimension attribute value.
+	 * @return float|null Numeric dimension, or null when not comparable.
+	 */
+	private static function parse_svg_dimension( ?string $value ): ?float {
+		if ( ! is_string( $value ) || trim( $value ) === '' ) {
+			return null;
+		}
+
+		if ( preg_match( '/^\s*(\d+(?:\.\d+)?)(?:px)?\s*$/i', $value, $matches ) !== 1 ) {
+			return null;
+		}
+
+		return (float) $matches[1];
 	}
 
 	/**
