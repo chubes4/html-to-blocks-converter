@@ -724,7 +724,7 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * core/buttons and core/button transforms - explicit button-like anchors.
+	 * core/buttons and core/button transforms - native WordPress button anchors.
 	 *
 	 * @return array Transform definitions
 	 */
@@ -860,10 +860,10 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Checks if an anchor explicitly carries button intent.
+	 * Checks if an anchor already carries native WordPress button markup.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $element Anchor element.
-	 * @return bool True when the anchor is button-like.
+	 * @return bool True when the anchor is already WordPress-button-shaped.
 	 */
 	private static function is_button_like_anchor( $element ): bool {
 		if ( ! $element || $element->get_tag_name() !== 'A' ) {
@@ -871,7 +871,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$class_name = $element->get_attribute( 'class' ) ?? '';
-		return preg_match( '/(?:^|\s)(?:button|btn|wp-block-button__link|wp-element-button)(?:$|\s|-)/i', $class_name ) === 1;
+		return preg_match( '/(?:^|\s)(?:wp-block-button__link|wp-element-button)(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
@@ -1874,7 +1874,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(actions?|buttons?|cta|group|section|container|wrapper|wrap|content|main|article|aside|header|footer|inner|row|grid|card|product|compare|feature|visual|pin|location|address|detail|chrome|scroll|thumb|stars?|rating|info)(?:$|[-_\s])/i' ) ) {
 			return true;
 		}
 

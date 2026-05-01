@@ -35,7 +35,7 @@ The plugin converts high-confidence static HTML patterns to their corresponding 
 | recognized provider `<iframe>` embeds | `core/embed` |
 | downloadable file anchors | `core/file` |
 | media-text wrappers | `core/media-text` |
-| button-like anchors | `core/buttons` with `core/button` children |
+| WordPress button anchors | `core/buttons` with `core/button` children |
 | `<details>` | `core/details` |
 | `<pre class="wp-block-verse">` | `core/verse` |
 | `<pre><code>` | `core/code` |
