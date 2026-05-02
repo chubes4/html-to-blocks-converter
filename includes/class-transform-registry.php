@@ -1675,7 +1675,7 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
-					$attributes['content'] = self::normalise_code_snippet_content( $element->get_inner_html() );
+					$attributes['content'] = self::normalise_code_snippet_content( $element );
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
 				},
@@ -1733,16 +1733,18 @@ class HTML_To_Blocks_Transform_Registry {
 			return trim( $element->get_text_content() ) !== '';
 		}
 
-		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:snippet|block|body|output))(?:$|[-_\s])/i' ) ) {
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|workflow[-_\s]?code|code[-_\s]?(?:snippet|block|body|output))(?:$|[-_\s])/i' ) ) {
 			return false;
 		}
 
 		$inner_html = $element->get_inner_html();
-		if ( preg_match( '/<br\s*\/?\s*>/i', $inner_html ) !== 1 ) {
+		$has_br_lines = preg_match( '/<br\s*\/?\s*>/i', $inner_html ) === 1;
+		$has_display_block_lines = self::has_display_block_code_lines( $element );
+		if ( ! $has_br_lines && ! $has_display_block_lines ) {
 			return false;
 		}
 
-		if ( self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:body|output))(?:$|[-_\s])/i' ) ) {
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|workflow[-_\s]?code|code[-_\s]?(?:body|output))(?:$|[-_\s])/i' ) ) {
 			return trim( $element->get_text_content() ) !== '';
 		}
 
@@ -1752,12 +1754,53 @@ class HTML_To_Blocks_Transform_Registry {
 	/**
 	 * Converts snippet div line-break markup into preformatted content.
 	 *
-	 * @param string $inner_html Source snippet HTML.
+	 * @param HTML_To_Blocks_HTML_Element $element Source snippet element.
 	 * @return string Preformatted block content.
 	 */
-	private static function normalise_code_snippet_content( string $inner_html ): string {
+	private static function normalise_code_snippet_content( $element ): string {
+		$display_block_lines = self::get_display_block_code_lines( $element );
+		if ( count( $display_block_lines ) >= 2 ) {
+			return trim( implode( "\n", $display_block_lines ) );
+		}
+
+		$inner_html = $element->get_inner_html();
 		$content = preg_replace( '/<br\s*\/?\s*>/i', "\n", $inner_html );
 		return trim( $content );
+	}
+
+	/**
+	 * Checks whether a code snippet uses direct display:block spans as line wrappers.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source snippet element.
+	 * @return bool True when the snippet has display:block line spans.
+	 */
+	private static function has_display_block_code_lines( $element ): bool {
+		return count( self::get_display_block_code_lines( $element ) ) >= 2;
+	}
+
+	/**
+	 * Extracts line contents from direct display:block span wrappers.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source snippet element.
+	 * @return array Line HTML fragments.
+	 */
+	private static function get_display_block_code_lines( $element ): array {
+		$lines = [];
+
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( 'SPAN' !== $child->get_tag_name() ) {
+				continue;
+			}
+
+			$style = $child->has_attribute( 'style' ) ? $child->get_attribute( 'style' ) : '';
+			if ( preg_match( '/(?:^|;)\s*display\s*:\s*block\b/i', (string) $style ) !== 1 ) {
+				continue;
+			}
+
+			$lines[] = $child->get_inner_html();
+		}
+
+		return $lines;
 	}
 
 	/**
