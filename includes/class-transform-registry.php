@@ -914,7 +914,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$class_name = $element->get_attribute( 'class' ) ?? '';
-		return preg_match( '/(?:^|\s)(?:wp-block-button__link|wp-element-button|[A-Za-z0-9_-]*btn[A-Za-z0-9_-]*)(?:$|\s)/i', $class_name ) === 1;
+		return preg_match( '/(?:^|\s)(?:wp-block-button__link|wp-element-button|[A-Za-z0-9]+-btn(?:-[A-Za-z0-9_-]+)?)(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
@@ -2423,8 +2423,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if (
-			array() === $element->get_child_elements()
-			&& trim( $element->get_text_content() ) !== ''
+			trim( $element->get_text_content() ) !== ''
 			&& trim( $element->get_inner_html() ) === trim( wp_strip_all_tags( $element->get_inner_html() ) )
 		) {
 			return false;
