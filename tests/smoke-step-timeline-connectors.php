@@ -212,6 +212,24 @@ foreach ( [
 $assert( substr_count( $serialized, '&rarr;' ) === 2, 'connector-arrows-preserved', $serialized );
 $assert( ! str_contains( $serialized, '<!-- wp:html --><div class="sc-steps">' ), 'wrapper-is-not-core-html-fallback', $serialized );
 
+$empty_connector_html = <<<'HTML'
+<div class="workflow-steps">
+  <div class="workflow-step"><p>Plan</p></div>
+  <div class="step-connector"></div>
+  <div class="workflow-step"><p>Build</p></div>
+</div>
+HTML;
+
+$empty_connector_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $empty_connector_html ] );
+$empty_connector_serialized = serialize_blocks( $empty_connector_blocks );
+$empty_connector_names      = $flatten_block_names( $empty_connector_blocks );
+
+$assert( ! in_array( 'core/html', $empty_connector_names, true ), 'empty-connectors-do-not-use-core-html', implode( ', ', $empty_connector_names ) );
+$assert( substr_count( implode( ',', $empty_connector_names ), 'core/group' ) === 4, 'empty-connectors-are-preserved-as-groups', implode( ', ', $empty_connector_names ) );
+$assert( str_contains( $empty_connector_serialized, 'step-connector' ), 'empty-connector-class-survives', $empty_connector_serialized );
+$assert( str_contains( $empty_connector_serialized, 'Plan' ), 'empty-connector-neighbor-before-survives', $empty_connector_serialized );
+$assert( str_contains( $empty_connector_serialized, 'Build' ), 'empty-connector-neighbor-after-survives', $empty_connector_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
