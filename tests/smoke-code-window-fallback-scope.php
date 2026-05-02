@@ -308,6 +308,43 @@ $assert( str_contains( $hero_code_serialized, 'agent-output.html &rarr; WordPres
 $assert( str_contains( $hero_code_serialized, 'Editable blocks' ) && str_contains( $hero_code_serialized, 'token-tag' ), 'hero-code-body-content-survives', $hero_code_serialized );
 $assert( ! str_contains( $hero_code_serialized, 'hero-code-dot' ), 'hero-code-decorative-dots-are-dropped', $hero_code_serialized );
 
+$hero_panel_html = <<<'HTML'
+<div class="hero-code-window">
+  <div class="window-bar">
+    <span class="dot dot-r"></span>
+    <span class="dot dot-y"></span>
+    <span class="dot dot-g"></span>
+    <span class="window-title">studio-code &mdash; agent output</span>
+  </div>
+  <div class="code-body">
+    <span class="code-line c-comment">// Agent writes normal HTML/CSS</span>
+    <span class="code-line"><span class="token-tag">&lt;section</span> <span class="token-attr">class</span>=<span class="token-val">"hero"</span><span class="token-tag">&gt;</span></span>
+  </div>
+  <div class="code-badge">Site Editor ready</div>
+</div>
+HTML;
+
+$hero_panel_blocks       = html_to_blocks_raw_handler( [ 'HTML' => $hero_panel_html ] );
+$hero_panel_serialized   = serialize_blocks( $hero_panel_blocks );
+$hero_panel_fallbacks    = $collect_blocks( $hero_panel_blocks, 'core/html' );
+$hero_panel_groups       = $collect_blocks( $hero_panel_blocks, 'core/group' );
+$hero_panel_paragraphs   = $collect_blocks( $hero_panel_blocks, 'core/paragraph' );
+$hero_panel_preformatted = $collect_blocks( $hero_panel_blocks, 'core/preformatted' );
+
+$assert( count( $hero_panel_fallbacks ) === 0, 'hero-panel-does-not-fallback-to-html', $hero_panel_serialized );
+$assert( count( $hero_panel_groups ) >= 3, 'hero-panel-children-stay-block-level-groups', $hero_panel_serialized );
+$assert( count( $hero_panel_paragraphs ) === 2, 'hero-panel-window-bar-and-badge-become-paragraph-groups', $hero_panel_serialized );
+$assert( count( $hero_panel_preformatted ) === 1, 'hero-panel-code-body-becomes-preformatted', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'hero-code-window' ), 'hero-panel-class-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'window-bar' ), 'hero-panel-window-bar-class-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'code-body' ), 'hero-panel-code-body-class-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'code-badge' ), 'hero-panel-code-badge-class-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'studio-code &mdash; agent output' ), 'hero-panel-title-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'Agent writes normal HTML/CSS' ) && str_contains( $hero_panel_serialized, 'token-tag' ), 'hero-panel-code-content-survives', $hero_panel_serialized );
+$assert( str_contains( $hero_panel_serialized, 'Site Editor ready' ), 'hero-panel-badge-text-survives', $hero_panel_serialized );
+$assert( ! str_contains( $hero_panel_serialized, 'wp-block-preformatted hero-code-window' ), 'hero-panel-wrapper-is-not-flattened-preformatted', $hero_panel_serialized );
+$assert( ! str_contains( $hero_panel_serialized, 'dot-r' ) && ! str_contains( $hero_panel_serialized, 'dot-y' ) && ! str_contains( $hero_panel_serialized, 'dot-g' ), 'hero-panel-decorative-dots-are-dropped', $hero_panel_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
