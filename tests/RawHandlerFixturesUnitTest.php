@@ -118,6 +118,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/group', 'core/paragraph', 'core/preformatted' ),
 				'snippets'       => array( 'hero-code-block reveal', 'hero-code-header', 'agent-output.html &rarr; WordPress blocks', 'token-tag' ),
 			),
+			'div-line-code-panel' => array(
+				'html'           => '<div class="case-code"><div class="t-comment"># customer brief &rarr; editable WordPress site</div><div>&nbsp;</div><div><span class="t-fn">generate</span>(<span class="t-string">"luxury spa, warm earth tones,</span></div><div><span class="t-string">  hero with booking CTA,</span></div><div><span class="t-string">  services grid, testimonials"</span>)</div><div>&nbsp;</div><div class="t-comment"># agent writes index.html + style.css</div><div>&nbsp;</div><div><span class="t-keyword">import-theme</span> /tmp/static-site/</div><div><span class="t-keyword">  --slug</span>=<span class="t-string">luxe-spa</span></div><div><span class="t-keyword">  --activate</span> <span class="t-keyword">--overwrite</span></div><div>&nbsp;</div><div class="t-comment"># OK Block theme active in Site Editor</div></div>',
+				'expected_names' => array( 'core/preformatted' ),
+				'snippets'       => array( 'case-code', 't-comment', 'customer brief', 't-fn', 'generate', 't-string', 'luxe-spa', 't-keyword', '--overwrite' ),
+			),
 			'empty-quote-accent-bar' => array(
 				'html'           => '<blockquote class="quote-card"><div class="quote-accent-bar"></div><p>Blocks over fallbacks.</p></blockquote>',
 				'expected_names' => array( 'core/quote', 'core/paragraph' ),
