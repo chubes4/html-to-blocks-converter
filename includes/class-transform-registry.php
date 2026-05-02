@@ -2024,6 +2024,20 @@ class HTML_To_Blocks_Transform_Registry {
 				'blockName' => 'core/group',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
+					return self::is_image_wrapper_element( $element );
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						[ self::create_image_block_from_img( $element->query_selector( 'img' ) ) ]
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
+				'priority'  => 14,
+				'isMatch'   => function ( $element ) {
 					return self::is_nav_logo_chrome_element( $element );
 				},
 				'transform' => function ( $element, $handler ) {
@@ -2471,6 +2485,26 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return self::is_empty_decorative_element( $element );
+	}
+
+	/**
+	 * Checks whether an element is an image-only wrapper that should stay grouped.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the wrapper should become core/group with core/image.
+	 */
+	private static function is_image_wrapper_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+			return false;
+		}
+
+		$images = $element->query_selector_all( 'img' );
+		if ( count( $images ) !== 1 || self::get_media_src( $images[0] ) === '' ) {
+			return false;
+		}
+
+		$remaining = str_replace( $images[0]->get_outer_html(), '', $element->get_inner_html() );
+		return trim( wp_strip_all_tags( $remaining ) ) === '';
 	}
 
 	/**
