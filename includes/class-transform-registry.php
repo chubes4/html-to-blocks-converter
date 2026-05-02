@@ -1312,6 +1312,34 @@ class HTML_To_Blocks_Transform_Registry {
 		return [
 			[
 				'blockName' => 'core/group',
+				'priority'  => 8,
+				'isMatch'   => function ( $element ) {
+					return self::is_decorative_code_chrome_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					$inner_blocks = array() !== $element->get_child_elements()
+						? $handler( [ 'HTML' => $element->get_inner_html() ] )
+						: [];
+
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						$inner_blocks
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return self::is_code_window_text_chrome_element( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_code_window_text_group( $element );
+				},
+			],
+			[
+				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
 					if ( 'DIV' !== $element->get_tag_name() ) {
@@ -1429,12 +1457,91 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_code_window_chrome_content( $element ): string {
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( self::class_matches( $child, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*(?:$|\s)/i' ) ) {
-				$content = preg_replace( '/<div\b[^>]*class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*[^"\']*["\'][^>]*>\s*<\/div>/i', '', $element->get_inner_html() );
+				$content = preg_replace( '/<(?:div|span)\b[^>]*class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*[^"\']*["\'][^>]*>\s*<\/(?:div|span)>/i', '', $element->get_inner_html() );
 				return trim( (string) $content );
 			}
 		}
 
 		return trim( $element->get_inner_html() );
+	}
+
+	/**
+	 * Checks whether an element is empty/decorative code-window chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the element can safely become native non-content chrome.
+	 */
+	private static function is_decorative_code_chrome_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
+			return false;
+		}
+
+		if ( self::has_unsafe_code_display_markup( $element ) || ! self::has_decorative_code_chrome_class( $element ) ) {
+			return false;
+		}
+
+		$text = trim( wp_strip_all_tags( $element->get_inner_html() ) );
+		if ( ! self::is_decorative_text_content( $text ) ) {
+			return false;
+		}
+
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( ! self::is_decorative_code_chrome_element( $child ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks whether an element is textual code-window chrome such as title bars.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when chrome can safely become a native group.
+	 */
+	private static function is_code_window_text_chrome_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
+			return false;
+		}
+
+		if ( self::has_unsafe_code_display_markup( $element ) ) {
+			return false;
+		}
+
+		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|pane[-_]?header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
+	}
+
+	/**
+	 * Checks for generic code-window chrome class names.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when class names describe decorative code chrome.
+	 */
+	private static function has_decorative_code_chrome_class( $element ): bool {
+		$class_name = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+		if ( '' === $class_name ) {
+			return false;
+		}
+
+		$chrome_part = '(?:dot|line|divider|separator|rule|arrow|chrome|bar|titlebar)';
+		return preg_match( '/(?:^|[\s_-])code[\w-]*[\s_-]?' . $chrome_part . '(?:$|[\s_-]|\d)/i', $class_name ) === 1
+			|| preg_match( '/(?:^|[\s_-])' . $chrome_part . '[\w-]*[\s_-]?code(?:$|[\s_-]|\d)/i', $class_name ) === 1;
+	}
+
+	/**
+	 * Checks whether text is empty or purely visual punctuation/chrome.
+	 *
+	 * @param string $text Text content to inspect.
+	 * @return bool True when text carries no semantic content.
+	 */
+	private static function is_decorative_text_content( string $text ): bool {
+		$text = trim( html_entity_decode( $text, ENT_QUOTES, 'UTF-8' ) );
+		if ( '' === $text ) {
+			return true;
+		}
+
+		return preg_match( '/^[\s\-_=|:;.,•·*+<>›»«‹→←↑↓↔⇒⇐⇑⇓➜➔➝⟶⟵⟷]+$/u', $text ) === 1;
 	}
 
 	/**
