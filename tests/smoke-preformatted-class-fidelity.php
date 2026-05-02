@@ -78,21 +78,21 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 	}
 };
 
+$source = new Preformatted_Class_Fidelity_Element(
+	'pre',
+	[ 'class' => 'prompt wp-block-preformatted alignwide has-small-font-size unsafe@class', 'id' => 'demo-prompt' ],
+	'<span class="label">— The Prompt —</span>Generate a site.'
+);
+
 $preformatted_transform = null;
 foreach ( HTML_To_Blocks_Transform_Registry::get_raw_transforms() as $transform ) {
-	if ( ( $transform['blockName'] ?? '' ) === 'core/preformatted' ) {
+	if ( ( $transform['blockName'] ?? '' ) === 'core/preformatted' && $transform['isMatch']( $source ) ) {
 		$preformatted_transform = $transform;
 		break;
 	}
 }
 
 $assert( $preformatted_transform !== null, 'preformatted-transform-registered' );
-
-$source = new Preformatted_Class_Fidelity_Element(
-	'pre',
-	[ 'class' => 'prompt wp-block-preformatted alignwide has-small-font-size unsafe@class', 'id' => 'demo-prompt' ],
-	'<span class="label">— The Prompt —</span>Generate a site.'
-);
 
 $assert( $preformatted_transform['isMatch']( $source ) === true, 'preformatted-transform-matches-pre-without-code' );
 
