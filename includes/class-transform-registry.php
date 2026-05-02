@@ -1339,6 +1339,16 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			],
 			[
+				'blockName' => 'core/preformatted',
+				'priority'  => 9,
+				'isMatch'   => function ( $element ) {
+					return self::is_div_line_code_panel( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_code_window_body_block( $element );
+				},
+			],
+			[
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -1412,7 +1422,15 @@ class HTML_To_Blocks_Transform_Registry {
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( $child->get_tag_name() === 'DIV' ) {
-				$lines[] = $child->get_inner_html();
+				$line_html = $child->get_inner_html();
+				if ( $child->has_attribute( 'class' ) ) {
+					$line_class = self::safe_block_class_name( $child->get_attribute( 'class' ) );
+					if ( '' !== $line_class ) {
+						$line_html = '<span class="' . esc_attr( $line_class ) . '">' . $line_html . '</span>';
+					}
+				}
+
+				$lines[] = $line_html;
 			}
 		}
 
@@ -1541,6 +1559,47 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return $has_header && $has_body;
+	}
+
+	/**
+	 * Checks whether a classed code panel is composed of direct div line wrappers.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the wrapper can become a preformatted native block.
+	 */
+	private static function is_div_line_code_panel( $element ): bool {
+		if ( 'DIV' !== $element->get_tag_name() || ! self::class_matches( $element, '/(?:^|[-_\s])(?:code|terminal|snippet)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		if ( self::has_unsafe_code_display_markup( $element ) ) {
+			return false;
+		}
+
+		$children = $element->get_child_elements();
+		if ( count( $children ) < 2 ) {
+			return false;
+		}
+
+		$has_text = false;
+		foreach ( $children as $child ) {
+			if ( 'DIV' !== $child->get_tag_name() ) {
+				return false;
+			}
+
+			foreach ( $child->get_child_elements() as $inline_child ) {
+				if ( ! in_array( $inline_child->get_tag_name(), array( 'SPAN', 'BR', 'CODE', 'STRONG', 'B', 'EM', 'I' ), true ) ) {
+					return false;
+				}
+			}
+
+			$text = str_replace( "\xc2\xa0", ' ', html_entity_decode( trim( $child->get_text_content() ), ENT_QUOTES, 'UTF-8' ) );
+			if ( trim( $text ) !== '' ) {
+				$has_text = true;
+			}
+		}
+
+		return $has_text;
 	}
 
 	/**
