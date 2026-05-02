@@ -176,6 +176,16 @@ $html = <<<'HTML'
 </div>
 <div class="ws-code"><span class="hl">studio-code</span> "Build a consulting firm site"</div>
 <div class="ws-code">→ <span class="hl">tmp/static-site/index.html</span> created</div>
+<div class="syntax-highlight code-body">
+  <span class="cm">&lt;!-- Agent writes normal HTML --&gt;</span><br>
+  <span class="tag">&lt;section</span> <span class="attr">class</span>=<span class="str">"hero"</span><span class="tag">&gt;</span><br>
+  <span class="tag">&lt;/section&gt;</span>
+</div>
+<div class="code-output">
+  &lt;!-- wp:group --&gt;<br>
+  &lt;!-- wp:heading --&gt;<br>
+  &lt;h1&gt;Launch Faster&lt;/h1&gt;
+</div>
 HTML;
 
 $blocks       = html_to_blocks_raw_handler( [ 'HTML' => $html ] );
@@ -188,7 +198,7 @@ $preformatted = $collect_blocks( $blocks, 'core/preformatted' );
 $assert( count( $fallbacks ) === 0, 'code-display-divs-do-not-fallback', $serialized );
 $assert( count( $groups ) >= 4, 'code-pane-wrappers-become-groups', $serialized );
 $assert( count( $paragraphs ) === 2, 'code-pane-headers-become-paragraphs', $serialized );
-$assert( count( $preformatted ) === 4, 'code-bodies-and-ws-code-become-preformatted', $serialized );
+$assert( count( $preformatted ) === 6, 'code-bodies-outputs-and-ws-code-become-preformatted', $serialized );
 $assert( str_contains( $serialized, 'code-pane' ) && str_contains( $serialized, 'code-pane-header' ), 'code-pane-classes-survive', $serialized );
 $assert( str_contains( $serialized, 'Before: Agent prompt engineering' ) && str_contains( $serialized, 'Fragile' ), 'before-header-text-survives', $serialized );
 $assert( str_contains( $serialized, 'After: Plain HTML in, blocks out' ) && str_contains( $serialized, 'Stable' ), 'after-header-text-survives', $serialized );
@@ -196,6 +206,9 @@ $assert( str_contains( $serialized, 'prompt fragment trying to produce block mar
 $assert( str_contains( $serialized, '&lt;section' ) && str_contains( $serialized, 'class="hero"' ), 'escaped-html-code-survives', $serialized );
 $assert( str_contains( $serialized, 'studio-code' ) && str_contains( $serialized, 'tmp/static-site/index.html' ), 'ws-code-text-survives', $serialized );
 $assert( str_contains( $serialized, 'wp-block-preformatted ws-code' ), 'ws-code-class-survives', $serialized );
+$assert( str_contains( $serialized, 'Agent writes normal HTML' ) && str_contains( $serialized, 'class</span>=<span class="str">"hero"' ), 'syntax-highlight-code-body-survives', $serialized );
+$assert( str_contains( $serialized, '&lt;!-- wp:group --&gt;' ) && str_contains( $serialized, '&lt;h1&gt;Launch Faster&lt;/h1&gt;' ), 'code-output-text-survives', $serialized );
+$assert( str_contains( $serialized, 'wp-block-preformatted syntax-highlight code-body' ) && str_contains( $serialized, 'wp-block-preformatted code-output' ), 'display-body-output-classes-survive', $serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
