@@ -279,6 +279,35 @@ $assert( str_contains( $generic_serialized, 'import-command.sh' ), 'generic-file
 $assert( str_contains( $generic_serialized, 'studio import ./site' ) && str_contains( $generic_serialized, 'Converts static snippets to blocks' ), 'generic-code-text-survives', $generic_serialized );
 $assert( ! str_contains( $generic_serialized, 'code-dot' ), 'generic-decorative-dots-are-dropped', $generic_serialized );
 
+$hero_code_html = <<<'HTML'
+<div class="hero-code-block reveal">
+  <div class="hero-code-header">
+    <span class="hero-code-dot"></span>
+    <span class="hero-code-dot"></span>
+    <span class="code-filename">agent-output.html &rarr; WordPress blocks</span>
+  </div>
+  <div class="hero-code-body">
+    <div><span class="token-tag">&lt;section</span> <span class="token-attr">class</span>=<span class="token-val">"hero"</span><span class="token-tag">&gt;</span></div>
+    <div><span class="token-tag">&lt;h1&gt;</span>Editable blocks<span class="token-tag">&lt;/h1&gt;</span></div>
+  </div>
+</div>
+HTML;
+
+$hero_code_blocks       = html_to_blocks_raw_handler( [ 'HTML' => $hero_code_html ] );
+$hero_code_serialized   = serialize_blocks( $hero_code_blocks );
+$hero_code_fallbacks    = $collect_blocks( $hero_code_blocks, 'core/html' );
+$hero_code_groups       = $collect_blocks( $hero_code_blocks, 'core/group' );
+$hero_code_preformatted = $collect_blocks( $hero_code_blocks, 'core/preformatted' );
+
+$assert( count( $hero_code_fallbacks ) === 0, 'hero-code-block-does-not-fallback-to-html', $hero_code_serialized );
+$assert( count( $hero_code_groups ) >= 2, 'hero-code-block-wrappers-become-groups', $hero_code_serialized );
+$assert( count( $hero_code_preformatted ) === 1, 'hero-code-body-becomes-preformatted', $hero_code_serialized );
+$assert( str_contains( $hero_code_serialized, 'hero-code-block reveal' ), 'hero-code-block-classes-survive', $hero_code_serialized );
+$assert( str_contains( $hero_code_serialized, 'hero-code-header' ), 'hero-code-header-class-survives', $hero_code_serialized );
+$assert( str_contains( $hero_code_serialized, 'agent-output.html &rarr; WordPress blocks' ), 'hero-code-filename-survives', $hero_code_serialized );
+$assert( str_contains( $hero_code_serialized, 'Editable blocks' ) && str_contains( $hero_code_serialized, 'token-tag' ), 'hero-code-body-content-survives', $hero_code_serialized );
+$assert( ! str_contains( $hero_code_serialized, 'hero-code-dot' ), 'hero-code-decorative-dots-are-dropped', $hero_code_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;

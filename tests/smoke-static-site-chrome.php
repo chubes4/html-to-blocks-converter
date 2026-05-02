@@ -68,6 +68,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 					'core/list-item',
 					'core/paragraph',
 					'core/preformatted',
+					'core/quote',
 				],
 				true
 			);
@@ -231,6 +232,17 @@ $dot_cluster_serialized = serialize_blocks(
 );
 $assert( ! str_contains( $dot_cluster_serialized, '<!-- wp:html -->' ), 'empty-dot-cluster-avoids-core-html-fallback', $dot_cluster_serialized );
 $assert( substr_count( $dot_cluster_serialized, '<!-- wp:group' ) >= 4, 'empty-dot-cluster-uses-native-groups', $dot_cluster_serialized );
+
+$quote_accent_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<blockquote class="quote-card"><div class="quote-accent-bar"></div><p>Blocks over fallbacks.</p></blockquote>',
+		]
+	)
+);
+$assert( ! str_contains( $quote_accent_serialized, '<!-- wp:html -->' ), 'quote-accent-bar-avoids-core-html-fallback', $quote_accent_serialized );
+$assert( ! str_contains( $quote_accent_serialized, 'quote-accent-bar' ), 'quote-accent-bar-is-dropped', $quote_accent_serialized );
+$assert( str_contains( $quote_accent_serialized, 'Blocks over fallbacks.' ), 'quote-accent-neighbor-text-survives', $quote_accent_serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {

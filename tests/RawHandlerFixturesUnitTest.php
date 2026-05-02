@@ -113,6 +113,16 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/group', 'core/group', 'core/paragraph', 'core/preformatted' ),
 				'snippets'       => array( 'workflow-code reveal hidden', 'code-window', 'code-titlebar', 'import-command.sh', 'studio import ./site', 'Converts static snippets to blocks' ),
 			),
+			'hero-code-window' => array(
+				'html'           => '<div class="hero-code-block reveal"><div class="hero-code-header"><span class="hero-code-dot"></span><span class="code-filename">agent-output.html &rarr; WordPress blocks</span></div><div class="hero-code-body"><div><span class="token-tag">&lt;section</span> <span class="token-attr">class</span>=<span class="token-val">"hero"</span><span class="token-tag">&gt;</span></div></div></div>',
+				'expected_names' => array( 'core/group', 'core/group', 'core/paragraph', 'core/preformatted' ),
+				'snippets'       => array( 'hero-code-block reveal', 'hero-code-header', 'agent-output.html &rarr; WordPress blocks', 'token-tag' ),
+			),
+			'empty-quote-accent-bar' => array(
+				'html'           => '<blockquote class="quote-card"><div class="quote-accent-bar"></div><p>Blocks over fallbacks.</p></blockquote>',
+				'expected_names' => array( 'core/quote', 'core/paragraph' ),
+				'snippets'       => array( 'Blocks over fallbacks.' ),
+			),
 			'separator'        => array(
 				'html'           => '<hr class="is-style-wide">',
 				'expected_names' => array( 'core/separator' ),

@@ -248,7 +248,8 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 	$style      = isset( $attributes['style'] ) ? (string) $attributes['style'] : '';
 	$role       = isset( $attributes['role'] ) ? strtolower( trim( (string) $attributes['role'] ) ) : '';
 
-	if ( preg_match( '/(?:^|[-_\s])(icon|ico|glyph|symbol)(?:$|[-_\s]|\d)/i', $class_name ) !== 1 ) {
+	$decorative_class_pattern = '/(?:^|[-_\s])(icon|ico|glyph|symbol|accent|bar|divider|separator|rule|line|orb|blob|dot|glow)(?:$|[-_\s]|\d)/i';
+	if ( preg_match( $decorative_class_pattern, $class_name ) !== 1 ) {
 		return false;
 	}
 
@@ -269,6 +270,10 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 
 	if ( preg_match( '/url\s*\(/i', $style ) ) {
 		return false;
+	}
+
+	if ( preg_match( '/(?:^|[-_\s])accent(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
+		return true;
 	}
 
 	return preg_match( '/(?:^|;)\s*position\s*:\s*(?:absolute|fixed)\b/i', $style ) === 1
