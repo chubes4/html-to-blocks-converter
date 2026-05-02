@@ -189,6 +189,9 @@ $assert( in_array( 'core/paragraph', $names, true ), 'neighbor-paragraph-convert
 $assert( in_array( 'hero-glow-1', $class_names, true ), 'hero-glow-1-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'hero-glow-2', $class_names, true ), 'hero-glow-2-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'quote-glow', $class_names, true ), 'quote-glow-class-survives', implode( ', ', $class_names ) );
+$assert( str_contains( $serialized, '<div class="wp-block-group hero-glow-1"></div>' ), 'empty-hero-glow-1-serializes-valid-group-wrapper', $serialized );
+$assert( str_contains( $serialized, '<div class="wp-block-group hero-glow-2"></div>' ), 'empty-hero-glow-2-serializes-valid-group-wrapper', $serialized );
+$assert( str_contains( $serialized, '<div class="wp-block-group quote-glow"></div>' ), 'empty-quote-glow-serializes-valid-group-wrapper', $serialized );
 $assert( str_contains( $serialized, 'Glow Native' ), 'neighbor-heading-text-survives', $serialized );
 $assert( str_contains( $serialized, 'Decorative layers should stay editable.' ), 'neighbor-paragraph-text-survives', $serialized );
 $assert( str_contains( $serialized, 'Native quote chrome.' ), 'quote-content-survives', $serialized );
