@@ -544,6 +544,7 @@ class HTML_To_Blocks_Block_Factory {
 				return [
 					'opening' => '<' . $tag . self::html_attrs(
 						[
+							'id'         => $attributes['anchor'] ?? null,
 							'class'      => self::merge_block_class( 'wp-block-group', $attributes ),
 							'style'      => self::style_attr( $attributes ),
 							'aria-label' => $attributes['ariaLabel'] ?? null,
@@ -615,6 +616,9 @@ class HTML_To_Blocks_Block_Factory {
 
         foreach ( $attributes as $key => $value ) {
             if ( ! isset( $block_type->attributes[ $key ] ) ) {
+                if ( 'anchor' === $key ) {
+                    $sanitized[ $key ] = $value;
+                }
                 continue;
             }
 
