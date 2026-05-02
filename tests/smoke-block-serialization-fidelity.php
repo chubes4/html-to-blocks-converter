@@ -132,6 +132,19 @@ $group = HTML_To_Blocks_Block_Factory::create_block(
 	[ $heading, $paragraph, $styled_paragraph ]
 );
 
+$css_var_background_group = HTML_To_Blocks_Block_Factory::create_block(
+	'core/group',
+	[
+		'tagName' => 'section',
+		'style'   => [
+			'color' => [
+				'background' => 'var(--surface)',
+			],
+		],
+	],
+	[ $paragraph ]
+);
+
 $empty_decorative_group = HTML_To_Blocks_Block_Factory::create_block(
 	'core/group',
 	[
@@ -158,9 +171,10 @@ $preformatted = HTML_To_Blocks_Block_Factory::create_block(
 	]
 );
 
-$serialized = serialize_blocks( [ $group, $empty_decorative_group, $list, $preformatted ] );
+$serialized = serialize_blocks( [ $group, $css_var_background_group, $empty_decorative_group, $list, $preformatted ] );
 
 $assert( strpos( $serialized, '<section class="wp-block-group hero">' ) !== false, 'group-static-html-uses-tag-and-class', $serialized );
+$assert( strpos( $serialized, '<section class="wp-block-group has-background" style="background-color:var(--surface)">' ) !== false, 'group-css-var-background-serializes-inline-style', $serialized );
 $assert( $empty_decorative_group['innerHTML'] === '<div class="wp-block-group hero-glow-1"></div>', 'empty-group-inner-html-matches-gutenberg-save', $empty_decorative_group['innerHTML'] );
 $assert( $empty_decorative_group['innerContent'] === [ '<div class="wp-block-group hero-glow-1"></div>' ], 'empty-group-inner-content-is-complete-wrapper', var_export( $empty_decorative_group['innerContent'], true ) );
 $assert( strpos( $serialized, '<!-- wp:group {"className":"hero-glow-1"} --><div class="wp-block-group hero-glow-1"></div><!-- /wp:group -->' ) !== false, 'empty-group-serializes-valid-original-content', $serialized );
