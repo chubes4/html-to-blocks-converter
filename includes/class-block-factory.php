@@ -177,6 +177,11 @@ class HTML_To_Blocks_Block_Factory {
 			}
 		}
 
+		$min_height = $style['dimensions']['minHeight'] ?? null;
+		if ( is_string( $min_height ) && $min_height !== '' ) {
+			$declarations[] = 'min-height:' . $min_height;
+		}
+
 		return implode( ';', $declarations );
 	}
 

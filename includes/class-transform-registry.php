@@ -2049,6 +2049,7 @@ class HTML_To_Blocks_Transform_Registry {
 			'class_name'   => true,
 			'align'        => true,
 			'colors'       => true,
+			'dimensions'   => true,
 			'typography'   => true,
 			'spacing'      => true,
 			'border'       => true,
@@ -2121,10 +2122,14 @@ class HTML_To_Blocks_Transform_Registry {
 			if ( ! empty( $options['border'] ) ) {
 				self::apply_border_support_attributes( $attributes, $style );
 			}
+
+			if ( ! empty( $options['dimensions'] ) ) {
+				self::apply_dimension_support_attributes( $attributes, $style );
+			}
 		}
 
 		if ( ! empty( $options['layout'] ) ) {
-			self::apply_layout_support_attributes( $attributes, $classes );
+			self::apply_layout_support_attributes( $attributes, $classes, $style, $element );
 		}
 
 		return $attributes;
@@ -2254,23 +2259,79 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param array  $attributes Block attributes.
 	 * @param string $classes Source class attribute.
 	 */
-	private static function apply_layout_support_attributes( array &$attributes, string $classes ): void {
+	private static function apply_layout_support_attributes( array &$attributes, string $classes, string $style = '', $element = null ): void {
 		if ( preg_match( '/(?:^|\s)is-layout-(flow|constrained|flex)(?:\s|$)/i', $classes, $matches ) ) {
 			$type = strtolower( $matches[1] );
 			$attributes['layout']['type'] = $type === 'flow' ? 'default' : $type;
+		}
+
+		if ( strtolower( self::extract_css_property( $style, 'display' ) ) === 'flex' ) {
+			$attributes['layout']['type'] = 'flex';
 		}
 
 		if ( preg_match( '/(?:^|\s)is-(vertical|horizontal)(?:\s|$)/i', $classes, $matches ) ) {
 			$attributes['layout']['orientation'] = strtolower( $matches[1] );
 		}
 
+		$flex_direction = strtolower( self::extract_css_property( $style, 'flex-direction' ) );
+		if ( in_array( $flex_direction, [ 'column', 'column-reverse' ], true ) ) {
+			$attributes['layout']['orientation'] = 'vertical';
+		} elseif ( in_array( $flex_direction, [ 'row', 'row-reverse' ], true ) ) {
+			$attributes['layout']['orientation'] = 'horizontal';
+		}
+
 		if ( preg_match( '/(?:^|\s)is-content-justification-(left|right|center|space-between)(?:\s|$)/i', $classes, $matches ) ) {
 			$attributes['layout']['justifyContent'] = strtolower( $matches[1] );
 		}
 
-		if ( preg_match( '/(?:^|\s)is-nowrap(?:\s|$)/i', $classes ) ) {
+		$justify_content = strtolower( self::extract_css_property( $style, 'justify-content' ) );
+		if ( in_array( $justify_content, [ 'left', 'right', 'center', 'space-between' ], true ) ) {
+			$attributes['layout']['justifyContent'] = $justify_content;
+		}
+
+		$align_items = strtolower( self::extract_css_property( $style, 'align-items' ) );
+		if ( in_array( $align_items, [ 'left', 'right', 'center' ], true ) ) {
+			$attributes['layout']['verticalAlignment'] = $align_items;
+		}
+
+		if ( preg_match( '/(?:^|\s)is-nowrap(?:\s|$)/i', $classes ) || strtolower( self::extract_css_property( $style, 'flex-wrap' ) ) === 'nowrap' ) {
 			$attributes['layout']['flexWrap'] = 'nowrap';
 		}
+
+		if ( empty( $attributes['layout'] ) && $element && self::is_hero_like_section( $element ) ) {
+			$attributes['layout'] = [
+				'type'           => 'flex',
+				'orientation'    => 'vertical',
+				'justifyContent' => 'center',
+			];
+		}
+	}
+
+	/**
+	 * Applies direct dimension declarations to block support attributes.
+	 *
+	 * @param array  $attributes Block attributes.
+	 * @param string $style Source style attribute.
+	 */
+	private static function apply_dimension_support_attributes( array &$attributes, string $style ): void {
+		$min_height = self::extract_css_property( $style, 'min-height' );
+		if ( $min_height !== '' ) {
+			$attributes['style']['dimensions']['minHeight'] = $min_height;
+		}
+	}
+
+	/**
+	 * Checks whether a section is a high-confidence full-bleed hero wrapper.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when a default flow group would lose hero centering intent.
+	 */
+	private static function is_hero_like_section( $element ): bool {
+		if ( $element->get_tag_name() !== 'SECTION' || ! $element->has_attribute( 'class' ) ) {
+			return false;
+		}
+
+		return preg_match( '/(?:^|\s)(?:hero|cover|banner|masthead)(?:\s|$)/i', $element->get_attribute( 'class' ) ) === 1;
 	}
 
 	/**
