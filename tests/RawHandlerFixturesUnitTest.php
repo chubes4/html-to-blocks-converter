@@ -128,6 +128,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/quote', 'core/paragraph' ),
 				'snippets'       => array( 'Blocks over fallbacks.' ),
 			),
+			'empty-step-connector' => array(
+				'html'           => '<div class="workflow-steps"><div class="workflow-step"><p>Plan</p></div><div class="step-connector"></div><div class="workflow-step"><p>Build</p></div></div>',
+				'expected_names' => array( 'core/group', 'core/group', 'core/paragraph', 'core/group', 'core/group', 'core/paragraph' ),
+				'snippets'       => array( 'workflow-steps', 'workflow-step', 'step-connector', 'Plan', 'Build' ),
+			),
 			'separator'        => array(
 				'html'           => '<hr class="is-style-wide">',
 				'expected_names' => array( 'core/separator' ),
