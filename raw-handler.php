@@ -142,6 +142,11 @@ function html_to_blocks_convert( $html ) {
 			continue;
 		}
 
+		if ( 'BR' === $element->get_tag_name() ) {
+			$ignored_decorative_html_length += strlen( $element_html );
+			continue;
+		}
+
 		if ( html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
 			$ignored_decorative_html_length += strlen( $element_html );
 			continue;
