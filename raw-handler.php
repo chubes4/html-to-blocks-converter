@@ -29,7 +29,7 @@ function html_to_blocks_raw_handler( $args ) {
 			&& isset( $blocks[0]['blockName'] )
 			&& $blocks[0]['blockName'] === 'core/freeform';
 		if ( ! $is_single_freeform ) {
-			return $blocks;
+			return html_to_blocks_normalize_parsed_image_html_blocks( $blocks );
 		}
 	}
 
@@ -379,6 +379,105 @@ function html_to_blocks_create_unsupported_html_fallback_block( string $element_
 	}
 
 	return $block;
+}
+
+/**
+ * Recursively converts parsed core/html image fragments back to native image blocks.
+ *
+ * Some upstream callers pass already-serialized block markup through h2bc. In that
+ * path parse_blocks() would otherwise preserve harmless image-only core/html
+ * fragments instead of applying the raw image transforms.
+ *
+ * @param array<int|string,array<string,mixed>> $blocks Parsed blocks.
+ * @return array<int|string,array<string,mixed>> Normalized blocks.
+ */
+function html_to_blocks_normalize_parsed_image_html_blocks( array $blocks ): array {
+	$normalized = array();
+
+	foreach ( $blocks as $block ) {
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+			$block['innerBlocks'] = html_to_blocks_normalize_parsed_image_html_blocks( $block['innerBlocks'] );
+		}
+
+		if ( ( $block['blockName'] ?? null ) !== 'core/html' ) {
+			$normalized[] = $block;
+			continue;
+		}
+
+		$html = '';
+		if ( isset( $block['attrs']['content'] ) && is_string( $block['attrs']['content'] ) ) {
+			$html = $block['attrs']['content'];
+		} elseif ( isset( $block['innerHTML'] ) && is_string( $block['innerHTML'] ) ) {
+			$html = $block['innerHTML'];
+		}
+
+		if ( ! html_to_blocks_is_image_only_html_fragment( $html ) ) {
+			$normalized[] = $block;
+			continue;
+		}
+
+		$converted = html_to_blocks_convert( $html );
+		if ( empty( $converted ) || html_to_blocks_contains_block_name( $converted, 'core/html' ) ) {
+			$normalized[] = $block;
+			continue;
+		}
+
+		$normalized = array_merge( $normalized, $converted );
+	}
+
+	return $normalized;
+}
+
+/**
+ * Checks whether an HTML fragment is only an image, optionally inside one wrapper.
+ *
+ * @param string $html HTML fragment.
+ * @return bool True when the fragment can safely be re-run through image transforms.
+ */
+function html_to_blocks_is_image_only_html_fragment( string $html ): bool {
+	$element = HTML_To_Blocks_HTML_Element::from_html( $html );
+	if ( ! $element ) {
+		return false;
+	}
+
+	if ( $element->get_tag_name() === 'IMG' ) {
+		$src = $element->get_attribute( 'src' );
+		return is_string( $src ) && '' !== $src;
+	}
+
+	if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN', 'FIGURE' ), true ) ) {
+		return false;
+	}
+
+	$images = $element->query_selector_all( 'img' );
+	$src    = count( $images ) === 1 ? $images[0]->get_attribute( 'src' ) : null;
+	if ( count( $images ) !== 1 || ! is_string( $src ) || '' === $src ) {
+		return false;
+	}
+
+	$remaining = str_replace( $images[0]->get_outer_html(), '', $element->get_inner_html() );
+	return trim( wp_strip_all_tags( $remaining ) ) === '';
+}
+
+/**
+ * Checks whether a block tree contains a block name.
+ *
+ * @param array<int|string,array<string,mixed>> $blocks Blocks to inspect.
+ * @param string                                $name   Block name.
+ * @return bool True when the block tree contains the name.
+ */
+function html_to_blocks_contains_block_name( array $blocks, string $name ): bool {
+	foreach ( $blocks as $block ) {
+		if ( ( $block['blockName'] ?? null ) === $name ) {
+			return true;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) && html_to_blocks_contains_block_name( $block['innerBlocks'], $name ) ) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /**
