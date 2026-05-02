@@ -1536,13 +1536,17 @@ class HTML_To_Blocks_Transform_Registry {
 			return trim( $element->get_text_content() ) !== '';
 		}
 
-		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:snippet|block))(?:$|[-_\s])/i' ) ) {
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:snippet|block|body|output))(?:$|[-_\s])/i' ) ) {
 			return false;
 		}
 
 		$inner_html = $element->get_inner_html();
 		if ( preg_match( '/<br\s*\/?\s*>/i', $inner_html ) !== 1 ) {
 			return false;
+		}
+
+		if ( self::class_matches( $element, '/(?:^|[-_\s])(?:step[-_\s]?code|code[-_\s]?(?:body|output))(?:$|[-_\s])/i' ) ) {
+			return trim( $element->get_text_content() ) !== '';
 		}
 
 		return preg_match( '/(?:&lt;|&gt;|\/\/|\x{2192}|&rarr;|=&quot;|=\")/iu', $inner_html ) === 1;

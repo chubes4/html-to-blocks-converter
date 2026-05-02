@@ -183,6 +183,33 @@ $html = <<<'HTML'
       &nbsp;&nbsp;<span class="hl">section.hero</span> &rarr; <span class="hl-purple">cover</span><br>
     </div>
   </div>
+  <div class="step-card">
+    <h3>Describe the site</h3>
+    <p>Plain multiline prompt snippets should remain native blocks.</p>
+    <div class="step-code">
+      "Build a SaaS landing page<br>
+      with a hero, pricing,<br>
+      and testimonials."
+    </div>
+  </div>
+  <div class="step-card">
+    <h3>Run the import</h3>
+    <p>CLI snippets should preserve indentation entities.</p>
+    <div class="step-code">
+      wp static-site-importer<br>
+      &nbsp;&nbsp;import-theme index.html<br>
+      &nbsp;&nbsp;--activate --overwrite
+    </div>
+  </div>
+  <div class="step-card">
+    <h3>Review the result</h3>
+    <p>Output snippets can contain checkmarks and plain words.</p>
+    <div class="step-code">
+      ✓ Block theme activated<br>
+      ✓ Site Editor ready<br>
+      ✓ All blocks editable
+    </div>
+  </div>
 </section>
 HTML;
 
@@ -196,15 +223,18 @@ $preformatted = $collect_blocks( $blocks, 'core/preformatted' );
 
 $assert( count( $blocks ) === 1 && ( $blocks[0]['blockName'] ?? '' ) === 'core/group', 'workflow-section-becomes-group', $serialized );
 $assert( count( $groups ) >= 3, 'step-cards-become-groups', $serialized );
-$assert( count( $headings ) === 2, 'step-titles-become-headings', $serialized );
-$assert( count( $paragraphs ) === 2, 'step-body-copy-becomes-paragraphs', $serialized );
-$assert( count( $preformatted ) === 2, 'step-code-becomes-preformatted', $serialized );
+$assert( count( $headings ) === 5, 'step-titles-become-headings', $serialized );
+$assert( count( $paragraphs ) === 5, 'step-body-copy-becomes-paragraphs', $serialized );
+$assert( count( $preformatted ) === 5, 'step-code-becomes-preformatted', $serialized );
 $assert( count( $fallbacks ) === 0, 'step-code-does-not-fallback-to-html', $serialized );
 $assert( str_contains( $serialized, 'workflow-steps' ) && str_contains( $serialized, 'step-card' ), 'wrapper-classes-survive', $serialized );
 $assert( str_contains( $serialized, 'wp-block-preformatted step-code' ), 'step-code-class-survives', $serialized );
 $assert( str_contains( $serialized, '&lt;section' ) && str_contains( $serialized, '&lt;/section&gt;' ), 'escaped-html-code-survives', $serialized );
 $assert( str_contains( $serialized, 'Welcome' ) && str_contains( $serialized, 'wp_html_to_blocks' ), 'span-text-survives', $serialized );
 $assert( str_contains( $serialized, '// Maps:' ) && str_contains( $serialized, '&rarr;' ), 'comments-and-arrow-survive', $serialized );
+$assert( str_contains( $serialized, 'Build a SaaS landing page' ) && str_contains( $serialized, 'and testimonials' ), 'plain-prompt-step-code-survives', $serialized );
+$assert( str_contains( $serialized, 'wp static-site-importer' ) && str_contains( $serialized, '&nbsp;&nbsp;--activate --overwrite' ), 'cli-step-code-survives', $serialized );
+$assert( str_contains( $serialized, '✓ Block theme activated' ) && str_contains( $serialized, '✓ All blocks editable' ), 'output-step-code-survives', $serialized );
 $assert( str_contains( $serialized, "&gt;</span>\n" ) && str_contains( $serialized, "// Maps:</span>\n" ), 'br-tags-become-linebreaks', $serialized );
 $assert( ! str_contains( $serialized, '<br>' ) && ! str_contains( $serialized, '<br/>' ), 'step-code-br-tags-removed', $serialized );
 
