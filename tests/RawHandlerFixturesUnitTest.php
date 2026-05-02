@@ -181,6 +181,16 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/buttons', 'core/button' ),
 				'snippets'       => array( 'https://example.com', 'Click' ),
 			),
+			'hero-actions'     => array(
+				'html'           => '<div class="hero-actions"><a href="/early-access/" class="btn btn-primary">Get Early Access</a><a href="/proof/" class="btn btn-ghost">See the Proof</a></div>',
+				'expected_names' => array( 'core/buttons', 'core/button', 'core/button' ),
+				'snippets'       => array( 'hero-actions', '/early-access/', 'btn btn-primary', 'Get Early Access', '/proof/', 'btn btn-ghost', 'See the Proof' ),
+			),
+			'cta-actions'      => array(
+				'html'           => '<div class="cta-actions"><a href="/signup/" class="cta-primary">Start Now <img src="/assets/arrow.svg" alt="" class="materialized-icon"></a><a href="/contact/" class="cta-secondary">Contact Us</a></div>',
+				'expected_names' => array( 'core/buttons', 'core/button', 'core/button' ),
+				'snippets'       => array( 'cta-actions', '/signup/', 'cta-primary', 'Start Now', '/assets/arrow.svg', 'materialized-icon', '/contact/', 'cta-secondary', 'Contact Us' ),
+			),
 			'details'          => array(
 				'html'           => '<details><summary>Question</summary><p>Answer</p></details>',
 				'expected_names' => array( 'core/details', 'core/paragraph' ),

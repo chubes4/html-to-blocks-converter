@@ -827,6 +827,10 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
+		if ( self::is_action_link_container( $element ) ) {
+			return true;
+		}
+
 		foreach ( $children as $child ) {
 			if ( ! self::is_button_like_anchor( $child ) ) {
 				return false;
@@ -834,6 +838,16 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Checks whether a container is explicitly an action/link row.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when direct anchors should remain separate action blocks.
+	 */
+	private static function is_action_link_container( $element ): bool {
+		return self::class_matches( $element, '/(?:^|[-_\s])(?:actions?|buttons?|cta)(?:$|[-_\s])/i' );
 	}
 
 	/**
