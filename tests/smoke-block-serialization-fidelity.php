@@ -132,6 +132,13 @@ $group = HTML_To_Blocks_Block_Factory::create_block(
 	[ $heading, $paragraph, $styled_paragraph ]
 );
 
+$empty_decorative_group = HTML_To_Blocks_Block_Factory::create_block(
+	'core/group',
+	[
+		'className' => 'hero-glow-1',
+	]
+);
+
 $list = HTML_To_Blocks_Block_Factory::create_block(
 	'core/list',
 	[
@@ -151,9 +158,12 @@ $preformatted = HTML_To_Blocks_Block_Factory::create_block(
 	]
 );
 
-$serialized = serialize_blocks( [ $group, $list, $preformatted ] );
+$serialized = serialize_blocks( [ $group, $empty_decorative_group, $list, $preformatted ] );
 
 $assert( strpos( $serialized, '<section class="wp-block-group hero">' ) !== false, 'group-static-html-uses-tag-and-class', $serialized );
+$assert( $empty_decorative_group['innerHTML'] === '<div class="wp-block-group hero-glow-1"></div>', 'empty-group-inner-html-matches-gutenberg-save', $empty_decorative_group['innerHTML'] );
+$assert( $empty_decorative_group['innerContent'] === [ '<div class="wp-block-group hero-glow-1"></div>' ], 'empty-group-inner-content-is-complete-wrapper', var_export( $empty_decorative_group['innerContent'], true ) );
+$assert( strpos( $serialized, '<!-- wp:group {"className":"hero-glow-1"} --><div class="wp-block-group hero-glow-1"></div><!-- /wp:group -->' ) !== false, 'empty-group-serializes-valid-original-content', $serialized );
 $assert( strpos( $serialized, '<h1 class="wp-block-heading hero-title">WordPress is officially dead.</h1>' ) !== false, 'heading-static-html-preserves-class', $serialized );
 $assert( strpos( $serialized, '<p class="lede">A generated static website.</p>' ) !== false, 'paragraph-static-html-preserves-class', $serialized );
 $assert( strpos( $serialized, '<p class="center has-text-color" style="color:var(--muted);margin-top:36px">Styled paragraph.</p>' ) !== false, 'paragraph-static-html-preserves-style-supports', $serialized );

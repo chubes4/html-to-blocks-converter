@@ -34,14 +34,19 @@ class HTML_To_Blocks_Block_Factory {
         $inner_html = '';
         $inner_content = [];
 
-        if ( ! empty( $inner_blocks ) ) {
-            $html_parts = self::generate_wrapper_html( $name, $attributes );
+        $html_parts = self::generate_wrapper_html( $name, $attributes );
+
+        if ( '' !== $html_parts['opening'] || '' !== $html_parts['closing'] ) {
             $inner_html = $html_parts['opening'] . $html_parts['closing'];
-            $inner_content[] = $html_parts['opening'];
-            foreach ( $inner_blocks as $index => $inner_block ) {
-                $inner_content[] = null;
+            if ( ! empty( $inner_blocks ) ) {
+                $inner_content[] = $html_parts['opening'];
+                foreach ( $inner_blocks as $index => $inner_block ) {
+                    $inner_content[] = null;
+                }
+                $inner_content[] = $html_parts['closing'];
+            } else {
+                $inner_content[] = $inner_html;
             }
-            $inner_content[] = $html_parts['closing'];
         } else {
             $block_html = self::generate_block_html( $name, $attributes );
             if ( ! empty( $block_html ) ) {
