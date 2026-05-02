@@ -253,7 +253,7 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 	$style      = isset( $attributes['style'] ) ? (string) $attributes['style'] : '';
 	$role       = isset( $attributes['role'] ) ? strtolower( trim( (string) $attributes['role'] ) ) : '';
 
-	$decorative_class_pattern = '/(?:^|[-_\s])(icon|ico|glyph|symbol|accent|bar|divider|separator|rule|line|orb|blob|dot|glow)(?:$|[-_\s]|\d)/i';
+	$decorative_class_pattern = '/(?:^|[-_\s])(icon|ico|glyph|symbol|accent|bar|divider|separator|sep|rule|line|orb|blob|dot|glow)(?:$|[-_\s]|\d)/i';
 	if ( preg_match( $decorative_class_pattern, $class_name ) !== 1 ) {
 		return false;
 	}
@@ -277,7 +277,7 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 		return false;
 	}
 
-	if ( preg_match( '/(?:^|[-_\s])accent(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
+	if ( preg_match( '/(?:^|[-_\s])(?:accent|sep)(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
 		return true;
 	}
 
@@ -285,6 +285,45 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 		|| preg_match( '/(?:^|;)\s*opacity\s*:\s*0(?:\.0+)?\b/i', $style ) === 1
 		|| preg_match( '/(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden|pointer-events\s*:\s*none)\b/i', $style ) === 1
 		|| strtolower( (string) ( $attributes['aria-hidden'] ?? '' ) ) === 'true';
+}
+
+/**
+ * Checks whether a span contains block-level markup that cannot live in a paragraph.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element The source element.
+ * @return bool True when the span should be promoted to a block wrapper.
+ */
+function html_to_blocks_is_blocky_span( $element ): bool {
+	if ( 'SPAN' !== $element->get_tag_name() ) {
+		return false;
+	}
+
+	return preg_match( '/<(?:address|article|aside|blockquote|details|div|dl|fieldset|figcaption|figure|footer|form|h[1-6]|header|hr|main|nav|ol|p|pre|section|table|ul)\b/i', $element->get_inner_html() ) === 1;
+}
+
+/**
+ * Promotes an invalid span wrapper to a div while preserving safe attributes.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element The span element.
+ * @return string A valid block-level wrapper with the original contents.
+ */
+function html_to_blocks_promote_span_to_div_markup( $element ): string {
+	$attributes = '';
+	foreach ( $element->get_attributes() as $name => $value ) {
+		$name = strtolower( (string) $name );
+		if ( preg_match( '/^[a-z][a-z0-9:-]*$/', $name ) !== 1 ) {
+			continue;
+		}
+
+		if ( true === $value ) {
+			$attributes .= ' ' . $name;
+			continue;
+		}
+
+		$attributes .= ' ' . $name . '="' . esc_attr( (string) $value ) . '"';
+	}
+
+	return '<div' . $attributes . '>' . $element->get_inner_html() . '</div>';
 }
 
 /**
@@ -599,6 +638,16 @@ function html_to_blocks_normalise_blocks( $html ) {
 			if ( $element_html ) {
 				$element = HTML_To_Blocks_HTML_Element::from_html( $element_html );
 				if ( $element && html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+					continue;
+				}
+
+				if ( $element && html_to_blocks_is_blocky_span( $element ) ) {
+					if ( $in_paragraph && ! empty( trim( $paragraph_buffer ) ) ) {
+						$output .= '<p>' . trim( $paragraph_buffer ) . '</p>';
+					}
+					$paragraph_buffer = '';
+					$in_paragraph     = false;
+					$output          .= html_to_blocks_promote_span_to_div_markup( $element );
 					continue;
 				}
 
