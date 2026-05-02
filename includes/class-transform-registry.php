@@ -2022,6 +2022,27 @@ class HTML_To_Blocks_Transform_Registry {
 			],
 			[
 				'blockName' => 'core/group',
+				'priority'  => 14,
+				'isMatch'   => function ( $element ) {
+					return self::is_nav_logo_chrome_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					$inner_html = $element->get_inner_html();
+					foreach ( $element->get_child_elements() as $child ) {
+						if ( self::is_empty_decorative_element( $child ) ) {
+							$inner_html = str_replace( $child->get_outer_html(), '', $inner_html );
+						}
+					}
+
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						$handler( array( 'HTML' => $inner_html ) )
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
 				'priority'  => 15,
 				'isMatch'   => function ( $element ) {
 					return self::is_group_element( $element );
@@ -2450,6 +2471,36 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return self::is_empty_decorative_element( $element );
+	}
+
+	/**
+	 * Checks whether an element is nav/logo chrome with removable visual-only children.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when decorative child placeholders should be ignored.
+	 */
+	private static function is_nav_logo_chrome_element( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
+			return false;
+		}
+
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:nav[-_\s]?logo|logo|brand)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		$has_decorative_child = false;
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( self::is_empty_decorative_element( $child ) ) {
+				$has_decorative_child = true;
+				continue;
+			}
+
+			if ( ! in_array( $child->get_tag_name(), array( 'A', 'P', 'SPAN', 'STRONG', 'B', 'EM', 'I' ), true ) ) {
+				return false;
+			}
+		}
+
+		return $has_decorative_child && '' !== trim( wp_strip_all_tags( $element->get_inner_html() ) );
 	}
 
 	/**

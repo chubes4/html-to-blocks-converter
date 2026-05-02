@@ -189,6 +189,19 @@ $assert( str_contains( $salt_star_serialized, 'href="#our-bakes"' ), 'salt-star-
 $assert( str_contains( $salt_star_serialized, 'href="#visit"' ), 'salt-star-nav-preserves-visit-href', $salt_star_serialized );
 $assert( str_contains( $salt_star_serialized, 'href="#order"' ), 'salt-star-nav-preserves-order-href', $salt_star_serialized );
 
+$studio_code_nav_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		array(
+			'HTML' => '<nav><div class="nav-logo"><div class="dot"></div>Studio Code</div></nav>',
+		)
+	)
+);
+$assert( ! str_contains( $studio_code_nav_serialized, '<!-- wp:html -->' ), 'studio-code-nav-logo-dot-avoids-core-html', $studio_code_nav_serialized );
+$assert( str_contains( $studio_code_nav_serialized, '<nav class="wp-block-group">' ), 'studio-code-nav-wrapper-survives', $studio_code_nav_serialized );
+$assert( str_contains( $studio_code_nav_serialized, 'class="wp-block-group nav-logo"' ), 'studio-code-nav-logo-wrapper-survives', $studio_code_nav_serialized );
+$assert( str_contains( $studio_code_nav_serialized, 'Studio Code' ), 'studio-code-nav-logo-text-survives', $studio_code_nav_serialized );
+$assert( ! str_contains( $studio_code_nav_serialized, 'class="wp-block-group dot"' ), 'studio-code-nav-logo-dot-is-dropped', $studio_code_nav_serialized );
+
 $inline_footer_serialized = serialize_blocks(
 	html_to_blocks_raw_handler(
 		[
