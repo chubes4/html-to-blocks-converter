@@ -79,6 +79,7 @@ function html_to_blocks_convert( $html ) {
 	$top_level_depth = $body_depth + 1;
 	$tag_occurrences = [];
 	$tag_positions   = [];
+	$ignored_decorative_html_length = 0;
 
 	while ( $processor->next_token() ) {
 		$token_type = $processor->get_token_type();
@@ -138,6 +139,11 @@ function html_to_blocks_convert( $html ) {
 					'occurrence' => $occurrence,
 				]
 			);
+			continue;
+		}
+
+		if ( html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+			$ignored_decorative_html_length += strlen( $element_html );
 			continue;
 		}
 
@@ -206,10 +212,12 @@ function html_to_blocks_convert( $html ) {
 	// Check for significant content loss (input had content but output is empty/minimal)
 	$output_content_length = html_to_blocks_measure_block_content_length( $blocks );
 	
-	if ( $original_html_length > 100 && $output_content_length < ( $original_html_length * 0.1 ) ) {
+	$diagnostic_html_length = max( 0, $original_html_length - $ignored_decorative_html_length );
+
+	if ( $diagnostic_html_length > 100 && $output_content_length < ( $diagnostic_html_length * 0.1 ) ) {
 		error_log( sprintf(
 			'[HTML to Blocks] Significant content loss detected | Input: %d chars | Output: %d chars | Blocks: %d | Processor error: %s | Preview: %s',
-			$original_html_length,
+			$diagnostic_html_length,
 			$output_content_length,
 			count( $blocks ),
 			$last_error ?? 'none',
@@ -218,6 +226,55 @@ function html_to_blocks_convert( $html ) {
 	}
 
 	return $blocks;
+}
+
+/**
+ * Checks whether an empty div/span is a safe visual-only icon placeholder.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element The source element.
+ * @return bool True when the placeholder should be ignored.
+ */
+function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): bool {
+	if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+		return false;
+	}
+
+	if ( trim( wp_strip_all_tags( $element->get_inner_html() ) ) !== '' || array() !== $element->get_child_elements() ) {
+		return false;
+	}
+
+	$attributes = $element->get_attributes();
+	$class_name = isset( $attributes['class'] ) ? (string) $attributes['class'] : '';
+	$style      = isset( $attributes['style'] ) ? (string) $attributes['style'] : '';
+	$role       = isset( $attributes['role'] ) ? strtolower( trim( (string) $attributes['role'] ) ) : '';
+
+	if ( preg_match( '/(?:^|[-_\s])(icon|ico|glyph|symbol)(?:$|[-_\s]|\d)/i', $class_name ) !== 1 ) {
+		return false;
+	}
+
+	foreach ( $attributes as $name => $value ) {
+		$name = strtolower( (string) $name );
+		if ( preg_match( '/^on/i', $name ) ) {
+			return false;
+		}
+
+		if ( ! in_array( $name, [ 'class', 'style', 'id', 'aria-hidden', 'role' ], true ) ) {
+			return false;
+		}
+	}
+
+	if ( $role !== '' && ! in_array( $role, [ 'none', 'presentation' ], true ) ) {
+		return false;
+	}
+
+	if ( preg_match( '/url\s*\(/i', $style ) ) {
+		return false;
+	}
+
+	return preg_match( '/(?:^|;)\s*position\s*:\s*(?:absolute|fixed)\b/i', $style ) === 1
+		|| preg_match( '/(?:^|;)\s*opacity\s*:\s*0(?:\.0+)?\b/i', $style ) === 1
+		|| preg_match( '/(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden|pointer-events\s*:\s*none)\b/i', $style ) === 1
+		|| strtolower( (string) ( $attributes['aria-hidden'] ?? '' ) ) === 'true';
 }
 
 /**
@@ -527,12 +584,18 @@ function html_to_blocks_normalise_blocks( $html ) {
 		$last_was_br = false;
 
 		if ( in_array( $tag_upper, $phrasing_tags, true ) && ! $is_closer ) {
-			if ( ! $in_paragraph ) {
-				$in_paragraph = true;
-			}
 			$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
 
 			if ( $element_html ) {
+				$element = HTML_To_Blocks_HTML_Element::from_html( $element_html );
+				if ( $element && html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+					continue;
+				}
+
+				if ( ! $in_paragraph ) {
+					$in_paragraph = true;
+				}
+
 				$paragraph_buffer .= $element_html;
 			}
 			continue;
