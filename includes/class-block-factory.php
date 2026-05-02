@@ -540,6 +540,7 @@ class HTML_To_Blocks_Block_Factory {
 					'opening' => '<' . $tag . self::html_attrs(
 						[
 							'class'      => self::merge_block_class( 'wp-block-group', $attributes ),
+							'style'      => self::style_attr( $attributes ),
 							'aria-label' => $attributes['ariaLabel'] ?? null,
 						]
 					) . '>',
