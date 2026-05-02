@@ -148,9 +148,14 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'snippets'       => array( 'Grouped copy' ),
 			),
 			'image-wrapper'    => array(
-				'html'           => '<div class="nav-brand-icon"><img src="/assets/icon.svg" alt="Brand icon" decoding="async"></div>',
+				'html'           => '<div class="nav-logo-mark"><img src="http://localhost:9159/wp-content/themes/studio-code/assets/icons/theme-part-header-1-b57d7c946b676f82.svg" alt="" decoding="async"></div>',
 				'expected_names' => array( 'core/group', 'core/image' ),
-				'snippets'       => array( 'nav-brand-icon', '/assets/icon.svg', 'Brand icon' ),
+				'snippets'       => array( 'nav-logo-mark', 'theme-part-header-1-b57d7c946b676f82.svg' ),
+			),
+			'parsed-image-html-wrapper' => array(
+				'html'           => '<!-- wp:group {"className":"nav-logo-mark"} --><div class="wp-block-group nav-logo-mark"><!-- wp:html --><img src="http://localhost:9159/wp-content/themes/studio-code/assets/icons/theme-part-header-1-b57d7c946b676f82.svg" alt="" decoding="async"><!-- /wp:html --></div><!-- /wp:group -->',
+				'expected_names' => array( 'core/group', 'core/image' ),
+				'snippets'       => array( 'nav-logo-mark', 'theme-part-header-1-b57d7c946b676f82.svg' ),
 			),
 			'site-editor-landmark' => array(
 				'html'           => '<main class="site-shell"><section class="hero"><h1>Site Editor Template Smoke</h1><p>Template raw HTML should become blocks.</p></section></main>',

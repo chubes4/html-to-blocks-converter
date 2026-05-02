@@ -156,7 +156,7 @@ $html = <<<'HTML'
 <span class="dot dot-y"></span>
 <span class="dot dot-g"></span>
 <img src="http://example.test/wp-content/themes/studio-code-launch/assets/icons/theme-part-footer-1-4532f13fa9ef8514.svg" alt="" decoding="async">
-<div class="nav-brand-icon"><img src="/assets/icon.svg" alt="Brand icon" decoding="async"></div>
+<div class="nav-logo-mark"><img src="http://localhost:9159/wp-content/themes/studio-code/assets/icons/theme-part-header-1-b57d7c946b676f82.svg" alt="" decoding="async"></div>
 <span class="footer-brand-icon"><img src="/assets/logo.png" alt="Footer logo"></span>
 HTML;
 
@@ -177,9 +177,8 @@ $assert( in_array( 'core/image', $names, true ), 'footer-svg-img-converts-to-cor
 $assert( ! str_contains( $serialized, '<!-- wp:html -->' ), 'serialized-output-has-no-wp-html', $serialized );
 $assert( ! str_contains( $serialized, '<!-- wp:html --><br>' ), 'standalone-br-does-not-serialize-as-html', $serialized );
 $assert( str_contains( $serialized, 'theme-part-footer-1-4532f13fa9ef8514.svg' ), 'footer-image-url-survives', $serialized );
-$assert( str_contains( $serialized, 'nav-brand-icon' ), 'svg-wrapper-class-survives', $serialized );
-$assert( str_contains( $serialized, '/assets/icon.svg' ), 'wrapped-svg-url-survives', $serialized );
-$assert( str_contains( $serialized, 'Brand icon' ), 'wrapped-svg-alt-survives', $serialized );
+$assert( str_contains( $serialized, 'nav-logo-mark' ), 'svg-wrapper-class-survives', $serialized );
+$assert( str_contains( $serialized, 'theme-part-header-1-b57d7c946b676f82.svg' ), 'wrapped-svg-url-survives', $serialized );
 $assert( str_contains( $serialized, 'footer-brand-icon' ), 'normal-image-wrapper-class-survives', $serialized );
 $assert( str_contains( $serialized, '/assets/logo.png' ), 'wrapped-normal-image-url-survives', $serialized );
 $assert( str_contains( $serialized, 'Footer logo' ), 'wrapped-normal-image-alt-survives', $serialized );
