@@ -118,6 +118,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/group', 'core/paragraph', 'core/preformatted' ),
 				'snippets'       => array( 'hero-code-block reveal', 'hero-code-header', 'agent-output.html &rarr; WordPress blocks', 'token-tag' ),
 			),
+			'hero-code-window-panel' => array(
+				'html'           => '<div class="hero-code-window"><div class="window-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="window-title">studio-code &mdash; agent output</span></div><div class="code-body"><span class="code-line c-comment">// Agent writes normal HTML/CSS</span><span class="code-line"><span class="token-tag">&lt;section</span> <span class="token-attr">class</span>=<span class="token-val">"hero"</span><span class="token-tag">&gt;</span></span></div><div class="code-badge">Site Editor ready</div></div>',
+				'expected_names' => array( 'core/group', 'core/group', 'core/paragraph', 'core/preformatted', 'core/group', 'core/paragraph' ),
+				'snippets'       => array( 'hero-code-window', 'window-bar', 'studio-code &mdash; agent output', 'code-body', 'Agent writes normal HTML/CSS', 'token-tag', 'code-badge', 'Site Editor ready' ),
+			),
 			'div-line-code-panel' => array(
 				'html'           => '<div class="case-code"><div class="t-comment"># customer brief &rarr; editable WordPress site</div><div>&nbsp;</div><div><span class="t-fn">generate</span>(<span class="t-string">"luxury spa, warm earth tones,</span></div><div><span class="t-string">  hero with booking CTA,</span></div><div><span class="t-string">  services grid, testimonials"</span>)</div><div>&nbsp;</div><div class="t-comment"># agent writes index.html + style.css</div><div>&nbsp;</div><div><span class="t-keyword">import-theme</span> /tmp/static-site/</div><div><span class="t-keyword">  --slug</span>=<span class="t-string">luxe-spa</span></div><div><span class="t-keyword">  --activate</span> <span class="t-keyword">--overwrite</span></div><div>&nbsp;</div><div class="t-comment"># OK Block theme active in Site Editor</div></div>',
 				'expected_names' => array( 'core/preformatted' ),

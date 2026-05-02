@@ -1396,7 +1396,7 @@ class HTML_To_Blocks_Transform_Registry {
 				continue;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|badge)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_text_group( $child );
 				continue;
 			}
@@ -1477,14 +1477,15 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string Editable chrome text, excluding decorative dots.
 	 */
 	private static function get_code_window_chrome_content( $element ): string {
+		$content = $element->get_inner_html();
+
 		foreach ( $element->get_child_elements() as $child ) {
-			if ( self::class_matches( $child, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*(?:$|\s)/i' ) ) {
-				$content = preg_replace( '/<(?:div|span)\b[^>]*class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*[^"\']*["\'][^>]*>\s*<\/(?:div|span)>/i', '', $element->get_inner_html() );
-				return trim( (string) $content );
+			if ( self::class_matches( $child, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?dot[A-Za-z0-9_-]*(?:$|\s)/i' ) || self::is_empty_decorative_element( $child ) ) {
+				$content = str_replace( $child->get_outer_html(), '', $content );
 			}
 		}
 
-		return trim( $element->get_inner_html() );
+		return trim( $content );
 	}
 
 	/**
@@ -1531,7 +1532,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
+		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|badge)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
 	}
 
 	/**
@@ -1569,6 +1570,10 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_div_line_code_panel( $element ): bool {
 		if ( 'DIV' !== $element->get_tag_name() || ! self::class_matches( $element, '/(?:^|[-_\s])(?:code|terminal|snippet)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		if ( self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*(?:$|\s)/i' ) ) {
 			return false;
 		}
 
@@ -1722,6 +1727,10 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_div_code_snippet_element( $element ): bool {
 		if ( $element->get_tag_name() !== 'DIV' ) {
+			return false;
+		}
+
+		if ( self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*(?:$|\s)/i' ) ) {
 			return false;
 		}
 
