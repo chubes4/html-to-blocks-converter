@@ -142,6 +142,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/paragraph' ),
 				'snippets'       => array( 'Grouped copy' ),
 			),
+			'image-wrapper'    => array(
+				'html'           => '<div class="nav-brand-icon"><img src="/assets/icon.svg" alt="Brand icon" decoding="async"></div>',
+				'expected_names' => array( 'core/group', 'core/image' ),
+				'snippets'       => array( 'nav-brand-icon', '/assets/icon.svg', 'Brand icon' ),
+			),
 			'site-editor-landmark' => array(
 				'html'           => '<main class="site-shell"><section class="hero"><h1>Site Editor Template Smoke</h1><p>Template raw HTML should become blocks.</p></section></main>',
 				'expected_names' => array( 'core/group', 'core/group', 'core/heading', 'core/paragraph' ),
