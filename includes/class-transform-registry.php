@@ -2964,7 +2964,7 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * core/paragraph transforms - p/address/a elements and text-only wrappers (lowest priority, fallback)
+	 * core/paragraph transforms - p/address/a elements, visual labels, and text-only wrappers (lowest priority, fallback)
 	 *
 	 * @return array Transform definitions
 	 */
@@ -2973,9 +2973,13 @@ class HTML_To_Blocks_Transform_Registry {
 			[
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
-				'selector'  => 'p,address,a,div,span',
+				'selector'  => 'p,address,a,label,div,span',
 				'isMatch'   => function ( $element ) {
 					if ( in_array( $element->get_tag_name(), [ 'P', 'ADDRESS', 'A' ], true ) ) {
+						return true;
+					}
+
+					if ( self::is_static_visual_label( $element ) ) {
 						return true;
 					}
 
@@ -2992,5 +2996,28 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			],
 		];
+	}
+
+	/**
+	 * Checks whether a label is static visual UI text rather than a form label.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the label can safely become editable paragraph text.
+	 */
+	private static function is_static_visual_label( $element ): bool {
+		if ( 'LABEL' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		if ( $element->has_attribute( 'for' ) || $element->has_attribute( 'form' ) ) {
+			return false;
+		}
+
+		$inner_html = $element->get_inner_html();
+		if ( trim( wp_strip_all_tags( $inner_html ) ) === '' ) {
+			return false;
+		}
+
+		return preg_match( '/<\s*(?:input|select|textarea|button|output|meter|progress)\b/i', $inner_html ) !== 1;
 	}
 }
