@@ -2598,6 +2598,32 @@ class HTML_To_Blocks_Transform_Registry {
 		if ( $min_height !== '' ) {
 			$attributes['style']['dimensions']['minHeight'] = $min_height;
 		}
+
+		$width = self::extract_css_property( $style, 'width' );
+		if ( $width !== '' && self::is_safe_dimension_value( $width ) ) {
+			$attributes['style']['dimensions']['width'] = $width;
+		}
+	}
+
+	/**
+	 * Checks whether a CSS dimension value is safe to preserve mechanically.
+	 *
+	 * @param string $value CSS dimension value.
+	 * @return bool True when the value contains no executable or external payload.
+	 */
+	private static function is_safe_dimension_value( string $value ): bool {
+		$value = trim( $value );
+
+		if ( $value === '' || strlen( $value ) > 80 ) {
+			return false;
+		}
+
+		if ( preg_match( '/(?:url\s*\(|expression\s*\(|javascript\s*:|behavior\s*:)/i', $value ) ) {
+			return false;
+		}
+
+		return preg_match( '/^[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?$/i', $value ) === 1
+			|| preg_match( '/^calc\(\s*[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?\s*[-+]\s*[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?\s*\)$/i', $value ) === 1;
 	}
 
 	/**
@@ -2845,7 +2871,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_empty_decorative_element( $element ): bool {
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|dot|mark|bullet|orb|blob)(?:$|[-_\s]|\d)/i' );
+			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|dot|mark|bullet|orb|blob|fill|progress|meter|gauge)(?:$|[-_\s]|\d)/i' );
 	}
 
 	/**
