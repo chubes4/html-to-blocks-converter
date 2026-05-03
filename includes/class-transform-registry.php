@@ -884,6 +884,28 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_button_transforms() {
 		return [
 			[
+				'blockName' => 'core/group',
+				'priority'  => 8,
+				'selector'  => 'div,p',
+				'isMatch'   => function ( $element ) {
+					return self::is_static_visual_button_container( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_visual_button_group( $element );
+				},
+			],
+			[
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'button',
+				'isMatch'   => function ( $element ) {
+					return self::is_static_visual_button( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_visual_button_paragraph( $element );
+				},
+			],
+			[
 				'blockName' => 'core/buttons',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -948,6 +970,117 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Checks whether a wrapper contains only static visual button controls.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when direct button children can become native text blocks.
+	 */
+	private static function is_static_visual_button_container( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'P' ], true ) ) {
+			return false;
+		}
+
+		$buttons = self::get_direct_static_visual_button_children_from_html( $element->get_inner_html() );
+		return count( $buttons ) >= 2;
+	}
+
+	/**
+	 * Gets direct static visual button children when no other content is present.
+	 *
+	 * @param string $html Inner HTML to inspect.
+	 * @return array Static visual button elements.
+	 */
+	private static function get_direct_static_visual_button_children_from_html( string $html ): array {
+		$remaining = $html;
+		$buttons   = [];
+
+		if ( ! preg_match_all( '/<button\b([^>]*)>(.*?)<\/button>/is', $html, $matches, PREG_SET_ORDER ) ) {
+			return [];
+		}
+
+		foreach ( $matches as $match ) {
+			$outer      = $match[0];
+			$attributes = self::parse_attribute_string( $match[1] );
+			$button     = new HTML_To_Blocks_HTML_Element( 'button', $attributes, $outer, trim( $match[2] ) );
+
+			if ( ! self::is_static_visual_button( $button ) ) {
+				return [];
+			}
+
+			$buttons[]  = $button;
+			$remaining = str_replace( $outer, '', $remaining );
+		}
+
+		return trim( $remaining ) === '' ? $buttons : [];
+	}
+
+	/**
+	 * Checks whether a button is static visual UI text rather than a form control.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the button can safely become editable paragraph text.
+	 */
+	private static function is_static_visual_button( $element ): bool {
+		if ( 'BUTTON' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		if ( $element->has_attribute( 'form' ) || $element->has_attribute( 'name' ) || $element->has_attribute( 'value' ) ) {
+			return false;
+		}
+
+		$type = strtolower( trim( (string) ( $element->get_attribute( 'type' ) ?? '' ) ) );
+		if ( in_array( $type, [ 'submit', 'reset' ], true ) ) {
+			return false;
+		}
+
+		foreach ( $element->get_attributes() as $name => $value ) {
+			if ( preg_match( '/^on/i', (string) $name ) === 1 ) {
+				return false;
+			}
+		}
+
+		if ( preg_match( '/<\s*[a-z][^>]*>/i', $element->get_inner_html() ) === 1 || trim( $element->get_text_content() ) === '' ) {
+			return false;
+		}
+
+		$class_name = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+		return preg_match( '/(?:^|[-_\s])(?:tabs?|chips?|filters?|pills?|segmented|selector|use[-_]?case)(?:$|[-_\s])/i', $class_name ) === 1;
+	}
+
+	/**
+	 * Creates a native group from a static visual button row.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Button row wrapper.
+	 * @return array Block array.
+	 */
+	private static function create_static_visual_button_group( $element ): array {
+		$buttons = array_map(
+			[ __CLASS__, 'create_static_visual_button_paragraph' ],
+			self::get_direct_static_visual_button_children_from_html( $element->get_inner_html() )
+		);
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			$buttons
+		);
+	}
+
+	/**
+	 * Creates an editable paragraph block from a static visual button.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Button element.
+	 * @return array Block array.
+	 */
+	private static function create_static_visual_button_paragraph( $element ): array {
+		$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true ] );
+		$attributes['content'] = $element->get_inner_html();
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 	}
 
 	/**

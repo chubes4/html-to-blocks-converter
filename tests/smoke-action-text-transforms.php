@@ -229,6 +229,52 @@ $ordinary_link = new HTML_To_Blocks_HTML_Element(
 $ordinary_link_transform = $find_transform( $ordinary_link );
 $smoke_assert( $ordinary_link_transform['blockName'] === 'core/paragraph', 'ordinary-link-stays-paragraph' );
 
+$static_button_tabs = new HTML_To_Blocks_HTML_Element(
+	'div',
+	[ 'class' => 'use-case-tabs' ],
+	'<div class="use-case-tabs"><button class="use-case-tab active">Product Managers</button><button class="use-case-tab">Engineering Leads</button><button class="use-case-tab">GTM Teams</button><button class="use-case-tab">Executives</button></div>',
+	'<button class="use-case-tab active">Product Managers</button><button class="use-case-tab">Engineering Leads</button><button class="use-case-tab">GTM Teams</button><button class="use-case-tab">Executives</button>'
+);
+$static_button_tabs_transform = $find_transform( $static_button_tabs );
+$static_button_tabs_block     = call_user_func( $static_button_tabs_transform['transform'], $static_button_tabs, $handler );
+
+$smoke_assert( $static_button_tabs_transform['blockName'] === 'core/group', 'static-button-tabs-become-group' );
+$smoke_assert( $static_button_tabs_block['attrs']['className'] === 'use-case-tabs', 'static-button-tab-wrapper-class-preserved' );
+$smoke_assert( count( $static_button_tabs_block['innerBlocks'] ) === 4, 'static-button-tabs-children-preserved' );
+$smoke_assert( $static_button_tabs_block['innerBlocks'][0]['blockName'] === 'core/paragraph', 'static-button-tab-child-becomes-paragraph' );
+$smoke_assert( $static_button_tabs_block['innerBlocks'][0]['attrs']['content'] === 'Product Managers', 'static-button-tab-label-preserved' );
+$smoke_assert( $static_button_tabs_block['innerBlocks'][0]['attrs']['className'] === 'use-case-tab active', 'static-button-tab-class-preserved' );
+$smoke_assert( strpos( $static_button_tabs_block['innerHTML'], '<!-- wp:html -->' ) === false, 'static-button-tabs-avoid-wp-html' );
+
+$static_chip_button = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'filter-chip active', 'type' => 'button' ],
+	'<button class="filter-chip active" type="button">Analytics</button>',
+	'Analytics'
+);
+$static_chip_button_transform = $find_transform( $static_chip_button );
+$static_chip_button_block     = call_user_func( $static_chip_button_transform['transform'], $static_chip_button );
+
+$smoke_assert( $static_chip_button_transform['blockName'] === 'core/paragraph', 'static-chip-button-becomes-paragraph' );
+$smoke_assert( $static_chip_button_block['attrs']['content'] === 'Analytics', 'static-chip-button-label-preserved' );
+$smoke_assert( $static_chip_button_block['attrs']['className'] === 'filter-chip active', 'static-chip-button-class-preserved' );
+
+$submit_button = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'use-case-tab', 'type' => 'submit' ],
+	'<button class="use-case-tab" type="submit">Submit</button>',
+	'Submit'
+);
+$smoke_assert( $find_transform( $submit_button ) === null, 'submit-button-falls-through' );
+
+$form_owned_button = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'filter-chip', 'form' => 'filters' ],
+	'<button class="filter-chip" form="filters">Apply</button>',
+	'Apply'
+);
+$smoke_assert( $find_transform( $form_owned_button ) === null, 'form-owned-button-falls-through' );
+
 // -------------------------------------------------------------------------
 // Labels: static visual UI labels become text, real form labels fall through.
 // -------------------------------------------------------------------------
