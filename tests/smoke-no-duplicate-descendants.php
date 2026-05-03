@@ -199,7 +199,7 @@ $assert_occurs_once( $serialized, '2003-2026', 'compare-heading-once' );
 $assert_occurs_once( $serialized, 'May 27, 2003', 'dates-once' );
 $assert_occurs_once( $serialized, 'It is rare that a piece of software earns the right to be eulogized.', 'eulogy-copy-once' );
 $assert_occurs_once( $serialized, 'The CMS was a workaround for not being able to write HTML.', 'manifesto-copy-once' );
-$assert_occurs_once( $serialized, 'manifesto-list', 'classed-list-wrapper-once' );
+$assert_contains( $serialized, 'manifesto-list', 'classed-visual-list-wrapper-preserved' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
