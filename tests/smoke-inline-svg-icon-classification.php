@@ -87,11 +87,15 @@ if ( ! function_exists( 'get_shortcode_regex' ) ) {
 }
 
 $fallback_events = [];
+$safe_svg_events = [];
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( $hook_name, ...$args ) {
-		global $fallback_events;
+		global $fallback_events, $safe_svg_events;
 		if ( $hook_name === 'html_to_blocks_unsupported_html_fallback' ) {
 			$fallback_events[] = $args;
+		}
+		if ( $hook_name === 'html_to_blocks_safe_inline_svg_icon' ) {
+			$safe_svg_events[] = $args;
 		}
 	}
 }
@@ -131,8 +135,10 @@ $collect_blocks = static function ( array $blocks, string $name ) use ( &$collec
 
 $safe_svg = '<svg class="icon icon-arrow" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Arrow"><title>Arrow</title><path fill="#fff" d="M4 12h14"/><polyline points="14 6 20 12 14 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
 $safe     = HTML_To_Blocks_SVG_Icon_Classifier::classify( $safe_svg );
+$helper   = html_to_blocks_classify_inline_svg_icon( $safe_svg );
 
 $assert( ! empty( $safe['is_safe'] ), 'classifier-accepts-safe-svg', $safe['reason'] ?? '' );
+$assert( ! empty( $helper['is_safe'] ), 'helper-accepts-safe-svg', $helper['reason'] ?? '' );
 $assert( str_contains( $safe['svg'], '<svg' ), 'classifier-returns-sanitized-svg', $safe['svg'] ?? '' );
 $assert( ! str_contains( $safe['svg'], 'xmlns' ), 'classifier-strips-nonessential-attrs', $safe['svg'] ?? '' );
 $assert( ( $safe['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'classifier-returns-kind-metadata' );
@@ -145,8 +151,20 @@ $fallbacks   = $collect_blocks( $safe_blocks, 'core/html' );
 $assert( count( $icons ) === 1, 'safe-svg-emits-placeholder-block' );
 $assert( count( $fallbacks ) === 0, 'safe-svg-emits-no-core-html' );
 $assert( count( $fallback_events ) === 0, 'safe-svg-emits-no-fallback-diagnostic' );
+$assert( count( $safe_svg_events ) === 1, 'safe-svg-emits-detection-event' );
 $assert( ( $icons[0]['attrs']['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'placeholder-exposes-metadata' );
 $assert( str_contains( $icons[0]['attrs']['svg'] ?? '', '<polyline' ), 'placeholder-exposes-sanitized-payload' );
+
+$reference_svgs = [
+	'use-href'     => '<svg viewBox="0 0 24 24"><use href="#shape"/></svg>',
+	'image-data'   => '<svg viewBox="0 0 24 24"><image href="data:image/png;base64,abc"/></svg>',
+	'fill-url-ref' => '<svg viewBox="0 0 24 24"><path fill="url(#paint)" d="M0 0h24v24H0z"/></svg>',
+];
+
+foreach ( $reference_svgs as $label => $reference_svg ) {
+	$reference = HTML_To_Blocks_SVG_Icon_Classifier::classify( $reference_svg );
+	$assert( empty( $reference['is_safe'] ), 'classifier-rejects-reference-svg-' . $label, $reference['reason'] ?? '' );
+}
 
 $unsafe_svg     = '<svg viewBox="0 0 24 24"><script>alert(1)</script><path onclick="alert(1)" d="M0 0h24v24H0z"/></svg>';
 $unsafe         = HTML_To_Blocks_SVG_Icon_Classifier::classify( $unsafe_svg );
