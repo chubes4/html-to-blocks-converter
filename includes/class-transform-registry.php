@@ -2892,6 +2892,10 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
+		if ( self::is_project_card_status_element( $element ) && ! self::is_empty_element( $element ) ) {
+			return false;
+		}
+
 		if (
 			trim( $element->get_text_content() ) !== ''
 			&& trim( $element->get_inner_html() ) === trim( wp_strip_all_tags( $element->get_inner_html() ) )
@@ -3200,7 +3204,22 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_empty_decorative_element( $element ): bool {
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' );
+			&& (
+				self::is_project_card_status_element( $element )
+				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
+			);
+	}
+
+	/**
+	 * Checks whether an element is a project-card status chip/dot.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the classes match the project-card status pattern.
+	 */
+	private static function is_project_card_status_element( $element ): bool {
+		return 'DIV' === $element->get_tag_name()
+			&& self::class_matches( $element, '/(?:^|\s)pcard-status(?:\s|$)/i' )
+			&& self::class_matches( $element, '/(?:^|\s)status-(?:done|active|warn|idle)(?:\s|$)/i' );
 	}
 
 	/**
