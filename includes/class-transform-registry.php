@@ -1496,7 +1496,7 @@ class HTML_To_Blocks_Transform_Registry {
 						return false;
 					}
 
-					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?(?:window|preview|panel)[A-Za-z0-9_-]*|code[-_]?pane)(?:$|\s)/i' ) ) {
+					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?(?:window|preview|panel|comparison)[A-Za-z0-9_-]*|code[-_]?pane)(?:$|\s)/i' ) ) {
 						return true;
 					}
 
@@ -1529,6 +1529,15 @@ class HTML_To_Blocks_Transform_Registry {
 
 			if ( 'PRE' === $child->get_tag_name() ) {
 				$inner_blocks[] = self::create_pre_code_preformatted_block( $child );
+				continue;
+			}
+
+			if ( self::class_matches( $child, '/(?:^|[-_\s])code[-_]?block(?:$|[-_\s])/i' ) && preg_match( '/<pre\b/i', $child->get_inner_html() ) === 1 ) {
+				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+					'core/group',
+					self::get_common_layout_attributes( $child ),
+					$handler( [ 'HTML' => $child->get_inner_html() ] )
+				);
 				continue;
 			}
 
@@ -1715,9 +1724,18 @@ class HTML_To_Blocks_Transform_Registry {
 				$has_header = true;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:body|block|output|panel)|code[-_]?preview[-_]?body)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( 'PRE' === $child->get_tag_name() || preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:body|block|output|panel)|code[-_]?preview[-_]?body)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$has_body = true;
 			}
+		}
+
+		$inner_html = $element->get_inner_html();
+		if ( ! $has_header && preg_match( '/class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label)[A-Za-z0-9_-]*[^"\']*["\']/i', $inner_html ) === 1 ) {
+			$has_header = true;
+		}
+
+		if ( ! $has_body && preg_match( '/<pre\b/i', $inner_html ) === 1 ) {
+			$has_body = true;
 		}
 
 		return $has_header && $has_body;
