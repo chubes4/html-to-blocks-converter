@@ -1374,7 +1374,7 @@ class HTML_To_Blocks_Transform_Registry {
 						return false;
 					}
 
-					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?window[A-Za-z0-9_-]*|code[-_]?pane)(?:$|\s)/i' ) ) {
+					if ( self::class_matches( $element, '/(?:^|\s)(?:[A-Za-z0-9_-]*code[-_]?(?:window|preview|panel)[A-Za-z0-9_-]*|code[-_]?pane)(?:$|\s)/i' ) ) {
 						return true;
 					}
 
@@ -1405,12 +1405,17 @@ class HTML_To_Blocks_Transform_Registry {
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
 
+			if ( 'PRE' === $child->get_tag_name() ) {
+				$inner_blocks[] = self::create_pre_code_preformatted_block( $child );
+				continue;
+			}
+
 			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?(?:body|block)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_body_block( $child );
 				continue;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|badge)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_text_group( $child );
 				continue;
 			}
@@ -1423,6 +1428,26 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_common_layout_attributes( $element ),
 			$inner_blocks
 		);
+	}
+
+	/**
+	 * Creates a preformatted block for code panel pre/code bodies.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Pre element.
+	 * @return array Block array.
+	 */
+	private static function create_pre_code_preformatted_block( $element ): array {
+		$code    = $element->query_selector( 'code' );
+		$content = $code ? $code->get_inner_html() : $element->get_inner_html();
+
+		$attrs            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+		$attrs['content'] = $content;
+
+		if ( $code && $code->has_attribute( 'class' ) ) {
+			$attrs['className'] = self::merge_class_names( $attrs['className'] ?? '', $code->get_attribute( 'class' ) );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attrs );
 	}
 
 	/**
@@ -1546,7 +1571,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|badge)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
+		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
 	}
 
 	/**
@@ -1564,11 +1589,11 @@ class HTML_To_Blocks_Transform_Registry {
 		$has_body   = false;
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?(?:bar|titlebar|header|pane[-_]?header)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label)|code[-_]?preview[-_]?header)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$has_header = true;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*code[-_]?(?:body|block|output)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:body|block|output|panel)|code[-_]?preview[-_]?body)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$has_body = true;
 			}
 		}
