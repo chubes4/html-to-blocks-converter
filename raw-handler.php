@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Main raw handler function - converts HTML to blocks
  *
- * @param array $args Arguments array with 'HTML' key
+ * @param array $args Arguments array with 'HTML' key and optional conversion context.
  * @return array Array of block arrays
  */
 function html_to_blocks_raw_handler( $args ) {
@@ -43,7 +43,7 @@ function html_to_blocks_raw_handler( $args ) {
 		}
 
 		$piece  = html_to_blocks_normalise_blocks( $piece );
-		$blocks = html_to_blocks_convert( $piece );
+		$blocks = html_to_blocks_convert( $piece, array_merge( $args, [ 'HTML' => $piece ] ) );
 		$result = array_merge( $result, $blocks );
 	}
 
@@ -54,9 +54,10 @@ function html_to_blocks_raw_handler( $args ) {
  * Converts HTML directly to blocks using registered transforms
  *
  * @param string $html HTML to convert
+ * @param array  $args Raw handler arguments for transform context.
  * @return array Array of blocks
  */
-function html_to_blocks_convert( $html ) {
+function html_to_blocks_convert( $html, $args = [] ) {
 	if ( empty( trim( $html ) ) ) {
 		return [];
 	}
@@ -167,8 +168,12 @@ function html_to_blocks_convert( $html ) {
 			$transform_fn = $raw_transform['transform'] ?? null;
 
 			if ( $transform_fn && is_callable( $transform_fn ) ) {
-				$raw_handler_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
-				$block                = call_user_func( $transform_fn, $element, $raw_handler_callback );
+				$raw_handler_fn       = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
+				$raw_handler_callback = function ( $nested_args ) use ( $args, $raw_handler_fn ) {
+					$nested_args = is_array( $nested_args ) ? $nested_args : [];
+					return call_user_func( $raw_handler_fn, array_merge( $args, $nested_args ) );
+				};
+				$block                = call_user_func( $transform_fn, $element, $raw_handler_callback, $args );
 
 				if ( $element->has_attribute( 'class' ) ) {
 					$existing_class = $block['attrs']['className'] ?? '';
