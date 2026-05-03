@@ -166,6 +166,28 @@ foreach ( $reference_svgs as $label => $reference_svg ) {
 	$assert( empty( $reference['is_safe'] ), 'classifier-rejects-reference-svg-' . $label, $reference['reason'] ?? '' );
 }
 
+$benchmark_svgs = [
+	'sidebar-icon-rect-circle-path' => '<svg class="sidebar-icon" viewbox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor"></rect><circle cx="13" cy="5" r="3" fill="#1a4fdb" fill-opacity="0.24"></circle><path d="M3 13h12" fill="currentColor" fill-opacity=".72"></path></svg>',
+	'feature-icon-rect-circle-path' => '<svg width="22" height="22" viewbox="0 0 22 22" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" fill="#1a4fdb"></rect><circle cx="15.5" cy="6.5" r="3.5" fill="currentColor" fill-opacity="0.4"></circle><path d="M4 17h14" fill="#ffcc00" fill-opacity="1"></path></svg>',
+];
+
+foreach ( $benchmark_svgs as $label => $benchmark_svg ) {
+	$benchmark_classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( $benchmark_svg );
+	$benchmark_blocks         = html_to_blocks_raw_handler( [ 'HTML' => $benchmark_svg ] );
+	$benchmark_icons          = $collect_blocks( $benchmark_blocks, 'html-to-blocks/svg-icon' );
+	$benchmark_fallbacks      = $collect_blocks( $benchmark_blocks, 'core/html' );
+	$benchmark_tags           = $benchmark_icons[0]['attrs']['metadata']['tags'] ?? [];
+	$benchmark_sanitized      = $benchmark_icons[0]['attrs']['svg'] ?? '';
+
+	$assert( ! empty( $benchmark_classification['is_safe'] ), $label . '-classifier-accepts-benchmark-svg', $benchmark_classification['reason'] ?? '' );
+	$assert( count( $benchmark_icons ) === 1, $label . '-emits-placeholder-block', var_export( $benchmark_blocks, true ) );
+	$assert( count( $benchmark_fallbacks ) === 0, $label . '-emits-no-core-html', var_export( $benchmark_blocks, true ) );
+	$assert( in_array( 'rect', $benchmark_tags, true ) && in_array( 'circle', $benchmark_tags, true ) && in_array( 'path', $benchmark_tags, true ), $label . '-records-primitive-tags', implode( ', ', $benchmark_tags ) );
+	$assert( str_contains( $benchmark_sanitized, 'fill-opacity' ), $label . '-preserves-safe-paint-opacity', $benchmark_sanitized );
+}
+
+$assert( count( $fallback_events ) === 0, 'benchmark-safe-svgs-emit-no-fallback-diagnostics' );
+
 $unsafe_svg     = '<svg viewBox="0 0 24 24"><script>alert(1)</script><path onclick="alert(1)" d="M0 0h24v24H0z"/></svg>';
 $unsafe         = HTML_To_Blocks_SVG_Icon_Classifier::classify( $unsafe_svg );
 $unsafe_blocks  = html_to_blocks_raw_handler( [ 'HTML' => $unsafe_svg ] );

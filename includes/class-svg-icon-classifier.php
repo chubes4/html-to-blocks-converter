@@ -21,8 +21,8 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	];
 
 	private const ALLOWED_ATTRIBUTES = [
-		'aria-hidden', 'aria-label', 'class', 'cx', 'cy', 'd', 'fill', 'height', 'points', 'r', 'role',
-		'stroke', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'viewbox', 'width', 'x', 'x1', 'x2', 'y', 'y1', 'y2',
+		'aria-hidden', 'aria-label', 'class', 'cx', 'cy', 'd', 'fill', 'fill-opacity', 'height', 'points', 'r', 'role', 'rx', 'ry',
+		'stroke', 'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'stroke-width', 'viewbox', 'width', 'x', 'x1', 'x2', 'y', 'y1', 'y2',
 	];
 
 	/**
