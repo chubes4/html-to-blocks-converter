@@ -345,6 +345,46 @@ $assert( str_contains( $hero_panel_serialized, 'Site Editor ready' ), 'hero-pane
 $assert( ! str_contains( $hero_panel_serialized, 'wp-block-preformatted hero-code-window' ), 'hero-panel-wrapper-is-not-flattened-preformatted', $hero_panel_serialized );
 $assert( ! str_contains( $hero_panel_serialized, 'dot-r' ) && ! str_contains( $hero_panel_serialized, 'dot-y' ) && ! str_contains( $hero_panel_serialized, 'dot-g' ), 'hero-panel-decorative-dots-are-dropped', $hero_panel_serialized );
 
+$code_preview_html = <<<'HTML'
+<div class="code-preview-container reveal">
+  <div class="code-preview-header">
+    <div class="code-dots"><div class="code-dot code-dot-r"></div><div class="code-dot code-dot-y"></div><div class="code-dot code-dot-g"></div></div>
+    <div class="code-tab-bar"><span class="code-tab active">index.html</span><span class="code-tab">blocks.html</span></div>
+  </div>
+  <div class="code-preview-body">
+    <div class="code-panel">
+      <div class="code-panel-label"><div class="code-panel-label-dot dot-amber"></div>Your HTML input</div>
+      <pre><code>&lt;section class="hero"&gt;
+  &lt;h1&gt;Launch&lt;/h1&gt;
+&lt;/section&gt;</code></pre>
+    </div>
+    <div class="arrow-divider"></div>
+    <div class="code-panel">
+      <div class="code-panel-label"><div class="code-panel-label-dot dot-green"></div>WordPress blocks</div>
+      <pre><code>&lt;!-- wp:group --&gt;
+&lt;!-- wp:heading --&gt;Launch&lt;!-- /wp:heading --&gt;</code></pre>
+    </div>
+  </div>
+</div>
+HTML;
+
+$code_preview_blocks       = html_to_blocks_raw_handler( [ 'HTML' => $code_preview_html ] );
+$code_preview_serialized   = serialize_blocks( $code_preview_blocks );
+$code_preview_fallbacks    = $collect_blocks( $code_preview_blocks, 'core/html' );
+$code_preview_groups       = $collect_blocks( $code_preview_blocks, 'core/group' );
+$code_preview_paragraphs   = $collect_blocks( $code_preview_blocks, 'core/paragraph' );
+$code_preview_preformatted = $collect_blocks( $code_preview_blocks, 'core/preformatted' );
+
+$assert( count( $code_preview_fallbacks ) === 0, 'code-preview-does-not-fallback-to-html', $code_preview_serialized );
+$assert( count( $code_preview_groups ) >= 6, 'code-preview-wrappers-become-groups', $code_preview_serialized );
+$assert( count( $code_preview_paragraphs ) >= 3, 'code-preview-labels-and-tabs-become-paragraphs', $code_preview_serialized );
+$assert( count( $code_preview_preformatted ) === 2, 'code-preview-pre-code-becomes-preformatted', $code_preview_serialized );
+$assert( str_contains( $code_preview_serialized, 'code-preview-container reveal' ), 'code-preview-container-classes-survive', $code_preview_serialized );
+$assert( str_contains( $code_preview_serialized, 'code-preview-body' ) && str_contains( $code_preview_serialized, 'code-panel' ), 'code-preview-panel-classes-survive', $code_preview_serialized );
+$assert( str_contains( $code_preview_serialized, 'Your HTML input' ) && str_contains( $code_preview_serialized, 'WordPress blocks' ), 'code-preview-label-text-survives', $code_preview_serialized );
+$assert( str_contains( $code_preview_serialized, '&lt;section class="hero"&gt;' ) && str_contains( $code_preview_serialized, '&lt;!-- wp:group --&gt;' ), 'code-preview-code-text-survives', $code_preview_serialized );
+$assert( ! str_contains( $code_preview_serialized, 'code-dot-r' ) && ! str_contains( $code_preview_serialized, 'dot-amber' ), 'code-preview-decorative-dots-are-dropped', $code_preview_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
