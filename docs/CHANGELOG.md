@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2026-05-03
+
+### Changed
+- Keep standalone smoke checks green
+
+### Fixed
+- convert visual lists to groups
+- convert code preview panels natively
+- preserve hero code window panels
+- convert action link groups to buttons
+- convert parsed image html blocks
+- convert empty connector divs natively
+- convert image-only wrappers natively
+- convert workflow code panels
+- preserve group section anchors
+- ignore decorative nav logo dots
+- normalize decorative strip items
+- preserve hero group flex layout
+- convert div line code panels
+- ignore trivial theme part fragments
+- serialize group background styles
+- serialize empty wrapper blocks
+- convert code-window and accent chrome natively
+- convert decorative code chrome natively
+- convert multiline code display divs natively
+- ignore empty decorative icon placeholders
+
 ## [0.6.8] - 2026-05-01
 
 ### Changed
