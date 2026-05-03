@@ -82,6 +82,10 @@ class HTML_To_Blocks_Transform_Registry {
 					$svg            = $classification['svg'] ?? '';
 					$metadata       = $classification['metadata'] ?? [];
 
+					if ( function_exists( 'do_action' ) ) {
+						do_action( 'html_to_blocks_safe_inline_svg_icon', $svg, $metadata, $classification );
+					}
+
 					return [
 						'blockName'    => 'html-to-blocks/svg-icon',
 						'attrs'        => [
