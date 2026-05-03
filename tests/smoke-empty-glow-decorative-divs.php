@@ -152,6 +152,7 @@ $html = <<<'HTML'
 <section class="hero-shell">
   <div class="hero-glow-1"></div>
   <div class="hero-glow-2"></div>
+  <div class="hero-gradient"></div>
   <div class="hero-content">
     <h1>Glow Native</h1>
     <p>Decorative layers should stay editable.</p>
@@ -161,6 +162,8 @@ $html = <<<'HTML'
   <div class="quote-glow"></div>
   <p>Native quote chrome.</p>
 </div>
+<div class="timeline-today"></div>
+<div class="check-icon"></div>
 HTML;
 
 $blocks      = html_to_blocks_raw_handler( [ 'HTML' => $html ] );
@@ -188,14 +191,30 @@ $assert( in_array( 'core/heading', $names, true ), 'neighbor-heading-converts-na
 $assert( in_array( 'core/paragraph', $names, true ), 'neighbor-paragraph-converts-natively', implode( ', ', $names ) );
 $assert( in_array( 'hero-glow-1', $class_names, true ), 'hero-glow-1-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'hero-glow-2', $class_names, true ), 'hero-glow-2-class-survives', implode( ', ', $class_names ) );
+$assert( in_array( 'hero-gradient', $class_names, true ), 'hero-gradient-class-survives', implode( ', ', $class_names ) );
 $assert( in_array( 'quote-glow', $class_names, true ), 'quote-glow-class-survives', implode( ', ', $class_names ) );
+$assert( in_array( 'timeline-today', $class_names, true ), 'timeline-today-class-survives', implode( ', ', $class_names ) );
+$assert( in_array( 'check-icon', $class_names, true ), 'check-icon-class-survives', implode( ', ', $class_names ) );
 $assert( str_contains( $serialized, '<div class="wp-block-group hero-glow-1"></div>' ), 'empty-hero-glow-1-serializes-valid-group-wrapper', $serialized );
 $assert( str_contains( $serialized, '<div class="wp-block-group hero-glow-2"></div>' ), 'empty-hero-glow-2-serializes-valid-group-wrapper', $serialized );
+$assert( str_contains( $serialized, '<div class="wp-block-group hero-gradient"></div>' ), 'empty-hero-gradient-serializes-valid-group-wrapper', $serialized );
 $assert( str_contains( $serialized, '<div class="wp-block-group quote-glow"></div>' ), 'empty-quote-glow-serializes-valid-group-wrapper', $serialized );
+$assert( str_contains( $serialized, '<div class="wp-block-group timeline-today"></div>' ), 'empty-timeline-today-serializes-valid-group-wrapper', $serialized );
+$assert( str_contains( $serialized, '<div class="wp-block-group check-icon"></div>' ), 'empty-check-icon-serializes-valid-group-wrapper', $serialized );
 $assert( str_contains( $serialized, 'Glow Native' ), 'neighbor-heading-text-survives', $serialized );
 $assert( str_contains( $serialized, 'Decorative layers should stay editable.' ), 'neighbor-paragraph-text-survives', $serialized );
 $assert( str_contains( $serialized, 'Native quote chrome.' ), 'quote-content-survives', $serialized );
 $assert( ! str_contains( $serialized, '<!-- wp:html -->' ), 'serialized-output-has-no-wp-html', $serialized );
+
+$arbitrary_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<div class="custom-widget">Meaningful widget copy</div>' ] );
+$arbitrary_names  = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$flatten_blocks( $arbitrary_blocks )
+);
+$assert( ! in_array( 'core/group', $arbitrary_names, true ), 'non-empty-arbitrary-div-does-not-become-group', implode( ', ', $arbitrary_names ) );
+$assert( in_array( 'core/paragraph', $arbitrary_names, true ), 'non-empty-arbitrary-div-remains-textual', implode( ', ', $arbitrary_names ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
