@@ -230,6 +230,52 @@ $ordinary_link_transform = $find_transform( $ordinary_link );
 $smoke_assert( $ordinary_link_transform['blockName'] === 'core/paragraph', 'ordinary-link-stays-paragraph' );
 
 // -------------------------------------------------------------------------
+// Labels: static visual UI labels become text, real form labels fall through.
+// -------------------------------------------------------------------------
+
+$visual_label = new HTML_To_Blocks_HTML_Element(
+	'label',
+	[ 'class' => 'inspector-label' ],
+	'<label class="inspector-label">Type</label>',
+	'Type'
+);
+$visual_label_transform = $find_transform( $visual_label );
+$visual_label_block     = call_user_func( $visual_label_transform['transform'], $visual_label, $handler );
+
+$smoke_assert( $visual_label_transform['blockName'] === 'core/paragraph', 'visual-label-becomes-paragraph' );
+$smoke_assert( $visual_label_block['attrs']['content'] === 'Type', 'visual-label-content-preserved' );
+$smoke_assert( $visual_label_block['attrs']['className'] === 'inspector-label', 'visual-label-class-preserved' );
+$smoke_assert( strpos( $visual_label_block['innerHTML'], '<p class="inspector-label">Type</p>' ) !== false, 'visual-label-renders-native-paragraph' );
+
+$rich_visual_label = new HTML_To_Blocks_HTML_Element(
+	'label',
+	[],
+	'<label>Overlay <strong>Color</strong></label>',
+	'Overlay <strong>Color</strong>'
+);
+$rich_visual_label_transform = $find_transform( $rich_visual_label );
+$rich_visual_label_block     = call_user_func( $rich_visual_label_transform['transform'], $rich_visual_label, $handler );
+
+$smoke_assert( $rich_visual_label_transform['blockName'] === 'core/paragraph', 'rich-visual-label-becomes-paragraph' );
+$smoke_assert( $rich_visual_label_block['attrs']['content'] === 'Overlay <strong>Color</strong>', 'rich-visual-label-inline-markup-preserved' );
+
+$form_label_for = new HTML_To_Blocks_HTML_Element(
+	'label',
+	[ 'for' => 'field-type' ],
+	'<label for="field-type">Type</label>',
+	'Type'
+);
+$smoke_assert( $find_transform( $form_label_for ) === null, 'form-label-for-falls-through' );
+
+$form_label_wrapping_input = new HTML_To_Blocks_HTML_Element(
+	'label',
+	[],
+	'<label>Type <input name="type"></label>',
+	'Type <input name="type">'
+);
+$smoke_assert( $find_transform( $form_label_wrapping_input ) === null, 'form-label-wrapping-input-falls-through' );
+
+// -------------------------------------------------------------------------
 // Details: summary becomes an attribute and nested content becomes blocks.
 // -------------------------------------------------------------------------
 

@@ -225,6 +225,26 @@ $assert( str_contains( $text_div_footer_serialized, 'Copyright 2026 Automattic I
 $assert( str_contains( $text_div_footer_serialized, 'wp:paragraph' ), 'footer-text-divs-become-paragraphs', $text_div_footer_serialized );
 $assert( ! str_contains( $text_div_footer_serialized, '<div class="wp-block-group footer-brand">' ), 'footer-brand-div-does-not-become-empty-wrapper', $text_div_footer_serialized );
 
+$inspector_field_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div class="inspector-field"><label>Type</label><div class="inspector-field-value">core/cover</div></div>',
+		]
+	)
+);
+$assert( ! str_contains( $inspector_field_serialized, '<!-- wp:html -->' ), 'inspector-field-label-avoids-core-html-fallback', $inspector_field_serialized );
+$assert( str_contains( $inspector_field_serialized, '<p>Type</p>' ), 'inspector-field-label-becomes-editable-text', $inspector_field_serialized );
+$assert( str_contains( $inspector_field_serialized, 'core/cover' ), 'inspector-field-value-survives', $inspector_field_serialized );
+
+$form_label_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<label for="field-type">Type</label>',
+		]
+	)
+);
+$assert( str_contains( $form_label_serialized, '<!-- wp:html -->' ), 'form-label-for-stays-semantic-fallback', $form_label_serialized );
+
 $badge_serialized = serialize_blocks(
 	html_to_blocks_raw_handler(
 		[
