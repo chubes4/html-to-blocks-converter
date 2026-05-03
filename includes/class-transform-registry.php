@@ -593,6 +593,18 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_list_transforms() {
 		return [
 			[
+				'blockName' => 'core/group',
+				'priority'  => 9,
+				'selector'  => 'ol,ul',
+				'isMatch'   => function ( $element ) {
+					return in_array( $element->get_tag_name(), [ 'OL', 'UL' ], true )
+						&& self::is_visual_list_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					return self::create_visual_list_group_from_element( $element, $handler );
+				},
+			],
+			[
 				'blockName' => 'core/list',
 				'priority'  => 10,
 				'selector'  => 'ol,ul',
@@ -658,6 +670,104 @@ class HTML_To_Blocks_Transform_Registry {
 		unset( $block['attrs']['className'] );
 
 		return $block;
+	}
+
+	/**
+	 * Checks whether a list is being used as card/timeline layout scaffolding.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $list_element The ol/ul element.
+	 * @return bool True when the list should become editable group blocks.
+	 */
+	private static function is_visual_list_element( $list_element ): bool {
+		foreach ( self::get_direct_li_children( $list_element->get_inner_html() ) as $li_html ) {
+			$li = HTML_To_Blocks_HTML_Element::from_html( $li_html );
+			if ( ! $li ) {
+				continue;
+			}
+
+			foreach ( $li->get_child_elements() as $child ) {
+				if ( self::is_visual_list_item_child( $child ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks whether a direct li child indicates layout content instead of prose.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $child Direct child element of an li.
+	 * @return bool True when the child should be editable outside core/list-item content.
+	 */
+	private static function is_visual_list_item_child( $child ): bool {
+		return in_array(
+			$child->get_tag_name(),
+			[
+				'DIV',
+				'SECTION',
+				'ARTICLE',
+				'MAIN',
+				'ASIDE',
+				'HEADER',
+				'FOOTER',
+				'NAV',
+				'H1',
+				'H2',
+				'H3',
+				'H4',
+				'H5',
+				'H6',
+				'P',
+				'FIGURE',
+				'TABLE',
+				'PRE',
+				'BLOCKQUOTE',
+				'DETAILS',
+			],
+			true
+		);
+	}
+
+	/**
+	 * Creates editable group blocks for visual ol/ul card or timeline layouts.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $list_element The ol/ul element.
+	 * @param callable                    $handler      Raw handler callback.
+	 * @return array Block array.
+	 */
+	private static function create_visual_list_group_from_element( $list_element, callable $handler ): array {
+		$inner_blocks = [];
+
+		foreach ( self::get_direct_li_children( $list_element->get_inner_html() ) as $li_html ) {
+			$li = HTML_To_Blocks_HTML_Element::from_html( $li_html );
+			if ( ! $li ) {
+				continue;
+			}
+
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/group',
+				self::get_visual_list_group_attributes( $li ),
+				$handler( [ 'HTML' => $li->get_inner_html() ] )
+			);
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_visual_list_group_attributes( $list_element ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Gets wrapper-safe attributes for visual list groups.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source ol/ul/li element.
+	 * @return array Block attributes.
+	 */
+	private static function get_visual_list_group_attributes( $element ): array {
+		return self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'align' => true, 'colors' => true, 'spacing' => true, 'border' => true ] );
 	}
 
 	/**

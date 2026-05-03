@@ -97,6 +97,10 @@ class Layout_Smoke_Element {
 		return null;
 	}
 
+	public function query_selector_all( string $selector ): array {
+		return [];
+	}
+
 	public function get_text_content(): string {
 		return trim( strip_tags( $this->inner_html ) );
 	}
