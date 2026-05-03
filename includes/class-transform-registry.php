@@ -926,7 +926,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'priority'  => 8,
 				'selector'  => 'div,p',
 				'isMatch'   => function ( $element ) {
-					return self::is_button_anchor_container( $element );
+					return self::is_button_anchor_container( $element ) || self::is_single_button_anchor_wrapper( $element );
 				},
 				'transform' => function ( $element ) {
 					return self::create_buttons_block_from_container( $element );
@@ -986,6 +986,35 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Checks whether an alignment/action wrapper contains one button-like CTA anchor.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper can safely become core/buttons.
+	 */
+	private static function is_single_button_anchor_wrapper( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'P' ], true ) ) {
+			return false;
+		}
+
+		$children = self::get_direct_anchor_children_from_html( $element->get_inner_html() );
+		if ( count( $children ) !== 1 || ! self::is_button_like_anchor( $children[0] ) ) {
+			return false;
+		}
+
+		return self::is_action_link_container( $element ) || self::is_alignment_button_wrapper( $element );
+	}
+
+	/**
+	 * Checks for explicit alignment wrapper classes commonly used around CTAs.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper class signals visual alignment.
+	 */
+	private static function is_alignment_button_wrapper( $element ): bool {
+		return self::class_matches( $element, '/(?:^|[-_\s])(?:center|centered|text[-_]?center|aligncenter|align[-_]?center)(?:$|[-_\s])/i' );
 	}
 
 	/**
