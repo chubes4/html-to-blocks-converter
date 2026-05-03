@@ -2450,14 +2450,35 @@ class HTML_To_Blocks_Transform_Registry {
 					return self::is_group_element( $element );
 				},
 				'transform' => function ( $element, $handler ) {
+					$attributes = self::is_empty_decorative_element( $element )
+						? self::get_empty_decorative_group_attributes( $element )
+						: self::get_common_layout_attributes( $element );
+
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
-						self::get_common_layout_attributes( $element ),
+						$attributes,
 						$handler( [ 'HTML' => $element->get_inner_html() ] )
 					);
 				},
 			],
 		];
+	}
+
+	/**
+	 * Gets safe attributes for empty decorative group chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return array Block attributes.
+	 */
+	private static function get_empty_decorative_group_attributes( $element ): array {
+		return self::get_block_support_attributes(
+			$element,
+			[
+				'anchor'     => true,
+				'class_name' => true,
+				'align'      => true,
+			]
+		);
 	}
 
 	/**
