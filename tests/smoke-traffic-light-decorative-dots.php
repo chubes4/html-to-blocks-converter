@@ -181,6 +181,27 @@ $assert( in_array( 'traffic-light tl-yellow', $class_names, true ), 'yellow-dot-
 $assert( in_array( 'traffic-light tl-green', $class_names, true ), 'green-dot-classes-survive', implode( ', ', $class_names ) );
 $assert( ! str_contains( $serialized, '<!-- wp:html -->' ), 'serialized-output-has-no-wp-html', $serialized );
 
+$fallback_events = [];
+$code_dot_blocks = html_to_blocks_raw_handler(
+	[
+		'HTML' => <<<'HTML'
+<div class="code-dot red"></div>
+<div class="code-dot yellow"></div>
+<div class="code-dot green"></div>
+HTML,
+	]
+);
+$code_dot_names  = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$flatten_blocks( $code_dot_blocks )
+);
+
+$assert( count( $code_dot_blocks ) === 0, 'empty-code-dot-chrome-is-dropped', (string) count( $code_dot_blocks ) );
+$assert( ! in_array( 'core/html', $code_dot_names, true ), 'empty-code-dot-chrome-does-not-use-core-html', implode( ', ', $code_dot_names ) );
+$assert( count( $fallback_events ) === 0, 'empty-code-dot-chrome-emits-no-fallback-events', (string) count( $fallback_events ) );
+
 $fallback_events  = [];
 $arbitrary_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<div class="custom-widget">Meaningful widget copy</div>' ] );
 $arbitrary_names  = array_map(

@@ -277,6 +277,10 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 		return false;
 	}
 
+	if ( preg_match( '/(?:^|\s)code[-_]?dot(?:$|\s)/i', $class_name ) === 1 ) {
+		return true;
+	}
+
 	if ( preg_match( '/(?:^|[-_\s])(?:accent|sep)(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
 		return true;
 	}
