@@ -2266,6 +2266,20 @@ class HTML_To_Blocks_Transform_Registry {
 			],
 			[
 				'blockName' => 'core/group',
+				'priority'  => 14,
+				'isMatch'   => function ( $element ) {
+					return self::is_inline_scroller_element( $element );
+				},
+				'transform' => function ( $element, $handler ) {
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						self::create_inline_scroller_child_blocks( $element, $handler )
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
 				'priority'  => 15,
 				'isMatch'   => function ( $element ) {
 					return self::is_group_element( $element );
@@ -2744,6 +2758,61 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return $has_decorative_child && '' !== trim( wp_strip_all_tags( $element->get_inner_html() ) );
+	}
+
+	/**
+	 * Checks whether a wrapper is a horizontal inline scroller/marquee track.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when direct inline children should stay separate blocks.
+	 */
+	private static function is_inline_scroller_element( $element ): bool {
+		if ( 'DIV' !== $element->get_tag_name() || ! self::class_matches( $element, '/(?:^|[-_\s])(?:marquee|scroller|scroll|ticker|track)(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		$children = $element->get_child_elements();
+		if ( count( $children ) < 2 ) {
+			return false;
+		}
+
+		foreach ( $children as $child ) {
+			if ( 'SPAN' !== $child->get_tag_name() || ! $child->has_attribute( 'class' ) || trim( $child->get_text_content() ) === '' ) {
+				return false;
+			}
+
+			foreach ( $child->get_child_elements() as $grandchild ) {
+				if ( ! self::is_empty_decorative_element( $grandchild ) ) {
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Creates child blocks for direct inline marquee/scroller items.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source scroller wrapper.
+	 * @param callable                    $handler Recursive conversion handler.
+	 * @return array Converted child blocks.
+	 */
+	private static function create_inline_scroller_child_blocks( $element, callable $handler ): array {
+		$inner_blocks = [];
+
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( array() !== $child->get_child_elements() ) {
+				$inner_blocks = array_merge( $inner_blocks, $handler( [ 'HTML' => $child->get_outer_html() ] ) );
+				continue;
+			}
+
+			$attributes            = self::get_block_support_attributes( $child, [ 'anchor' => true, 'class_name' => true ] );
+			$attributes['content'] = $child->get_inner_html();
+			$inner_blocks[]        = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+		}
+
+		return $inner_blocks;
 	}
 
 	/**
