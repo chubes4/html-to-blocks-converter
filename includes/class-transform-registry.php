@@ -2871,7 +2871,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_empty_decorative_element( $element ): bool {
 		return self::is_empty_element( $element )
-			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|dot|mark|bullet|orb|blob|fill|progress|meter|gauge)(?:$|[-_\s]|\d)/i' );
+			&& self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|progress|meter|gauge|today)(?:$|[-_\s]|\d)/i' );
 	}
 
 	/**
