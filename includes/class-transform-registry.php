@@ -1042,7 +1042,11 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( preg_match( '/(?:^|\s)btn(?:$|\s)/i', $class_name ) === 1 && preg_match( '/(?:^|\s)btn-(?!cta(?:$|\s))[A-Za-z0-9_-]+(?:$|\s)/i', $class_name ) === 1 ) {
+		if ( preg_match( '/(?:^|\s)btn(?:$|\s)/i', $class_name ) === 1 ) {
+			return true;
+		}
+
+		if ( preg_match( '/(?:^|\s)btn-(?!cta(?:$|\s))[A-Za-z0-9_-]+(?:$|\s)/i', $class_name ) === 1 ) {
 			return true;
 		}
 
