@@ -50,8 +50,8 @@ class HTML_To_Blocks_HTML_Element {
 			return self::from_table_scoped_html( $html );
 		}
 
-		$attributes      = self::extract_attributes( $processor );
-		$inner_html      = self::extract_inner_html( $html, $tag_name );
+		$attributes = self::extract_attributes( $processor );
+		$inner_html = self::extract_inner_html( $html, $tag_name );
 
 		return new self( $tag_name, $attributes, $html, $inner_html );
 	}
@@ -69,7 +69,7 @@ class HTML_To_Blocks_HTML_Element {
 
 		$tag = strtolower( $matches[1] );
 
-		$wrappers = [
+		$wrappers = array(
 			'thead'    => '<table>%s</table>',
 			'tbody'    => '<table>%s</table>',
 			'tfoot'    => '<table>%s</table>',
@@ -79,7 +79,7 @@ class HTML_To_Blocks_HTML_Element {
 			'tr'       => '<table><tbody>%s</tbody></table>',
 			'td'       => '<table><tbody><tr>%s</tr></tbody></table>',
 			'th'       => '<table><tbody><tr>%s</tr></tbody></table>',
-		];
+		);
 
 		if ( ! isset( $wrappers[ $tag ] ) ) {
 			return null;
@@ -117,7 +117,7 @@ class HTML_To_Blocks_HTML_Element {
 	 * @return array Associative array of attribute name => value
 	 */
 	private static function extract_attributes( WP_HTML_Processor $processor ): array {
-		$attributes = [];
+		$attributes = array();
 		$names      = $processor->get_attribute_names_with_prefix( '' );
 
 		if ( $names ) {
@@ -139,10 +139,22 @@ class HTML_To_Blocks_HTML_Element {
 	private static function extract_inner_html( string $html, string $tag_name ): string {
 		$tag_lower = strtolower( $tag_name );
 
-		$void_elements = [
-			'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-			'link', 'meta', 'param', 'source', 'track', 'wbr',
-		];
+		$void_elements = array(
+			'area',
+			'base',
+			'br',
+			'col',
+			'embed',
+			'hr',
+			'img',
+			'input',
+			'link',
+			'meta',
+			'param',
+			'source',
+			'track',
+			'wbr',
+		);
 
 		if ( in_array( $tag_lower, $void_elements, true ) ) {
 			return '';
@@ -187,7 +199,7 @@ class HTML_To_Blocks_HTML_Element {
 	 */
 	public function get_attribute( string $name ): ?string {
 		$value = $this->attributes[ strtolower( $name ) ] ?? null;
-		if ( $value === true ) {
+		if ( true === $value ) {
 			return '';
 		}
 		return $value;
@@ -259,16 +271,16 @@ class HTML_To_Blocks_HTML_Element {
 	public function query_selector_all( string $selector ): array {
 		$processor = WP_HTML_Processor::create_fragment( $this->outer_html );
 		if ( ! $processor ) {
-			return [];
+			return array();
 		}
 
 		$selector = trim( $selector );
-		$results  = [];
+		$results  = array();
 
-		$tag_match   = null;
-		$class_match = null;
-		$id_match    = null;
-		$occurrence_counters = [];
+		$tag_match           = null;
+		$class_match         = null;
+		$id_match            = null;
+		$occurrence_counters = array();
 
 		if ( preg_match( '/^([a-z0-9]+)?(?:\.([a-z0-9_-]+))?(?:#([a-z0-9_-]+))?$/i', $selector, $matches ) ) {
 			$tag_match   = ! empty( $matches[1] ) ? strtoupper( $matches[1] ) : null;
@@ -283,12 +295,12 @@ class HTML_To_Blocks_HTML_Element {
 				continue;
 			}
 
-			$tag = $processor->get_tag();
-			$tag_lower = strtolower( $tag );
+			$tag                               = $processor->get_tag();
+			$tag_lower                         = strtolower( $tag );
 			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
-			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
+			$occurrence                        = $occurrence_counters[ $tag_lower ] - 1;
 
-			if ( $root_depth === null ) {
+			if ( null === $root_depth ) {
 				$root_depth = $processor->get_current_depth();
 				continue;
 			}
@@ -335,24 +347,24 @@ class HTML_To_Blocks_HTML_Element {
 	public function get_child_elements(): array {
 		$processor = WP_HTML_Processor::create_fragment( $this->outer_html );
 		if ( ! $processor ) {
-			return [];
+			return array();
 		}
 
-		$children   = [];
-		$root_depth = null;
-		$occurrence_counters = [];
+		$children            = array();
+		$root_depth          = null;
+		$occurrence_counters = array();
 
 		while ( $processor->next_tag() ) {
 			if ( $processor->is_tag_closer() ) {
 				continue;
 			}
 
-			$tag_name = $processor->get_tag();
-			$tag_lower = strtolower( $tag_name );
+			$tag_name                          = $processor->get_tag();
+			$tag_lower                         = strtolower( $tag_name );
 			$occurrence_counters[ $tag_lower ] = ( $occurrence_counters[ $tag_lower ] ?? 0 ) + 1;
-			$occurrence = $occurrence_counters[ $tag_lower ] - 1;
+			$occurrence                        = $occurrence_counters[ $tag_lower ] - 1;
 
-			if ( $root_depth === null ) {
+			if ( null === $root_depth ) {
 				$root_depth = $processor->get_current_depth();
 				continue;
 			}
@@ -389,13 +401,25 @@ class HTML_To_Blocks_HTML_Element {
 			return null;
 		}
 
-		$start_pos        = $positions[ $occurrence ];
-		$html_from_start  = substr( $html, $start_pos );
+		$start_pos       = $positions[ $occurrence ];
+		$html_from_start = substr( $html, $start_pos );
 
-		$void_elements = [
-			'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-			'link', 'meta', 'param', 'source', 'track', 'wbr',
-		];
+		$void_elements = array(
+			'area',
+			'base',
+			'br',
+			'col',
+			'embed',
+			'hr',
+			'img',
+			'input',
+			'link',
+			'meta',
+			'param',
+			'source',
+			'track',
+			'wbr',
+		);
 
 		if ( in_array( strtolower( $tag_name ), $void_elements, true ) ) {
 			$pattern = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?\/?>/i';
@@ -416,7 +440,7 @@ class HTML_To_Blocks_HTML_Element {
 	 * @return array
 	 */
 	private static function find_tag_positions( string $html, string $tag_name ): array {
-		$positions = [];
+		$positions = array();
 		$offset    = 0;
 		$pattern   = '/<' . preg_quote( $tag_name, '/' ) . '(?:\s|>)/i';
 
@@ -447,15 +471,15 @@ class HTML_To_Blocks_HTML_Element {
 			$remaining = substr( $html, $i );
 
 			if ( preg_match( $open_pattern, $remaining ) ) {
-				$depth++;
+				++$depth;
 			} elseif ( preg_match( $close_pattern, $remaining, $close_match ) ) {
-				$depth--;
-				if ( $depth === 0 ) {
+				--$depth;
+				if ( 0 === $depth ) {
 					return substr( $html, 0, $i + strlen( $close_match[0] ) );
 				}
 			}
 
-			$i++;
+			++$i;
 		}
 
 		return null;

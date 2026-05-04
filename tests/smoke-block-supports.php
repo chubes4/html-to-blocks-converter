@@ -45,7 +45,7 @@ foreach ( [ 'esc_attr', 'esc_html', 'esc_url' ] as $function_name ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $text ) {
-		return strip_tags( $text );
+		return wp_strip_all_tags( $text );
 	}
 }
 
@@ -93,7 +93,7 @@ class Block_Supports_Smoke_Element {
 	}
 
 	public function get_text_content(): string {
-		return trim( strip_tags( $this->inner_html ) );
+		return trim( wp_strip_all_tags( $this->inner_html ) );
 	}
 }
 
@@ -103,7 +103,7 @@ $assertions = 0;
 $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 	$assertions++;
 	if ( ! $condition ) {
-		$failures[] = 'FAIL [' . $label . ']' . ( $detail !== '' ? ': ' . $detail : '' );
+		$failures[] = 'FAIL [' . $label . ']' . ( '' !== $detail ? ': ' . $detail : '' );
 	}
 };
 
@@ -137,7 +137,7 @@ $heading = new Block_Supports_Smoke_Element(
 $heading_transform = $find_transform( $heading, 'core/heading' );
 $heading_block     = $heading_transform ? call_user_func( $heading_transform['transform'], $heading ) : null;
 
-$assert( $heading_block && $heading_block['blockName'] === 'core/heading', 'heading-transform-found' );
+$assert( $heading_block && 'core/heading' === $heading_block['blockName'], 'heading-transform-found' );
 $assert( ( $heading_block['attrs']['anchor'] ?? '' ) === 'intro', 'heading-anchor' );
 $assert( ( $heading_block['attrs']['align'] ?? '' ) === 'wide', 'heading-align-wide' );
 $assert( ( $heading_block['attrs']['textAlign'] ?? '' ) === 'center', 'heading-text-align' );
@@ -168,7 +168,7 @@ $paragraph = new Block_Supports_Smoke_Element(
 $paragraph_transform = $find_transform( $paragraph, 'core/paragraph' );
 $paragraph_block     = $paragraph_transform ? call_user_func( $paragraph_transform['transform'], $paragraph ) : null;
 
-$assert( $paragraph_block && $paragraph_block['blockName'] === 'core/paragraph', 'paragraph-transform-found' );
+$assert( $paragraph_block && 'core/paragraph' === $paragraph_block['blockName'], 'paragraph-transform-found' );
 $assert( ( $paragraph_block['attrs']['fontSize'] ?? '' ) === 'heading-2', 'paragraph-preset-font-size-class-wins' );
 $assert( ( $paragraph_block['attrs']['className'] ?? '' ) === 'readable-copy', 'paragraph-filters-preset-font-class' );
 
@@ -185,7 +185,7 @@ $group = new Block_Supports_Smoke_Element(
 $group_transform = $find_transform( $group, 'core/group' );
 $group_block     = $group_transform ? call_user_func( $group_transform['transform'], $group, $handler ) : null;
 
-$assert( $group_block && $group_block['blockName'] === 'core/group', 'group-transform-found' );
+$assert( $group_block && 'core/group' === $group_block['blockName'], 'group-transform-found' );
 $assert( ( $group_block['attrs']['anchor'] ?? '' ) === 'shell', 'group-anchor' );
 $assert( ( $group_block['attrs']['align'] ?? '' ) === 'full', 'group-align-full' );
 $assert( ( $group_block['attrs']['className'] ?? '' ) === 'site-shell', 'group-safe-class-filter' );
@@ -205,7 +205,7 @@ $border_group = new Block_Supports_Smoke_Element(
 $border_group_transform = $find_transform( $border_group, 'core/group' );
 $border_group_block     = $border_group_transform ? call_user_func( $border_group_transform['transform'], $border_group, $handler ) : null;
 
-$assert( $border_group_block && $border_group_block['blockName'] === 'core/group', 'border-group-transform-found' );
+$assert( $border_group_block && 'core/group' === $border_group_block['blockName'], 'border-group-transform-found' );
 $assert( ( $border_group_block['attrs']['style']['border']['width'] ?? '' ) === '1px', 'group-border-shorthand-width' );
 $assert( ( $border_group_block['attrs']['style']['border']['style'] ?? '' ) === 'solid', 'group-border-shorthand-style' );
 $assert( ( $border_group_block['attrs']['style']['border']['color'] ?? '' ) === 'var(--border)', 'group-border-shorthand-color' );
@@ -224,7 +224,7 @@ $misparsed_border_group = new Block_Supports_Smoke_Element(
 $misparsed_border_group_transform = $find_transform( $misparsed_border_group, 'core/group' );
 $misparsed_border_group_block     = $misparsed_border_group_transform ? call_user_func( $misparsed_border_group_transform['transform'], $misparsed_border_group, $handler ) : null;
 
-$assert( $misparsed_border_group_block && $misparsed_border_group_block['blockName'] === 'core/group', 'misparsed-border-group-transform-found' );
+$assert( $misparsed_border_group_block && 'core/group' === $misparsed_border_group_block['blockName'], 'misparsed-border-group-transform-found' );
 $assert( ! isset( $misparsed_border_group_block['attrs']['style']['border']['width'] ), 'group-drops-invalid-border-width' );
 $assert( ! str_contains( $misparsed_border_group_block['innerHTML'] ?? '', 'border-width:1px solid var(--border)' ), 'group-does-not-serialize-invalid-border-width', $misparsed_border_group_block['innerHTML'] ?? '' );
 
@@ -232,7 +232,7 @@ $separator = new Block_Supports_Smoke_Element( 'hr', [ 'class' => 'wp-block-sepa
 $separator_transform = $find_transform( $separator, 'core/separator' );
 $separator_block     = $separator_transform ? call_user_func( $separator_transform['transform'], $separator ) : null;
 
-$assert( $separator_block && $separator_block['blockName'] === 'core/separator', 'separator-transform-found' );
+$assert( $separator_block && 'core/separator' === $separator_block['blockName'], 'separator-transform-found' );
 $assert( ( $separator_block['attrs']['align'] ?? '' ) === 'wide', 'separator-align-wide' );
 $assert( ( $separator_block['attrs']['className'] ?? '' ) === 'is-style-dots custom-separator', 'separator-preserves-safe-classes' );
 
@@ -240,7 +240,7 @@ $custom_separator = new Block_Supports_Smoke_Element( 'hr', [ 'class' => 'ep-div
 $custom_separator_transform = $find_transform( $custom_separator, 'core/separator' );
 $custom_separator_block     = $custom_separator_transform ? call_user_func( $custom_separator_transform['transform'], $custom_separator ) : null;
 
-$assert( $custom_separator_block && $custom_separator_block['blockName'] === 'core/separator', 'custom-separator-transform-found' );
+$assert( $custom_separator_block && 'core/separator' === $custom_separator_block['blockName'], 'custom-separator-transform-found' );
 $assert( ( $custom_separator_block['attrs']['className'] ?? '' ) === 'ep-divider', 'custom-separator-preserves-class' );
 $assert(
 	( $custom_separator_block['innerHTML'] ?? '' ) === '<hr class="wp-block-separator has-css-opacity ep-divider"/>',

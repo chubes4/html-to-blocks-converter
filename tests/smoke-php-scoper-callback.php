@@ -49,7 +49,7 @@ namespace HTMLToBlocksConverterSmoke\Synthetic\Vendor {
 	 */
 	function build_callback() {
 		$namespace = current_namespace();
-		return $namespace !== '' ? $namespace . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
+		return '' !== $namespace ? $namespace . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
 	}
 }
 
@@ -61,14 +61,15 @@ namespace {
 	$smoke_assert = function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 		$assertions++;
 		if ( ! $condition ) {
-			$failures[] = "FAIL [$label]" . ( $detail !== '' ? ": $detail" : '' );
+			$failures[] = "FAIL [$label]" . ( '' !== $detail ? ": $detail" : '' );
 		}
 	};
 
 	$read_required_file = static function ( string $path ) use ( $smoke_assert ): string {
-		$contents = file_get_contents( $path );
+		global $wp_filesystem;
+		$contents = $wp_filesystem->get_contents( $path );
 		$smoke_assert(
-			is_string( $contents ) && $contents !== '',
+			is_string( $contents ) && '' !== $contents,
 			basename( $path ) . '-readable',
 			"Unable to read $path"
 		);
@@ -119,7 +120,7 @@ namespace {
 	$scoped_callable = \HTMLToBlocksConverterSmoke\Synthetic\Vendor\build_callback();
 
 	$smoke_assert(
-		$scoped_callable === 'HTMLToBlocksConverterSmoke\\Synthetic\\Vendor\\html_to_blocks_raw_handler',
+		'HTMLToBlocksConverterSmoke\\Synthetic\\Vendor\\html_to_blocks_raw_handler' === $scoped_callable,
 		'scoped-callable-string-shape',
 		"got: $scoped_callable"
 	);
@@ -140,7 +141,7 @@ namespace {
 	$smoke_assert(
 		is_array( $invoke_result )
 			&& isset( $invoke_result['called_in_namespace'] )
-			&& $invoke_result['called_in_namespace'] === 'HTMLToBlocksConverterSmoke\\Synthetic\\Vendor',
+			&& 'HTMLToBlocksConverterSmoke\\Synthetic\\Vendor' === $invoke_result['called_in_namespace'],
 		'scoped-callable-invokes-namespaced-function',
 		'invocation did not land in the synthetic namespace'
 	);
@@ -160,9 +161,9 @@ namespace {
 	}
 
 	$global_namespace  = html_to_blocks_smoke_current_namespace();
-	$unscoped_callable = $global_namespace !== '' ? $global_namespace . '\\html_to_blocks_raw_handler_global_smoke' : 'html_to_blocks_raw_handler_global_smoke';
+	$unscoped_callable = '' !== $global_namespace ? $global_namespace . '\\html_to_blocks_raw_handler_global_smoke' : 'html_to_blocks_raw_handler_global_smoke';
 	$smoke_assert(
-		$unscoped_callable === 'html_to_blocks_raw_handler_global_smoke',
+		'html_to_blocks_raw_handler_global_smoke' === $unscoped_callable,
 		'unscoped-callable-string-shape',
 		"got: $unscoped_callable"
 	);

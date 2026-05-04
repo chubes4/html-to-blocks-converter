@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
 	$wp_html_api_candidates = array_filter(
 		[
-			getenv( 'WP_HTML_API_PATH' ) ?: '',
+			getenv( 'WP_HTML_API_PATH' ) ? getenv( 'WP_HTML_API_PATH' ) : '',
 			'/wordpress/wp-includes/html-api',
 			'/Users/chubes/Studio/intelligence-chubes4/wp-includes/html-api',
 		]
@@ -31,7 +31,7 @@ if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
 		}
 	}
 
-	if ( $wp_html_api_path === '' ) {
+	if ( '' === $wp_html_api_path ) {
 		fwrite( STDERR, "FAIL: WP_HTML_Processor is unavailable. Set WP_HTML_API_PATH to wp-includes/html-api.\n" );
 		exit( 1 );
 	}
@@ -87,7 +87,7 @@ foreach ( [ 'esc_attr', 'esc_html', 'esc_url' ] as $function_name ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $text ) {
-		return strip_tags( $text );
+		return wp_strip_all_tags( $text );
 	}
 }
 
@@ -101,7 +101,7 @@ $fallback_events = [];
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( $hook_name, ...$args ) {
 		global $fallback_events;
-		if ( $hook_name === 'html_to_blocks_unsupported_html_fallback' ) {
+		if ( 'html_to_blocks_unsupported_html_fallback' === $hook_name ) {
 			$fallback_events[] = $args;
 		}
 	}
@@ -115,7 +115,7 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 			$attrs      = array_diff_key( $block['attrs'] ?? [], [ 'content' => true ] );
 			$attrs_json = empty( $attrs ) ? '' : ' ' . json_encode( $attrs, JSON_UNESCAPED_SLASHES );
 
-			if ( $name === 'core/html' ) {
+			if ( 'core/html' === $name ) {
 				$output .= '<!-- wp:html -->' . ( $block['attrs']['content'] ?? $block['innerHTML'] ?? '' ) . '<!-- /wp:html -->';
 				continue;
 			}
@@ -124,7 +124,7 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 			$output .= $block['innerContent'][0] ?? $block['innerHTML'] ?? '';
 			$output .= serialize_blocks( $block['innerBlocks'] ?? [] );
 			$inner_content = $block['innerContent'] ?? [];
-			$output       .= end( $inner_content ) ?: '';
+			$output       .= end( $inner_content ) ? end( $inner_content ) : '';
 			$output .= '<!-- /wp:' . substr( $name, 5 ) . ' -->';
 		}
 
@@ -145,7 +145,7 @@ $assertions = 0;
 $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 	$assertions++;
 	if ( ! $condition ) {
-		$failures[] = 'FAIL [' . $label . ']' . ( $detail !== '' ? ': ' . $detail : '' );
+		$failures[] = 'FAIL [' . $label . ']' . ( '' !== $detail ? ': ' . $detail : '' );
 	}
 };
 

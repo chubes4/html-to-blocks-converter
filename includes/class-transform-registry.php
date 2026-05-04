@@ -65,8 +65,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_svg_icon_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'html-to-blocks/svg-icon',
 				'priority'  => 2,
 				'isMatch'   => function ( $element ) {
@@ -80,25 +80,25 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( $element->get_outer_html() );
 					$svg            = $classification['svg'] ?? '';
-					$metadata       = $classification['metadata'] ?? [];
+					$metadata       = $classification['metadata'] ?? array();
 
 					if ( function_exists( 'do_action' ) ) {
 						do_action( 'html_to_blocks_safe_inline_svg_icon', $svg, $metadata, $classification );
 					}
 
-					return [
+					return array(
 						'blockName'    => 'html-to-blocks/svg-icon',
-						'attrs'        => [
+						'attrs'        => array(
 							'svg'      => $svg,
 							'metadata' => $metadata,
-						],
-						'innerBlocks'  => [],
+						),
+						'innerBlocks'  => array(),
 						'innerHTML'    => $svg,
-						'innerContent' => [ $svg ],
-					];
+						'innerContent' => array( $svg ),
+					);
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -107,8 +107,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_site_editor_marker_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/pattern',
 				'priority'  => 1,
 				'isMatch'   => function ( $element ) {
@@ -117,11 +117,11 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/pattern',
-						[ 'slug' => self::get_pattern_marker_slug( $element ) ]
+						array( 'slug' => self::get_pattern_marker_slug( $element ) )
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/template-part',
 				'priority'  => 1,
 				'isMatch'   => function ( $element ) {
@@ -129,16 +129,16 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$slug       = self::get_template_part_marker_slug( $element );
-					$attributes = [ 'slug' => $slug ];
+					$attributes = array( 'slug' => $slug );
 
-					if ( in_array( $slug, [ 'header', 'footer', 'sidebar' ], true ) ) {
+					if ( in_array( $slug, array( 'header', 'footer', 'sidebar' ), true ) ) {
 						$attributes['area'] = $slug;
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/template-part', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -193,8 +193,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_media_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/gallery',
 				'priority'  => 8,
 				'isMatch'   => function ( $element ) {
@@ -203,8 +203,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_gallery_block( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/media-text',
 				'priority'  => 8,
 				'isMatch'   => function ( $element ) {
@@ -215,8 +215,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element, $handler ) {
 					return self::create_media_text_block( $element, $handler );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/video',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -225,7 +225,7 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$video      = $element->get_tag_name() === 'VIDEO' ? $element : $element->query_selector( 'video' );
-					$attributes = self::get_media_attributes( $video, [ 'src', 'poster', 'preload', 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ] );
+					$attributes = self::get_media_attributes( $video, array( 'src', 'poster', 'preload', 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ) );
 
 					if ( $element->get_tag_name() === 'FIGURE' ) {
 						$caption = $element->query_selector( 'figcaption' );
@@ -236,8 +236,8 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/video', $attributes );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/audio',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -246,7 +246,7 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$audio      = $element->get_tag_name() === 'AUDIO' ? $element : $element->query_selector( 'audio' );
-					$attributes = self::get_media_attributes( $audio, [ 'src', 'preload', 'autoplay', 'loop' ] );
+					$attributes = self::get_media_attributes( $audio, array( 'src', 'preload', 'autoplay', 'loop' ) );
 
 					if ( $element->get_tag_name() === 'FIGURE' ) {
 						$caption = $element->query_selector( 'figcaption' );
@@ -257,8 +257,8 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/audio', $attributes );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/file',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -269,8 +269,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_file_block_from_anchor( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/file',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -282,8 +282,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_file_block_from_anchor( $element->query_selector( 'a' ) );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/embed',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -293,17 +293,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$src        = $element->get_attribute( 'src' );
-					$attributes = [
+					$attributes = array(
 						'url'              => self::normalise_embed_url( $src ),
 						'type'             => 'rich',
 						'providerNameSlug' => self::get_embed_provider_slug( $src ),
 						'responsive'       => true,
-					];
+					);
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/embed', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -330,8 +330,8 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_gallery_block( $element ): array {
 		$images       = $element->query_selector_all( 'img' );
 		$captions     = $element->query_selector_all( 'figcaption' );
-		$inner_blocks = [];
-		$ids          = [];
+		$inner_blocks = array();
+		$ids          = array();
 
 		foreach ( $images as $index => $img ) {
 			$caption        = isset( $captions[ $index ] ) ? $captions[ $index ]->get_inner_html() : '';
@@ -343,7 +343,7 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 		}
 
-		$attributes = [];
+		$attributes = array();
 		if ( ! empty( $ids ) ) {
 			$attributes['ids'] = $ids;
 		}
@@ -363,12 +363,12 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_image_block_from_img( $img, string $caption = '' ): array {
-		$attributes = [
+		$attributes = array(
 			'url' => $img->get_attribute( 'src' ) ?? '',
-		];
+		);
 
 		self::apply_image_element_attributes( $attributes, $img );
-		if ( $caption !== '' ) {
+		if ( '' !== $caption ) {
 			$attributes['caption'] = $caption;
 		}
 		if ( $img->has_attribute( 'class' ) && preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $img->get_attribute( 'class' ), $matches ) ) {
@@ -385,7 +385,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param HTML_To_Blocks_HTML_Element $img        Source img element.
 	 */
 	private static function apply_image_element_attributes( array &$attributes, $img ): void {
-		foreach ( [ 'alt', 'title', 'srcset', 'sizes', 'width', 'height' ] as $attribute ) {
+		foreach ( array( 'alt', 'title', 'srcset', 'sizes', 'width', 'height' ) as $attribute ) {
 			if ( $img->has_attribute( $attribute ) ) {
 				$attributes[ $attribute ] = $img->get_attribute( $attribute );
 			}
@@ -400,16 +400,16 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_media_text_block( $element, $handler ): array {
-		$media       = $element->query_selector( 'img' ) ?: $element->query_selector( 'video' );
-		$content     = $element->query_selector( '.wp-block-media-text__content' );
-		$media_type  = $media && $media->get_tag_name() === 'VIDEO' ? 'video' : 'image';
-		$attributes  = [
+		$media      = $element->query_selector( 'img' ) ? $element->query_selector( 'img' ) : $element->query_selector( 'video' );
+		$content    = $element->query_selector( '.wp-block-media-text__content' );
+		$media_type = $media && $media->get_tag_name() === 'VIDEO' ? 'video' : 'image';
+		$attributes = array(
 			'mediaUrl'          => self::get_media_src( $media ),
 			'mediaType'         => $media_type,
 			'mediaPosition'     => 'left',
 			'mediaWidth'        => 50,
 			'isStackedOnMobile' => true,
-		];
+		);
 
 		if ( $media && $media->has_attribute( 'alt' ) ) {
 			$attributes['mediaAlt'] = $media->get_attribute( 'alt' );
@@ -431,7 +431,7 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 		}
 
-		$inner_blocks = $content ? $handler( [ 'HTML' => $content->get_inner_html() ] ) : [];
+		$inner_blocks = $content ? $handler( array( 'HTML' => $content->get_inner_html() ) ) : array();
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/media-text', $attributes, $inner_blocks );
 	}
@@ -466,16 +466,16 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array
 	 */
 	private static function get_media_attributes( $element, array $keys ): array {
-		$attributes = [ 'src' => self::get_media_src( $element ) ];
+		$attributes = array( 'src' => self::get_media_src( $element ) );
 
 		foreach ( $keys as $key ) {
-			$html_key = $key === 'playsInline' ? 'playsinline' : $key;
-			if ( $key === 'src' || ! $element->has_attribute( $html_key ) ) {
+			$html_key = 'playsInline' === $key ? 'playsinline' : $key;
+			if ( 'src' === $key || ! $element->has_attribute( $html_key ) ) {
 				continue;
 			}
 
 			$value = $element->get_attribute( $html_key );
-			if ( in_array( $key, [ 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ], true ) ) {
+			if ( in_array( $key, array( 'autoplay', 'controls', 'loop', 'muted', 'playsInline' ), true ) ) {
 				$attributes[ $key ] = true;
 			} else {
 				$attributes[ $key ] = $value;
@@ -510,12 +510,12 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_file_block_from_anchor( $anchor ): array {
-		$attributes = [
+		$attributes = array(
 			'href'               => $anchor->get_attribute( 'href' ),
 			'textLinkHref'       => $anchor->get_attribute( 'href' ),
 			'fileName'           => $anchor->get_inner_html(),
 			'showDownloadButton' => true,
-		];
+		);
 
 		if ( $anchor->has_attribute( 'target' ) ) {
 			$attributes['textLinkTarget'] = $anchor->get_attribute( 'target' );
@@ -534,17 +534,17 @@ class HTML_To_Blocks_Transform_Registry {
 		$host = parse_url( $url, PHP_URL_HOST );
 		$host = $host ? strtolower( preg_replace( '/^www\./', '', $host ) ) : '';
 
-		$providers = [
-			'youtube.com'     => 'youtube',
-			'youtu.be'        => 'youtube',
-			'vimeo.com'       => 'vimeo',
-			'soundcloud.com'  => 'soundcloud',
-			'spotify.com'     => 'spotify',
-			'twitter.com'     => 'twitter',
-			'x.com'           => 'twitter',
-			'instagram.com'   => 'instagram',
-			'tiktok.com'      => 'tiktok',
-		];
+		$providers = array(
+			'youtube.com'    => 'youtube',
+			'youtu.be'       => 'youtube',
+			'vimeo.com'      => 'vimeo',
+			'soundcloud.com' => 'soundcloud',
+			'spotify.com'    => 'spotify',
+			'twitter.com'    => 'twitter',
+			'x.com'          => 'twitter',
+			'instagram.com'  => 'instagram',
+			'tiktok.com'     => 'tiktok',
+		);
 
 		foreach ( $providers as $needle => $slug ) {
 			if ( $host === $needle || substr( $host, -strlen( '.' . $needle ) ) === '.' . $needle ) {
@@ -578,8 +578,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_heading_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/heading',
 				'priority'  => 10,
 				'selector'  => 'h1,h2,h3,h4,h5,h6',
@@ -589,16 +589,25 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					$level      = (int) substr( $element->get_tag_name(), 1 );
 					$content    = $element->get_inner_html();
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
-					$attributes = array_merge( $attributes, [
+					$attributes = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'align'      => true,
+						'text_align' => true,
+						'colors'     => true,
+						'typography' => true,
+						'spacing'    => true,
+						'border'     => true,
+						'class_name' => true,
+					) );
+					$attributes = array_merge( $attributes, array(
 						'level'   => $level,
 						'content' => $content,
-					] );
+					) );
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/heading', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -607,31 +616,31 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_list_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'selector'  => 'ol,ul',
 				'isMatch'   => function ( $element ) {
-					return in_array( $element->get_tag_name(), [ 'OL', 'UL' ], true )
+					return in_array( $element->get_tag_name(), array( 'OL', 'UL' ), true )
 						&& self::is_visual_list_element( $element );
 				},
 				'transform' => function ( $element, $handler ) {
 					return self::create_visual_list_group_from_element( $element, $handler );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/list',
 				'priority'  => 10,
 				'selector'  => 'ol,ul',
 				'isMatch'   => function ( $element ) {
-					return in_array( $element->get_tag_name(), [ 'OL', 'UL' ], true );
+					return in_array( $element->get_tag_name(), array( 'OL', 'UL' ), true );
 				},
 				'transform' => function ( $element ) {
 					return self::create_list_block_from_element( $element );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -643,10 +652,16 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_list_block_from_element( $list_element ) {
 		$ordered = $list_element->get_tag_name() === 'OL';
 
-		$list_attributes = self::get_block_support_attributes( $list_element, [ 'anchor' => true, 'class_name' => true, 'colors' => true, 'spacing' => true, 'border' => true ] );
-		$list_attributes = array_merge( $list_attributes, [
+		$list_attributes = self::get_block_support_attributes( $list_element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'colors'     => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
+		$list_attributes = array_merge( $list_attributes, array(
 			'ordered' => $ordered,
-		] );
+		) );
 
 		if ( $list_element->has_attribute( 'start' ) ) {
 			$list_attributes['start'] = (int) $list_element->get_attribute( 'start' );
@@ -656,19 +671,19 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 		if ( $list_element->has_attribute( 'type' ) ) {
 			$type     = $list_element->get_attribute( 'type' );
-			$type_map = [
+			$type_map = array(
 				'A' => 'upper-alpha',
 				'a' => 'lower-alpha',
 				'I' => 'upper-roman',
 				'i' => 'lower-roman',
-			];
+			);
 			if ( isset( $type_map[ $type ] ) ) {
 				$list_attributes['type'] = $type_map[ $type ];
 			}
 		}
 
-		$inner_blocks   = [];
-		$li_elements    = self::get_direct_li_children( $list_element->get_inner_html() );
+		$inner_blocks = array();
+		$li_elements  = self::get_direct_li_children( $list_element->get_inner_html() );
 
 		foreach ( $li_elements as $li_html ) {
 			$li = HTML_To_Blocks_HTML_Element::from_html( $li_html );
@@ -720,7 +735,7 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function is_visual_list_item_child( $child ): bool {
 		return in_array(
 			$child->get_tag_name(),
-			[
+			array(
 				'DIV',
 				'SECTION',
 				'ARTICLE',
@@ -741,7 +756,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'PRE',
 				'BLOCKQUOTE',
 				'DETAILS',
-			],
+			),
 			true
 		);
 	}
@@ -754,7 +769,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_visual_list_group_from_element( $list_element, callable $handler ): array {
-		$inner_blocks = [];
+		$inner_blocks = array();
 
 		foreach ( self::get_direct_li_children( $list_element->get_inner_html() ) as $li_html ) {
 			$li = HTML_To_Blocks_HTML_Element::from_html( $li_html );
@@ -765,7 +780,7 @@ class HTML_To_Blocks_Transform_Registry {
 			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
 				'core/group',
 				self::get_visual_list_group_attributes( $li ),
-				$handler( [ 'HTML' => $li->get_inner_html() ] )
+				$handler( array( 'HTML' => $li->get_inner_html() ) )
 			);
 		}
 
@@ -783,7 +798,14 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block attributes.
 	 */
 	private static function get_visual_list_group_attributes( $element ): array {
-		return self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'align' => true, 'colors' => true, 'spacing' => true, 'border' => true ] );
+		return self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'align'      => true,
+			'colors'     => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
 	}
 
 	/**
@@ -808,7 +830,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$content      = trim( $inner_html );
-		$inner_blocks = [];
+		$inner_blocks = array();
 
 		if ( $nested_list ) {
 			$inner_blocks[] = self::create_list_block_from_element( $nested_list );
@@ -816,7 +838,7 @@ class HTML_To_Blocks_Transform_Registry {
 
 		return HTML_To_Blocks_Block_Factory::create_block(
 			'core/list-item',
-			[ 'content' => $content ],
+			array( 'content' => $content ),
 			$inner_blocks
 		);
 	}
@@ -828,7 +850,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Array of li element HTML strings
 	 */
 	private static function get_direct_li_children( string $inner_html ): array {
-		$results    = [];
+		$results    = array();
 		$len        = strlen( $inner_html );
 		$i          = 0;
 		$list_depth = 0;
@@ -837,27 +859,27 @@ class HTML_To_Blocks_Transform_Registry {
 			$remaining = substr( $inner_html, $i );
 
 			if ( preg_match( '/^<(ul|ol)(?:\s|>)/i', $remaining ) ) {
-				$list_depth++;
-				$i++;
+				++$list_depth;
+				++$i;
 				continue;
 			}
 
 			if ( preg_match( '/^<\/(ul|ol)\s*>/i', $remaining ) ) {
-				$list_depth--;
-				$i++;
+				--$list_depth;
+				++$i;
 				continue;
 			}
 
-			if ( $list_depth === 0 && preg_match( '/^<li(?:\s[^>]*)?>/i', $remaining ) ) {
+			if ( 0 === $list_depth && preg_match( '/^<li(?:\s[^>]*)?>/i', $remaining ) ) {
 				$li_html = self::extract_balanced_li( $remaining );
 				if ( $li_html ) {
 					$results[] = $li_html;
-					$i += strlen( $li_html );
+					$i        += strlen( $li_html );
 					continue;
 				}
 			}
 
-			$i++;
+			++$i;
 		}
 
 		return $results;
@@ -878,15 +900,15 @@ class HTML_To_Blocks_Transform_Registry {
 			$remaining = substr( $html, $i );
 
 			if ( preg_match( '/^<li(?:\s|>)/i', $remaining ) ) {
-				$li_depth++;
+				++$li_depth;
 			} elseif ( preg_match( '/^<\/li\s*>/i', $remaining, $close_match ) ) {
-				$li_depth--;
-				if ( $li_depth === 0 ) {
+				--$li_depth;
+				if ( 0 === $li_depth ) {
 					return substr( $html, 0, $i + strlen( $close_match[0] ) );
 				}
 			}
 
-			$i++;
+			++$i;
 		}
 
 		return null;
@@ -898,8 +920,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_button_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -909,8 +931,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_static_visual_button_group( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/paragraph',
 				'priority'  => 8,
 				'selector'  => 'button',
@@ -920,8 +942,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_static_visual_button_paragraph( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -931,8 +953,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_buttons_block_from_container( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 9,
 				'selector'  => 'a',
@@ -942,8 +964,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_buttons_block_from_anchor( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 9,
 				'selector'  => 'p',
@@ -955,8 +977,8 @@ class HTML_To_Blocks_Transform_Registry {
 					$anchor = self::get_single_anchor_from_html( $element->get_inner_html() );
 					return self::create_buttons_block_from_anchor( $anchor );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -966,7 +988,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the container can safely become core/buttons.
 	 */
 	private static function is_button_anchor_container( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'P' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'P' ), true ) ) {
 			return false;
 		}
 
@@ -1001,7 +1023,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the wrapper can safely become core/buttons.
 	 */
 	private static function is_single_button_anchor_wrapper( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'P' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'P' ), true ) ) {
 			return false;
 		}
 
@@ -1030,7 +1052,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when direct button children can become native text blocks.
 	 */
 	private static function is_static_visual_button_container( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'P' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'P' ), true ) ) {
 			return false;
 		}
 
@@ -1046,10 +1068,10 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function get_direct_static_visual_button_children_from_html( string $html ): array {
 		$remaining = $html;
-		$buttons   = [];
+		$buttons   = array();
 
 		if ( ! preg_match_all( '/<button\b([^>]*)>(.*?)<\/button>/is', $html, $matches, PREG_SET_ORDER ) ) {
-			return [];
+			return array();
 		}
 
 		foreach ( $matches as $match ) {
@@ -1058,14 +1080,14 @@ class HTML_To_Blocks_Transform_Registry {
 			$button     = new HTML_To_Blocks_HTML_Element( 'button', $attributes, $outer, trim( $match[2] ) );
 
 			if ( ! self::is_static_visual_button( $button ) ) {
-				return [];
+				return array();
 			}
 
-			$buttons[]  = $button;
+			$buttons[] = $button;
 			$remaining = str_replace( $outer, '', $remaining );
 		}
 
-		return trim( $remaining ) === '' ? $buttons : [];
+		return trim( $remaining ) === '' ? $buttons : array();
 	}
 
 	/**
@@ -1088,7 +1110,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$type = strtolower( trim( (string) ( $element->get_attribute( 'type' ) ?? '' ) ) );
-		if ( in_array( $type, [ 'submit', 'reset' ], true ) ) {
+		if ( in_array( $type, array( 'submit', 'reset' ), true ) ) {
 			return false;
 		}
 
@@ -1108,7 +1130,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function create_static_visual_button_group( $element ): array {
 		$buttons = array_map(
-			[ __CLASS__, 'create_static_visual_button_paragraph' ],
+			array( __CLASS__, 'create_static_visual_button_paragraph' ),
 			self::get_direct_static_visual_button_children_from_html( $element->get_inner_html() )
 		);
 
@@ -1126,7 +1148,14 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_static_visual_button_paragraph( $element ): array {
-		$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true ] );
+		$attributes            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'colors'     => true,
+			'typography' => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
 		$attributes['content'] = $element->get_inner_html();
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
@@ -1150,10 +1179,10 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function get_direct_anchor_children_from_html( string $html ): array {
 		$remaining = $html;
-		$anchors   = [];
+		$anchors   = array();
 
 		if ( ! preg_match_all( '/<a\s([^>]*)>(.*?)<\/a>/is', $html, $matches, PREG_SET_ORDER ) ) {
-			return [];
+			return array();
 		}
 
 		foreach ( $matches as $match ) {
@@ -1163,7 +1192,7 @@ class HTML_To_Blocks_Transform_Registry {
 			$remaining  = str_replace( $outer, '', $remaining );
 		}
 
-		return trim( $remaining ) === '' ? $anchors : [];
+		return trim( $remaining ) === '' ? $anchors : array();
 	}
 
 	/**
@@ -1189,7 +1218,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Parsed attributes.
 	 */
 	private static function parse_attribute_string( string $attribute_string ): array {
-		$attributes = [];
+		$attributes = array();
 		if ( preg_match_all( '/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))/', $attribute_string, $matches, PREG_SET_ORDER ) ) {
 			foreach ( $matches as $match ) {
 				$value = '';
@@ -1270,7 +1299,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_buttons_block_from_anchor( $anchor ): array {
-		return self::create_buttons_block_from_anchors( [ $anchor ] );
+		return self::create_buttons_block_from_anchors( array( $anchor ) );
 	}
 
 	/**
@@ -1280,7 +1309,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_buttons_block_from_container( $element ): array {
-		$attributes = [];
+		$attributes = array();
 		if ( $element->has_attribute( 'class' ) ) {
 			$attributes['className'] = $element->get_attribute( 'class' );
 		}
@@ -1295,8 +1324,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param array $wrapper_attributes Wrapper block attributes.
 	 * @return array Block array.
 	 */
-	private static function create_buttons_block_from_anchors( array $anchors, array $wrapper_attributes = [] ): array {
-		$buttons = [];
+	private static function create_buttons_block_from_anchors( array $anchors, array $wrapper_attributes = array() ): array {
+		$buttons = array();
 
 		foreach ( $anchors as $anchor ) {
 			$buttons[] = self::create_button_block_from_anchor( $anchor );
@@ -1312,9 +1341,9 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_button_block_from_anchor( $anchor ): array {
-		$attributes = [
+		$attributes = array(
 			'text' => $anchor->get_inner_html(),
-		];
+		);
 
 		if ( $anchor->has_attribute( 'href' ) ) {
 			$attributes['url'] = $anchor->get_attribute( 'href' );
@@ -1345,8 +1374,8 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 		$classes = array_filter(
 			$classes,
-			function ( $class ) {
-				return ! in_array( $class, [ 'wp-block-button__link', 'wp-element-button' ], true );
+			function ( $class_name ) {
+				return ! in_array( $class_name, array( 'wp-block-button__link', 'wp-element-button' ), true );
 			}
 		);
 
@@ -1359,8 +1388,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_image_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/image',
 				'priority'  => 10,
 				'isMatch'   => function ( $element ) {
@@ -1368,15 +1397,15 @@ class HTML_To_Blocks_Transform_Registry {
 						return false;
 					}
 					$img = $element->query_selector( 'img' );
-					return $img !== null;
+					return null !== $img;
 				},
 				'transform' => function ( $element ) {
 					$img        = $element->query_selector( 'img' );
 					$figcaption = $element->query_selector( 'figcaption' );
 
-					$attributes = [
+					$attributes = array(
 						'url' => $img->get_attribute( 'src' ) ?? '',
-					];
+					);
 
 					self::apply_image_element_attributes( $attributes, $img );
 
@@ -1420,17 +1449,17 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/image', $attributes );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/image',
 				'priority'  => 15,
 				'isMatch'   => function ( $element ) {
 					return $element->get_tag_name() === 'IMG';
 				},
 				'transform' => function ( $element ) {
-					$attributes = [
+					$attributes = array(
 						'url' => $element->get_attribute( 'src' ) ?? '',
-					];
+					);
 
 					self::apply_image_element_attributes( $attributes, $element );
 
@@ -1446,8 +1475,8 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/image', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1456,8 +1485,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_details_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/details',
 				'priority'  => 10,
 				'selector'  => 'details',
@@ -1469,14 +1498,14 @@ class HTML_To_Blocks_Transform_Registry {
 					preg_match( '/<summary(?:\s[^>]*)?>(.*?)<\/summary>/is', $inner_html, $summary_matches );
 
 					$summary      = trim( $summary_matches[1] ?? '' );
-					$content_html  = trim( preg_replace( '/<summary(?:\s[^>]*)?>.*?<\/summary>/is', '', $inner_html, 1 ) );
-					$inner_blocks  = $content_html !== '' ? $handler( [ 'HTML' => $content_html ] ) : [];
-					$attributes    = [ 'summary' => $summary ];
+					$content_html = trim( preg_replace( '/<summary(?:\s[^>]*)?>.*?<\/summary>/is', '', $inner_html, 1 ) );
+					$inner_blocks = '' !== $content_html ? $handler( array( 'HTML' => $content_html ) ) : array();
+					$attributes   = array( 'summary' => $summary );
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/details', $attributes, $inner_blocks );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1485,8 +1514,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_pullquote_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/pullquote',
 				'priority'  => 9,
 				'selector'  => 'blockquote',
@@ -1507,15 +1536,15 @@ class HTML_To_Blocks_Transform_Registry {
 						$value    = trim( preg_replace( '/<cite(?:\s[^>]*)?>.*?<\/cite>/is', '', $value, 1 ) );
 					}
 
-					$attributes = [ 'value' => $value ];
-					if ( $citation !== '' ) {
+					$attributes = array( 'value' => $value );
+					if ( '' !== $citation ) {
 						$attributes['citation'] = $citation;
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/pullquote', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1524,8 +1553,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_quote_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -1542,11 +1571,11 @@ class HTML_To_Blocks_Transform_Registry {
 					$children       = $element->get_child_elements();
 					$blockquote     = $children[0];
 					$figcaption     = $children[1];
-					$inner_blocks   = $handler( [ 'HTML' => $blockquote->get_outer_html() ] );
-					$caption_attrs  = self::get_block_support_attributes( $figcaption, [ 'class_name' => true ] );
+					$inner_blocks   = $handler( array( 'HTML' => $blockquote->get_outer_html() ) );
+					$caption_attrs  = self::get_block_support_attributes( $figcaption, array( 'class_name' => true ) );
 					$caption_markup = trim( $figcaption->get_inner_html() );
 
-					if ( $caption_markup !== '' ) {
+					if ( '' !== $caption_markup ) {
 						$caption_attrs['content'] = $caption_markup;
 						$inner_blocks[]           = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs );
 					}
@@ -1557,8 +1586,8 @@ class HTML_To_Blocks_Transform_Registry {
 						$inner_blocks
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/quote',
 				'priority'  => 10,
 				'selector'  => 'blockquote',
@@ -1567,17 +1596,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element, $handler ) {
 					$inner_html   = $element->get_inner_html();
-					$inner_blocks = $handler( [ 'HTML' => $inner_html ] );
+					$inner_blocks = $handler( array( 'HTML' => $inner_html ) );
 
-					$attributes = [];
+					$attributes = array();
 					if ( $element->has_attribute( 'id' ) && $element->get_attribute( 'id' ) !== '' ) {
 						$attributes['anchor'] = $element->get_attribute( 'id' );
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/quote', $attributes, $inner_blocks );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1586,8 +1615,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_code_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/code',
 				'priority'  => 10,
 				'isMatch'   => function ( $element ) {
@@ -1600,13 +1629,16 @@ class HTML_To_Blocks_Transform_Registry {
 					}
 					$inner_html    = $element->get_inner_html();
 					$stripped      = preg_replace( '/<code[^>]*>.*<\/code>/is', '', $inner_html );
-					$has_only_code = empty( trim( strip_tags( $stripped ) ) );
+					$has_only_code = empty( trim( wp_strip_all_tags( $stripped ) ) );
 					return $has_only_code;
 				},
 				'transform' => function ( $element ) {
-					$code    = $element->query_selector( 'code' );
+					$code = $element->query_selector( 'code' );
 					if ( $code && array() !== $code->get_child_elements() ) {
-						$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+						$attributes            = self::get_block_support_attributes( $element, array(
+							'anchor'     => true,
+							'class_name' => true,
+						) );
 						$attributes['content'] = $code->get_inner_html();
 
 						if ( $code->has_attribute( 'class' ) ) {
@@ -1618,7 +1650,7 @@ class HTML_To_Blocks_Transform_Registry {
 
 					$content = $code ? $code->get_text_content() : $element->get_text_content();
 
-					$attributes = [ 'content' => $content ];
+					$attributes = array( 'content' => $content );
 
 					// Preserve language class for syntax highlighting
 					if ( $code && $code->has_attribute( 'class' ) ) {
@@ -1633,8 +1665,8 @@ class HTML_To_Blocks_Transform_Registry {
 						$attributes
 					);
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1643,8 +1675,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_code_window_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'isMatch'   => function ( $element ) {
@@ -1652,8 +1684,8 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element, $handler ) {
 					$inner_blocks = array() !== $element->get_child_elements()
-						? $handler( [ 'HTML' => $element->get_inner_html() ] )
-						: [];
+						? $handler( array( 'HTML' => $element->get_inner_html() ) )
+						: array();
 
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
@@ -1661,8 +1693,8 @@ class HTML_To_Blocks_Transform_Registry {
 						$inner_blocks
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -1671,8 +1703,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_code_window_text_group( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/preformatted',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -1681,8 +1713,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_code_window_body_block( $element );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
@@ -1708,8 +1740,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element, $handler ) {
 					return self::create_code_window_block( $element, $handler );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1720,7 +1752,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_code_window_block( $element, $handler ): array {
-		$inner_blocks = [];
+		$inner_blocks = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
@@ -1734,7 +1766,7 @@ class HTML_To_Blocks_Transform_Registry {
 				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
 					'core/group',
 					self::get_common_layout_attributes( $child ),
-					$handler( [ 'HTML' => $child->get_inner_html() ] )
+					$handler( array( 'HTML' => $child->get_inner_html() ) )
 				);
 				continue;
 			}
@@ -1749,7 +1781,7 @@ class HTML_To_Blocks_Transform_Registry {
 				continue;
 			}
 
-			$inner_blocks = array_merge( $inner_blocks, $handler( [ 'HTML' => $child->get_outer_html() ] ) );
+			$inner_blocks = array_merge( $inner_blocks, $handler( array( 'HTML' => $child->get_outer_html() ) ) );
 		}
 
 		return HTML_To_Blocks_Block_Factory::create_block(
@@ -1769,7 +1801,10 @@ class HTML_To_Blocks_Transform_Registry {
 		$code    = $element->query_selector( 'code' );
 		$content = $code ? $code->get_inner_html() : $element->get_inner_html();
 
-		$attrs            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+		$attrs            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+		) );
 		$attrs['content'] = $content;
 
 		if ( $code && $code->has_attribute( 'class' ) ) {
@@ -1786,7 +1821,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_code_window_body_block( $element ): array {
-		$lines = [];
+		$lines = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( $child->get_tag_name() === 'DIV' ) {
@@ -1802,8 +1837,11 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 		}
 
-		$content = ! empty( $lines ) ? implode( "\n", $lines ) : $element->get_inner_html();
-		$attrs   = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+		$content          = ! empty( $lines ) ? implode( "\n", $lines ) : $element->get_inner_html();
+		$attrs            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+		) );
 		$attrs['content'] = $content;
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attrs );
@@ -1819,22 +1857,22 @@ class HTML_To_Blocks_Transform_Registry {
 		$content = self::get_code_window_chrome_content( $element );
 		$attrs   = self::get_common_layout_attributes( $element );
 
-		if ( $content === '' ) {
+		if ( '' === $content ) {
 			return HTML_To_Blocks_Block_Factory::create_block( 'core/group', $attrs );
 		}
 
 		return HTML_To_Blocks_Block_Factory::create_block(
 			'core/group',
 			$attrs,
-			[
+			array(
 				HTML_To_Blocks_Block_Factory::create_block(
 					'core/paragraph',
-					[
+					array(
 						'className' => $attrs['className'] ?? '',
 						'content'   => $content,
-					]
+					)
 				),
-			]
+			)
 		);
 	}
 
@@ -2022,8 +2060,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_verse_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/verse',
 				'priority'  => 10,
 				'selector'  => 'pre',
@@ -2036,10 +2074,10 @@ class HTML_To_Blocks_Transform_Registry {
 					return preg_match( '/(?:^|\s)(?:wp-block-verse|verse)(?:$|\s)/i', $class_name ) === 1;
 				},
 				'transform' => function ( $element ) {
-					return HTML_To_Blocks_Block_Factory::create_block( 'core/verse', [ 'content' => $element->get_inner_html() ] );
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/verse', array( 'content' => $element->get_inner_html() ) );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -2048,21 +2086,24 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_preformatted_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/preformatted',
 				'priority'  => 9,
 				'isMatch'   => function ( $element ) {
 					return self::is_div_code_snippet_element( $element );
 				},
 				'transform' => function ( $element ) {
-					$attributes            = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true ] );
+					$attributes            = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'class_name' => true,
+					) );
 					$attributes['content'] = self::normalise_code_snippet_content( $element );
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/preformatted',
 				'priority'  => 11,
 				'isMatch'   => function ( $element ) {
@@ -2075,13 +2116,13 @@ class HTML_To_Blocks_Transform_Registry {
 					}
 					$inner_html    = $element->get_inner_html();
 					$stripped      = preg_replace( '/<code[^>]*>.*<\/code>/is', '', $inner_html );
-					$has_only_code = empty( trim( strip_tags( $stripped ) ) );
+					$has_only_code = empty( trim( wp_strip_all_tags( $stripped ) ) );
 					return ! $has_only_code;
 				},
 				'transform' => function ( $element ) {
 					$content = $element->get_inner_html();
 
-					$attributes = self::get_block_support_attributes(
+					$attributes            = self::get_block_support_attributes(
 						$element,
 						array(
 							'anchor'     => true,
@@ -2092,8 +2133,8 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/preformatted', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -2123,8 +2164,8 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		$inner_html = $element->get_inner_html();
-		$has_br_lines = preg_match( '/<br\s*\/?\s*>/i', $inner_html ) === 1;
+		$inner_html              = $element->get_inner_html();
+		$has_br_lines            = preg_match( '/<br\s*\/?\s*>/i', $inner_html ) === 1;
 		$has_display_block_lines = self::has_display_block_code_lines( $element );
 		if ( ! $has_br_lines && ! $has_display_block_lines ) {
 			return false;
@@ -2150,7 +2191,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$inner_html = $element->get_inner_html();
-		$content = preg_replace( '/<br\s*\/?\s*>/i', "\n", $inner_html );
+		$content    = preg_replace( '/<br\s*\/?\s*>/i', "\n", $inner_html );
 		return trim( $content );
 	}
 
@@ -2171,7 +2212,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Line HTML fragments.
 	 */
 	private static function get_display_block_code_lines( $element ): array {
-		$lines = [];
+		$lines = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( 'SPAN' !== $child->get_tag_name() ) {
@@ -2205,8 +2246,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_separator_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/separator',
 				'priority'  => 10,
 				'selector'  => 'hr',
@@ -2214,7 +2255,14 @@ class HTML_To_Blocks_Transform_Registry {
 					return $element->get_tag_name() === 'HR';
 				},
 				'transform' => function ( $element ) {
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'align' => true, 'colors' => true, 'spacing' => true, 'border' => true ] );
+					$attributes = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'class_name' => true,
+						'align'      => true,
+						'colors'     => true,
+						'spacing'    => true,
+						'border'     => true,
+					) );
 
 					if ( $element->has_attribute( 'class' ) ) {
 						$class = $element->get_attribute( 'class' );
@@ -2227,8 +2275,8 @@ class HTML_To_Blocks_Transform_Registry {
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/separator', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -2237,8 +2285,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_table_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/table',
 				'priority'  => 10,
 				'selector'  => 'table',
@@ -2248,8 +2296,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element ) {
 					return self::create_table_block_from_element( $element );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -2263,46 +2311,46 @@ class HTML_To_Blocks_Transform_Registry {
 		$processor  = WP_HTML_Processor::create_fragment( $table_html );
 
 		if ( ! $processor ) {
-			return HTML_To_Blocks_Block_Factory::create_block( 'core/table', [] );
+			return HTML_To_Blocks_Block_Factory::create_block( 'core/table', array() );
 		}
 
 		$current_section = 'body';
-		$current_row     = [];
-		$rows_head       = [];
-		$rows_body       = [];
-		$rows_foot       = [];
+		$current_row     = array();
+		$rows_head       = array();
+		$rows_body       = array();
+		$rows_foot       = array();
 		$caption_text    = '';
 		$html_offset     = 0;
 
-		while ( $processor->next_tag( [ 'tag_closers' => 'visit' ] ) ) {
+		while ( $processor->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
 			$tag       = $processor->get_tag();
 			$is_closer = $processor->is_tag_closer();
 
-			if ( $tag === 'THEAD' && ! $is_closer ) {
+			if ( 'THEAD' === $tag && ! $is_closer ) {
 				$current_section = 'head';
-			} elseif ( $tag === 'TBODY' && ! $is_closer ) {
+			} elseif ( 'TBODY' === $tag && ! $is_closer ) {
 				$current_section = 'body';
-			} elseif ( $tag === 'TFOOT' && ! $is_closer ) {
+			} elseif ( 'TFOOT' === $tag && ! $is_closer ) {
 				$current_section = 'foot';
-			} elseif ( $tag === 'TR' && ! $is_closer ) {
-				$current_row = [];
-			} elseif ( $tag === 'TR' && $is_closer ) {
+			} elseif ( 'TR' === $tag && ! $is_closer ) {
+				$current_row = array();
+			} elseif ( 'TR' === $tag && $is_closer ) {
 				if ( ! empty( $current_row ) ) {
-					$row_data = [ 'cells' => $current_row ];
-					if ( $current_section === 'head' ) {
+					$row_data = array( 'cells' => $current_row );
+					if ( 'head' === $current_section ) {
 						$rows_head[] = $row_data;
-					} elseif ( $current_section === 'foot' ) {
+					} elseif ( 'foot' === $current_section ) {
 						$rows_foot[] = $row_data;
 					} else {
 						$rows_body[] = $row_data;
 					}
 				}
-				$current_row = [];
-			} elseif ( ( $tag === 'TD' || $tag === 'TH' ) && ! $is_closer ) {
-				$cell_data = [
+				$current_row = array();
+			} elseif ( ( 'TD' === $tag || 'TH' === $tag ) && ! $is_closer ) {
+				$cell_data = array(
 					'content' => '',
 					'tag'     => strtolower( $tag ),
-				];
+				);
 
 				if ( $processor->get_attribute( 'colspan' ) ) {
 					$cell_data['colspan'] = (int) $processor->get_attribute( 'colspan' );
@@ -2315,17 +2363,24 @@ class HTML_To_Blocks_Transform_Registry {
 				$cell_data['content'] = $inner_html;
 
 				$current_row[] = $cell_data;
-			} elseif ( $tag === 'CAPTION' && ! $is_closer ) {
+			} elseif ( 'CAPTION' === $tag && ! $is_closer ) {
 				$caption_text = self::extract_cell_content_at_offset( $table_html, $html_offset, 'CAPTION' );
 			}
 		}
 
-		$attributes = self::get_block_support_attributes( $table_element, [ 'anchor' => true, 'class_name' => true, 'align' => true, 'colors' => true, 'spacing' => true, 'border' => true ] );
-		$attributes = array_merge( $attributes, [
+		$attributes = self::get_block_support_attributes( $table_element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'align'      => true,
+			'colors'     => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
+		$attributes = array_merge( $attributes, array(
 			'head' => $rows_head,
 			'body' => $rows_body,
 			'foot' => $rows_foot,
-		] );
+		) );
 
 		if ( ! empty( $caption_text ) ) {
 			$attributes['caption'] = $caption_text;
@@ -2358,7 +2413,7 @@ class HTML_To_Blocks_Transform_Registry {
 		$close_tag = '</' . $tag_lower . '>';
 		$close_pos = stripos( $content, $close_tag );
 
-		if ( $close_pos !== false ) {
+		if ( false !== $close_pos ) {
 			$inner_html = substr( $content, 0, $close_pos );
 			$offset     = (int) ( $offset + $matches[0][1] + strlen( $matches[0][0] ) - strlen( $content ) + $close_pos + strlen( $close_tag ) );
 			return trim( $inner_html );
@@ -2373,25 +2428,29 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_layout_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/spacer',
 				'priority'  => 11,
 				'isMatch'   => function ( $element ) {
 					return self::is_spacer_element( $element );
 				},
 				'transform' => function ( $element ) {
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'class_name' => true, 'spacing' => true ] );
+					$attributes = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'class_name' => true,
+						'spacing'    => true,
+					) );
 					$height     = self::extract_height_value( $element );
 
-					if ( $height !== '' ) {
+					if ( '' !== $height ) {
 						$attributes['height'] = $height;
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/spacer', $attributes );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/cover',
 				'priority'  => 12,
 				'isMatch'   => function ( $element ) {
@@ -2400,42 +2459,42 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element, $handler ) {
 					$attributes   = self::get_common_layout_attributes( $element );
 					$style        = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
-					$inner_blocks = $handler( [ 'HTML' => $element->get_inner_html() ] );
+					$inner_blocks = $handler( array( 'HTML' => $element->get_inner_html() ) );
 
 					if ( preg_match( '/background-image:\s*url\((["\']?)([^)"\']+)\1\)/i', $style, $matches ) ) {
 						$attributes['url'] = trim( $matches[2] );
 					}
 
 					$background_color = self::extract_background_color( $style );
-					if ( $background_color !== '' ) {
+					if ( '' !== $background_color ) {
 						$attributes['customOverlayColor'] = $background_color;
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/cover', $attributes, $inner_blocks );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/columns',
 				'priority'  => 13,
 				'isMatch'   => function ( $element ) {
 					return self::is_columns_element( $element );
 				},
 				'transform' => function ( $element, $handler ) {
-					$inner_blocks = [];
+					$inner_blocks = array();
 					foreach ( $element->get_child_elements() as $child ) {
 						if ( ! self::is_column_element( $child ) ) {
 							continue;
 						}
 
 						$column_attributes = self::get_common_layout_attributes( $child );
-						$column_blocks     = $handler( [ 'HTML' => $child->get_inner_html() ] );
+						$column_blocks     = $handler( array( 'HTML' => $child->get_inner_html() ) );
 						$inner_blocks[]    = HTML_To_Blocks_Block_Factory::create_block( 'core/column', $column_attributes, $column_blocks );
 					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/columns', self::get_common_layout_attributes( $element ), $inner_blocks );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 12,
 				'isMatch'   => function ( $element ) {
@@ -2444,8 +2503,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'transform' => function ( $element, $handler ) {
 					return self::create_repeated_card_grid_group( $element, $handler );
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/column',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
@@ -2455,11 +2514,11 @@ class HTML_To_Blocks_Transform_Registry {
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/column',
 						self::get_common_layout_attributes( $element ),
-						$handler( [ 'HTML' => $element->get_inner_html() ] )
+						$handler( array( 'HTML' => $element->get_inner_html() ) )
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
@@ -2469,11 +2528,11 @@ class HTML_To_Blocks_Transform_Registry {
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
 						self::get_common_layout_attributes( $element ),
-						[ self::create_image_block_from_img( $element->query_selector( 'img' ) ) ]
+						array( self::create_image_block_from_img( $element->query_selector( 'img' ) ) )
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
@@ -2493,8 +2552,8 @@ class HTML_To_Blocks_Transform_Registry {
 						$handler( array( 'HTML' => $inner_html ) )
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
@@ -2507,35 +2566,35 @@ class HTML_To_Blocks_Transform_Registry {
 						self::create_inline_scroller_child_blocks( $element, $handler )
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 14,
 				'isMatch'   => function ( $element ) {
 					return self::is_decorative_figure_with_caption( $element );
 				},
 				'transform' => function ( $element ) {
-					$children       = $element->get_child_elements();
+					$children      = $element->get_child_elements();
 					$visual        = $children[0];
 					$caption       = $children[1];
-					$caption_attrs = self::get_block_support_attributes( $caption, [ 'class_name' => true ] );
+					$caption_attrs = self::get_block_support_attributes( $caption, array( 'class_name' => true ) );
 
 					$caption_attrs['content'] = trim( $caption->get_inner_html() );
 
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
 						self::get_common_layout_attributes( $element ),
-						[
+						array(
 							HTML_To_Blocks_Block_Factory::create_block(
 								'core/group',
 								self::get_empty_decorative_group_attributes( $visual )
 							),
 							HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs ),
-						]
+						)
 					);
 				},
-			],
-			[
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 15,
 				'isMatch'   => function ( $element ) {
@@ -2549,11 +2608,11 @@ class HTML_To_Blocks_Transform_Registry {
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
 						$attributes,
-						$handler( [ 'HTML' => $element->get_inner_html() ] )
+						$handler( array( 'HTML' => $element->get_inner_html() ) )
 					);
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -2565,7 +2624,7 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_empty_decorative_group_attributes( $element ): array {
 		return self::get_block_support_attributes(
 			$element,
-			[
+			array(
 				'anchor'     => true,
 				'class_name' => true,
 				'align'      => true,
@@ -2573,7 +2632,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'dimensions' => true,
 				'spacing'    => true,
 				'border'     => true,
-			]
+			)
 		);
 	}
 
@@ -2584,19 +2643,19 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block attributes.
 	 */
 	private static function get_common_layout_attributes( $element ): array {
-		$options = [
-			'anchor'       => true,
-			'class_name'   => true,
-			'align'        => true,
-			'colors'       => true,
-			'dimensions'   => true,
-			'typography'   => true,
-			'spacing'      => true,
-			'border'       => true,
-			'layout'       => true,
-			'tag_name'     => $element->get_tag_name() !== 'DIV',
-			'aria_label'   => true,
-		];
+		$options = array(
+			'anchor'     => true,
+			'class_name' => true,
+			'align'      => true,
+			'colors'     => true,
+			'dimensions' => true,
+			'typography' => true,
+			'spacing'    => true,
+			'border'     => true,
+			'layout'     => true,
+			'tag_name'   => $element->get_tag_name() !== 'DIV',
+			'aria_label' => true,
+		);
 
 		return self::get_block_support_attributes( $element, $options );
 	}
@@ -2608,8 +2667,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param array                       $options Enabled support keys.
 	 * @return array Block attributes.
 	 */
-	private static function get_block_support_attributes( $element, array $options = [] ): array {
-		$attributes = [];
+	private static function get_block_support_attributes( $element, array $options = array() ): array {
+		$attributes = array();
 		$classes    = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
 		$style      = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
 
@@ -2623,14 +2682,14 @@ class HTML_To_Blocks_Transform_Registry {
 
 		if ( ! empty( $options['class_name'] ) ) {
 			$class_name = self::safe_block_class_name( $classes );
-			if ( $class_name !== '' ) {
+			if ( '' !== $class_name ) {
 				$attributes['className'] = $class_name;
 			}
 		}
 
 		if ( ! empty( $options['tag_name'] ) ) {
 			$tag_name = strtolower( $element->get_tag_name() );
-			if ( in_array( $tag_name, [ 'section', 'main', 'article', 'aside', 'header', 'footer', 'nav' ], true ) ) {
+			if ( in_array( $tag_name, array( 'section', 'main', 'article', 'aside', 'header', 'footer', 'nav' ), true ) ) {
 				$attributes['tagName'] = $tag_name;
 			}
 		}
@@ -2647,10 +2706,10 @@ class HTML_To_Blocks_Transform_Registry {
 			self::apply_typography_support_attributes( $attributes, $style, $classes );
 		}
 
-		if ( $style !== '' ) {
+		if ( '' !== $style ) {
 			if ( ! empty( $options['text_align'] ) ) {
 				$text_align = self::extract_css_property( $style, 'text-align' );
-				if ( in_array( strtolower( $text_align ), [ 'left', 'center', 'right' ], true ) ) {
+				if ( in_array( strtolower( $text_align ), array( 'left', 'center', 'right' ), true ) ) {
 					$attributes['textAlign'] = strtolower( $text_align );
 				}
 			}
@@ -2688,13 +2747,13 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 		$classes = array_filter(
 			$classes,
-			function ( $class ) {
-				return $class !== ''
-					&& preg_match( '/^[A-Za-z0-9_-]+$/', $class ) === 1
-					&& preg_match( '/^align(?:wide|full|left|center|right)$/i', $class ) !== 1
-					&& preg_match( '/^has-(?:[A-Za-z0-9_-]+-(?:color|background-color|font-size)|text-color|background|custom-font-size)$/i', $class ) !== 1
-					&& preg_match( '/^is-(?:layout-(?:flow|constrained|flex)|vertical|horizontal|nowrap|content-justification-[A-Za-z0-9_-]+)$/i', $class ) !== 1
-					&& stripos( $class, 'wp-block-' ) !== 0;
+			function ( $class_name ) {
+				return '' !== $class_name
+					&& preg_match( '/^[A-Za-z0-9_-]+$/', $class_name ) === 1
+					&& preg_match( '/^align(?:wide|full|left|center|right)$/i', $class_name ) !== 1
+					&& preg_match( '/^has-(?:[A-Za-z0-9_-]+-(?:color|background-color|font-size)|text-color|background|custom-font-size)$/i', $class_name ) !== 1
+					&& preg_match( '/^is-(?:layout-(?:flow|constrained|flex)|vertical|horizontal|nowrap|content-justification-[A-Za-z0-9_-]+)$/i', $class_name ) !== 1
+					&& stripos( $class_name, 'wp-block-' ) !== 0;
 			}
 		);
 
@@ -2721,22 +2780,22 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function apply_color_support_attributes( array &$attributes, string $style, string $classes = '' ): void {
 		$text_color = self::extract_preset_class_slug( $classes, 'color' );
-		if ( $text_color !== '' ) {
+		if ( '' !== $text_color ) {
 			$attributes['textColor'] = $text_color;
 		}
 
 		$background_color = self::extract_preset_class_slug( $classes, 'background-color' );
-		if ( $background_color !== '' ) {
+		if ( '' !== $background_color ) {
 			$attributes['backgroundColor'] = $background_color;
 		}
 
 		$color = self::extract_css_property( $style, 'color' );
-		if ( $color !== '' ) {
+		if ( '' !== $color ) {
 			$attributes['style']['color']['text'] = $color;
 		}
 
 		$background = self::extract_background_color( $style );
-		if ( $background !== '' ) {
+		if ( '' !== $background ) {
 			if ( stripos( $background, 'gradient(' ) !== false ) {
 				$attributes['style']['color']['gradient'] = $background;
 			} else {
@@ -2754,14 +2813,14 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function apply_typography_support_attributes( array &$attributes, string $style, string $classes = '' ): void {
 		$font_size = self::extract_preset_class_slug( $classes, 'font-size' );
-		if ( $font_size !== '' ) {
+		if ( '' !== $font_size ) {
 			$attributes['fontSize'] = $font_size;
 			return;
 		}
 
 		$font_size_value = self::extract_css_property( $style, 'font-size' );
 		$font_size_token = self::normalise_wp_preset_var( $font_size_value, 'font-size' );
-		if ( $font_size_token !== '' ) {
+		if ( '' !== $font_size_token ) {
 			$attributes['fontSize'] = $font_size_token;
 		}
 	}
@@ -2773,26 +2832,26 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param string $style Source style attribute.
 	 */
 	private static function apply_spacing_support_attributes( array &$attributes, string $style ): void {
-		foreach ( [ 'margin', 'padding' ] as $kind ) {
-			$value = self::extract_css_property( $style, $kind );
-			$side_values = [];
-			foreach ( [ 'top', 'right', 'bottom', 'left' ] as $side ) {
+		foreach ( array( 'margin', 'padding' ) as $kind ) {
+			$value       = self::extract_css_property( $style, $kind );
+			$side_values = array();
+			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
 				$side_value = self::extract_css_property( $style, $kind . '-' . $side );
-				if ( $side_value !== '' ) {
+				if ( '' !== $side_value ) {
 					$side_values[ $side ] = $side_value;
 				}
 			}
 
 			if ( ! empty( $side_values ) ) {
 				foreach ( $side_values as $side => $side_value ) {
-					$side_values[ $side ] = self::normalise_wp_preset_var( $side_value, 'spacing' ) ?: $side_value;
+					$side_values[ $side ] = self::normalise_wp_preset_var( $side_value, 'spacing' ) ? self::normalise_wp_preset_var( $side_value, 'spacing' ) : $side_value;
 				}
 				$attributes['style']['spacing'][ $kind ] = $side_values;
 				continue;
 			}
 
-			if ( $value !== '' ) {
-				$attributes['style']['spacing'][ $kind ] = self::normalise_wp_preset_var( $value, 'spacing' ) ?: $value;
+			if ( '' !== $value ) {
+				$attributes['style']['spacing'][ $kind ] = self::normalise_wp_preset_var( $value, 'spacing' ) ? self::normalise_wp_preset_var( $value, 'spacing' ) : $value;
 			}
 		}
 	}
@@ -2805,8 +2864,8 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function apply_layout_support_attributes( array &$attributes, string $classes, string $style = '', $element = null ): void {
 		if ( preg_match( '/(?:^|\s)is-layout-(flow|constrained|flex)(?:\s|$)/i', $classes, $matches ) ) {
-			$type = strtolower( $matches[1] );
-			$attributes['layout']['type'] = $type === 'flow' ? 'default' : $type;
+			$type                         = strtolower( $matches[1] );
+			$attributes['layout']['type'] = 'flow' === $type ? 'default' : $type;
 		}
 
 		if ( strtolower( self::extract_css_property( $style, 'display' ) ) === 'flex' ) {
@@ -2818,9 +2877,9 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$flex_direction = strtolower( self::extract_css_property( $style, 'flex-direction' ) );
-		if ( in_array( $flex_direction, [ 'column', 'column-reverse' ], true ) ) {
+		if ( in_array( $flex_direction, array( 'column', 'column-reverse' ), true ) ) {
 			$attributes['layout']['orientation'] = 'vertical';
-		} elseif ( in_array( $flex_direction, [ 'row', 'row-reverse' ], true ) ) {
+		} elseif ( in_array( $flex_direction, array( 'row', 'row-reverse' ), true ) ) {
 			$attributes['layout']['orientation'] = 'horizontal';
 		}
 
@@ -2829,12 +2888,12 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$justify_content = strtolower( self::extract_css_property( $style, 'justify-content' ) );
-		if ( in_array( $justify_content, [ 'left', 'right', 'center', 'space-between' ], true ) ) {
+		if ( in_array( $justify_content, array( 'left', 'right', 'center', 'space-between' ), true ) ) {
 			$attributes['layout']['justifyContent'] = $justify_content;
 		}
 
 		$align_items = strtolower( self::extract_css_property( $style, 'align-items' ) );
-		if ( in_array( $align_items, [ 'left', 'right', 'center' ], true ) ) {
+		if ( in_array( $align_items, array( 'left', 'right', 'center' ), true ) ) {
 			$attributes['layout']['verticalAlignment'] = $align_items;
 		}
 
@@ -2843,11 +2902,11 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( empty( $attributes['layout'] ) && $element && self::is_hero_like_section( $element ) ) {
-			$attributes['layout'] = [
+			$attributes['layout'] = array(
 				'type'           => 'flex',
 				'orientation'    => 'vertical',
 				'justifyContent' => 'center',
-			];
+			);
 		}
 	}
 
@@ -2859,12 +2918,12 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function apply_dimension_support_attributes( array &$attributes, string $style ): void {
 		$min_height = self::extract_css_property( $style, 'min-height' );
-		if ( $min_height !== '' ) {
+		if ( '' !== $min_height ) {
 			$attributes['style']['dimensions']['minHeight'] = $min_height;
 		}
 
 		$width = self::extract_css_property( $style, 'width' );
-		if ( $width !== '' && self::is_safe_dimension_value( $width ) ) {
+		if ( '' !== $width && self::is_safe_dimension_value( $width ) ) {
 			$attributes['style']['dimensions']['width'] = $width;
 		}
 	}
@@ -2878,7 +2937,7 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function is_safe_dimension_value( string $value ): bool {
 		$value = trim( $value );
 
-		if ( $value === '' || strlen( $value ) > 80 ) {
+		if ( '' === $value || strlen( $value ) > 80 ) {
 			return false;
 		}
 
@@ -2911,30 +2970,30 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param string $style Source style attribute.
 	 */
 	private static function apply_border_support_attributes( array &$attributes, string $style ): void {
-		$border_parts = [];
+		$border_parts = array();
 
 		$border = self::extract_css_property( $style, 'border' );
-		if ( $border !== '' ) {
+		if ( '' !== $border ) {
 			$border_parts = self::parse_border_shorthand( $border );
 		}
 
 		$color = self::extract_css_property( $style, 'border-color' );
-		if ( $color !== '' && self::is_safe_border_color( $color ) ) {
+		if ( '' !== $color && self::is_safe_border_color( $color ) ) {
 			$border_parts['color'] = $color;
 		}
 
 		$border_style = self::extract_css_property( $style, 'border-style' );
-		if ( $border_style !== '' && self::is_safe_border_style( $border_style ) ) {
+		if ( '' !== $border_style && self::is_safe_border_style( $border_style ) ) {
 			$border_parts['style'] = strtolower( $border_style );
 		}
 
 		$width = self::extract_css_property( $style, 'border-width' );
-		if ( $width !== '' && self::is_safe_border_width( $width ) ) {
+		if ( '' !== $width && self::is_safe_border_width( $width ) ) {
 			$border_parts['width'] = $width;
 		}
 
 		$radius = self::extract_css_property( $style, 'border-radius' );
-		if ( $radius !== '' && self::is_safe_border_radius( $radius ) ) {
+		if ( '' !== $radius && self::is_safe_border_radius( $radius ) ) {
 			$border_parts['radius'] = $radius;
 		}
 
@@ -2950,7 +3009,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Border support parts.
 	 */
 	private static function parse_border_shorthand( string $value ): array {
-		$parts = [];
+		$parts = array();
 		foreach ( self::split_css_value_tokens( $value ) as $token ) {
 			$lower_token = strtolower( $token );
 
@@ -2979,7 +3038,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Tokens.
 	 */
 	private static function split_css_value_tokens( string $value ): array {
-		$tokens = [];
+		$tokens = array();
 		$token  = '';
 		$depth  = 0;
 		$length = strlen( $value );
@@ -2987,14 +3046,14 @@ class HTML_To_Blocks_Transform_Registry {
 		for ( $index = 0; $index < $length; $index++ ) {
 			$char = $value[ $index ];
 
-			if ( $char === '(' ) {
-				$depth++;
-			} elseif ( $char === ')' && $depth > 0 ) {
-				$depth--;
+			if ( '(' === $char ) {
+				++$depth;
+			} elseif ( ')' === $char && $depth > 0 ) {
+				--$depth;
 			}
 
-			if ( ctype_space( $char ) && $depth === 0 ) {
-				if ( $token !== '' ) {
+			if ( ctype_space( $char ) && 0 === $depth ) {
+				if ( '' !== $token ) {
 					$tokens[] = $token;
 					$token    = '';
 				}
@@ -3004,7 +3063,7 @@ class HTML_To_Blocks_Transform_Registry {
 			$token .= $char;
 		}
 
-		if ( $token !== '' ) {
+		if ( '' !== $token ) {
 			$tokens[] = $token;
 		}
 
@@ -3019,11 +3078,11 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_safe_border_width( string $value ): bool {
 		$value = trim( $value );
-		if ( $value === '' || preg_match( '/\s/', $value ) ) {
+		if ( '' === $value || preg_match( '/\s/', $value ) ) {
 			return false;
 		}
 
-		return in_array( strtolower( $value ), [ 'thin', 'medium', 'thick' ], true )
+		return in_array( strtolower( $value ), array( 'thin', 'medium', 'thick' ), true )
 			|| preg_match( '/^(?:0|[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax))$/i', $value ) === 1;
 	}
 
@@ -3034,7 +3093,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when safe.
 	 */
 	private static function is_safe_border_style( string $value ): bool {
-		return in_array( strtolower( trim( $value ) ), [ 'none', 'hidden', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset' ], true );
+		return in_array( strtolower( trim( $value ) ), array( 'none', 'hidden', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset' ), true );
 	}
 
 	/**
@@ -3045,7 +3104,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_safe_border_color( string $value ): bool {
 		$value = trim( $value );
-		if ( $value === '' || strlen( $value ) > 100 || preg_match( '/(?:url\s*\(|expression\s*\(|javascript\s*:|behavior\s*:)/i', $value ) ) {
+		if ( '' === $value || strlen( $value ) > 100 || preg_match( '/(?:url\s*\(|expression\s*\(|javascript\s*:|behavior\s*:)/i', $value ) ) {
 			return false;
 		}
 
@@ -3093,7 +3152,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string Preset slug or empty string.
 	 */
 	private static function extract_preset_class_slug( string $classes, string $kind ): string {
-		$pattern = $kind === 'background-color'
+		$pattern = 'background-color' === $kind
 			? '/(?:^|\s)has-([A-Za-z0-9_-]+)-background-color(?:\s|$)/i'
 			: '/(?:^|\s)has-([A-Za-z0-9_-]+)-' . preg_quote( $kind, '/' ) . '(?:\s|$)/i';
 
@@ -3102,7 +3161,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$slug = strtolower( $matches[1] );
-		return in_array( $slug, [ 'text', 'background', 'custom' ], true ) ? '' : $slug;
+		return in_array( $slug, array( 'text', 'background', 'custom' ), true ) ? '' : $slug;
 	}
 
 	/**
@@ -3125,19 +3184,19 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_group_element( $element ): bool {
 		$tag = $element->get_tag_name();
-		if ( $tag === 'SECTION' ) {
+		if ( 'SECTION' === $tag ) {
 			return true;
 		}
 
-		if ( in_array( $tag, [ 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'NAV' ], true ) ) {
+		if ( in_array( $tag, array( 'MAIN', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'NAV' ), true ) ) {
 			return true;
 		}
 
-		if ( $tag === 'SPAN' ) {
+		if ( 'SPAN' === $tag ) {
 			return self::is_empty_decorative_element( $element );
 		}
 
-		if ( $tag !== 'DIV' ) {
+		if ( 'DIV' !== $tag ) {
 			return false;
 		}
 
@@ -3182,7 +3241,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when direct children should become editable card groups.
 	 */
 	private static function is_repeated_card_grid_element( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SECTION' ), true ) ) {
 			return false;
 		}
 
@@ -3200,7 +3259,7 @@ class HTML_To_Blocks_Transform_Registry {
 				return false;
 			}
 
-			$card_count++;
+			++$card_count;
 		}
 
 		return $card_count >= 2;
@@ -3213,7 +3272,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the element is safe to convert as a card group.
 	 */
 	private static function is_card_grid_item_element( $element ): bool {
-		if ( in_array( $element->get_tag_name(), [ 'ARTICLE', 'ASIDE' ], true ) ) {
+		if ( in_array( $element->get_tag_name(), array( 'ARTICLE', 'ASIDE' ), true ) ) {
 			return true;
 		}
 
@@ -3221,7 +3280,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return true;
 		}
 
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SECTION' ), true ) ) {
 			return false;
 		}
 
@@ -3236,7 +3295,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_repeated_card_grid_group( $element, callable $handler ): array {
-		$inner_blocks = [];
+		$inner_blocks = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( self::is_empty_decorative_element( $child ) ) {
@@ -3263,7 +3322,7 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_card_grid_item_group( $element, callable $handler ): array {
 		$link_element = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element );
 		$content_html = $link_element ? $link_element->get_inner_html() : $element->get_inner_html();
-		$inner_blocks = $handler( [ 'HTML' => $content_html ] );
+		$inner_blocks = $handler( array( 'HTML' => $content_html ) );
 
 		if ( $link_element && $link_element->has_attribute( 'href' ) ) {
 			$inner_blocks[] = self::create_button_block_from_anchor( self::create_card_grid_cta_anchor( $link_element ) );
@@ -3307,13 +3366,13 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return HTML_To_Blocks_HTML_Element Synthetic CTA anchor.
 	 */
 	private static function create_card_grid_cta_anchor( $anchor ): HTML_To_Blocks_HTML_Element {
-		$text = self::get_card_grid_link_label( $anchor );
-		$attrs = [
+		$text  = self::get_card_grid_link_label( $anchor );
+		$attrs = array(
 			'href'  => $anchor->get_attribute( 'href' ) ?? '',
 			'class' => self::merge_class_names( $anchor->get_attribute( 'class' ) ?? '', 'card-grid-link' ),
-		];
+		);
 
-		foreach ( [ 'target', 'rel' ] as $attribute ) {
+		foreach ( array( 'target', 'rel' ) as $attribute ) {
 			if ( $anchor->has_attribute( $attribute ) ) {
 				$attrs[ $attribute ] = $anchor->get_attribute( $attribute );
 			}
@@ -3329,7 +3388,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string Link label.
 	 */
 	private static function get_card_grid_link_label( $anchor ): string {
-		foreach ( [ 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ] as $selector ) {
+		foreach ( array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $selector ) {
 			$heading = $anchor->query_selector( $selector );
 			if ( $heading && trim( $heading->get_text_content() ) !== '' ) {
 				return trim( $heading->get_text_content() );
@@ -3337,7 +3396,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$text = trim( $anchor->get_text_content() );
-		return $text !== '' ? $text : 'Read more';
+		return '' !== $text ? $text : 'Read more';
 	}
 
 	/**
@@ -3347,7 +3406,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the wrapper should become core/group with core/image.
 	 */
 	private static function is_image_wrapper_element( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
 			return false;
 		}
 
@@ -3429,15 +3488,18 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Converted child blocks.
 	 */
 	private static function create_inline_scroller_child_blocks( $element, callable $handler ): array {
-		$inner_blocks = [];
+		$inner_blocks = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( array() !== $child->get_child_elements() ) {
-				$inner_blocks = array_merge( $inner_blocks, $handler( [ 'HTML' => $child->get_outer_html() ] ) );
+				$inner_blocks = array_merge( $inner_blocks, $handler( array( 'HTML' => $child->get_outer_html() ) ) );
 				continue;
 			}
 
-			$attributes            = self::get_block_support_attributes( $child, [ 'anchor' => true, 'class_name' => true ] );
+			$attributes            = self::get_block_support_attributes( $child, array(
+				'anchor'     => true,
+				'class_name' => true,
+			) );
 			$attributes['content'] = $child->get_inner_html();
 			$inner_blocks[]        = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 		}
@@ -3488,12 +3550,12 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when source style provides a native block background.
 	 */
 	private static function has_visual_placeholder_background( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
 			return false;
 		}
 
 		$style = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
-		if ( $style === '' || preg_match( '/url\s*\(/i', $style ) === 1 ) {
+		if ( '' === $style || preg_match( '/url\s*\(/i', $style ) === 1 ) {
 			return false;
 		}
 
@@ -3531,7 +3593,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_cover_element( $element ): bool {
 		$style = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
-		if ( $style === '' ) {
+		if ( '' === $style ) {
 			return false;
 		}
 
@@ -3553,7 +3615,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the element should become core/columns.
 	 */
 	private static function is_columns_element( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SECTION' ), true ) ) {
 			return false;
 		}
 
@@ -3566,7 +3628,7 @@ class HTML_To_Blocks_Transform_Registry {
 			if ( ! self::is_column_element( $child ) ) {
 				return false;
 			}
-			$column_count++;
+			++$column_count;
 		}
 
 		return $column_count >= 2;
@@ -3579,7 +3641,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the element should become core/column.
 	 */
 	private static function is_column_element( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SECTION', 'ARTICLE', 'ASIDE' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SECTION', 'ARTICLE', 'ASIDE' ), true ) ) {
 			return false;
 		}
 
@@ -3593,7 +3655,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the element should become core/spacer.
 	 */
 	private static function is_spacer_element( $element ): bool {
-		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) ) {
 			return false;
 		}
 
@@ -3613,7 +3675,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function class_matches( $element, string $pattern ): bool {
 		$class_name = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
-		return $class_name !== '' && preg_match( $pattern, $class_name ) === 1;
+		return '' !== $class_name && preg_match( $pattern, $class_name ) === 1;
 	}
 
 	/**
@@ -3651,13 +3713,13 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Transform definitions
 	 */
 	private static function get_paragraph_transforms() {
-		return [
-			[
+		return array(
+			array(
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
 				'selector'  => 'p,address,a,label,div,span',
 				'isMatch'   => function ( $element ) {
-					if ( in_array( $element->get_tag_name(), [ 'P', 'ADDRESS', 'A' ], true ) ) {
+					if ( in_array( $element->get_tag_name(), array( 'P', 'ADDRESS', 'A' ), true ) ) {
 						return true;
 					}
 
@@ -3665,19 +3727,28 @@ class HTML_To_Blocks_Transform_Registry {
 						return true;
 					}
 
-					return in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true )
+					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )
 						&& array() === $element->get_child_elements()
 						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
-					$content    = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
-					$attributes = self::get_block_support_attributes( $element, [ 'anchor' => true, 'align' => true, 'text_align' => true, 'colors' => true, 'typography' => true, 'spacing' => true, 'border' => true, 'class_name' => true ] );
+					$content               = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
+					$attributes            = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'align'      => true,
+						'text_align' => true,
+						'colors'     => true,
+						'typography' => true,
+						'spacing'    => true,
+						'border'     => true,
+						'class_name' => true,
+					) );
 					$attributes['content'] = $content;
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**

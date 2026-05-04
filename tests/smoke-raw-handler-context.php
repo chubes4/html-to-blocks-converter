@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
 	$wp_html_api_candidates = array_filter(
 		[
-			getenv( 'WP_HTML_API_PATH' ) ?: '',
+			getenv( 'WP_HTML_API_PATH' ) ? getenv( 'WP_HTML_API_PATH' ) : '',
 			'/wordpress/wp-includes/html-api',
 			'/Users/chubes/Studio/intelligence-chubes4/wp-includes/html-api',
 		]
@@ -28,7 +28,7 @@ if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
 		}
 	}
 
-	if ( $wp_html_api_path === '' ) {
+	if ( '' === $wp_html_api_path ) {
 		fwrite( STDERR, "FAIL: WP_HTML_Processor is unavailable. Set WP_HTML_API_PATH to wp-includes/html-api.\n" );
 		exit( 1 );
 	}
@@ -76,7 +76,7 @@ foreach ( [ 'esc_attr', 'esc_html', 'esc_url' ] as $function_name ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $text ) {
-		return strip_tags( $text );
+		return wp_strip_all_tags( $text );
 	}
 }
 
@@ -148,11 +148,11 @@ $nested_content = $blocks[1]['innerBlocks'][0]['attrs']['content'] ?? '';
 $assertions     = 2;
 $failures       = [];
 
-if ( $top_content !== 'Top:smoke:import' ) {
+if ( 'Top:smoke:import' !== $top_content ) {
 	$failures[] = 'FAIL [top-level-transform-context]: ' . $top_content;
 }
 
-if ( $nested_content !== 'Nested:smoke:import' ) {
+if ( 'Nested:smoke:import' !== $nested_content ) {
 	$failures[] = 'FAIL [nested-transform-context]: ' . $nested_content;
 }
 
