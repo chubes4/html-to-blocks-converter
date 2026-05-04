@@ -110,6 +110,7 @@ then delegate static fragments back to h2bc.
 | Block name/family | Status | Required HTML signal | Test coverage file | Notes |
 |---|---|---|---|---|
 | Native `core/navigation` blocks | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Requires editor-valid serialization, menu intent, route knowledge, menu-location selection, and optional `wp_navigation` post lifecycle. h2bc preserves rendered navigation markup as `core/html` by default. |
+| `core/navigation-link`, `core/navigation-submenu` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Navigation links and submenus require native navigation context and are not standalone raw transforms. Static links/lists stay preserved unless a compiler owns the native navigation contract. |
 | `core/navigation-overlay-close` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Overlay controls require navigation UI state chosen by an editor or compiler, not rendered-content inference. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline`, `core/home-link` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Site identity blocks and home links require site metadata and URL context. A rendered heading, image, or link is not enough. |
 | `core/avatar` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Avatar output requires author or commenter identity context. Static images stay `core/image`. |
@@ -121,6 +122,7 @@ then delegate static fragments back to h2bc.
 | Dynamic utility blocks (`core/latest-posts`, `core/latest-comments`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`, `core/page-list`, `core/page-list-item`) | `context-required` | None in raw HTML alone | `docs/site-editor-boundary.md` | These blocks require runtime site data, taxonomy/page hierarchy, authentication state, feed state, or search interaction intent. |
 | `core/breadcrumbs` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Breadcrumbs require route, hierarchy, and site navigation context. |
 | `core/terms-query`, `core/term-*` | `compiler-only` | None in raw HTML alone | `docs/site-editor-boundary.md` | Term query and term display blocks require taxonomy query intent and current term context. |
+| WooCommerce product/catalog blocks | `compiler-only` | Explicit commerce/product context, not raw HTML alone | `docs/site-editor-boundary.md`, `tests/smoke-product-grid-context-gate.php` | Static product grids/cards remain editable static blocks by default. Woo-native materialization requires importer-owned product identity and policy. |
 
 ## Theme And Context Block Classification
 
@@ -140,6 +142,7 @@ rendered output.
 | `core/query`, `core/post-template`, query pagination/title blocks | `compiler-only` | Requires loop intent, query args, and content-model context. Repeated cards remain static layout/content blocks. |
 | `core/comments` and `core/comment-*` blocks | `compiler-only` | Requires comment-query context and per-comment state. Rendered comment HTML is not enough. |
 | Dynamic utility blocks (`core/latest-posts`, `core/archives`, `core/categories`, `core/rss`, `core/tag-cloud`, `core/loginout`, `core/search`, `core/calendar`) | `unsupported` | h2bc has no site-data intent or runtime state. A separate product contract must choose these blocks deliberately. |
+| WooCommerce product/catalog blocks | `compiler-only` | h2bc preserves product-looking cards as static editable content unless explicit commerce context is provided by the importer/compiler layer. |
 
 ## Future Candidates
 
