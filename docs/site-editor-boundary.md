@@ -43,11 +43,13 @@ candidates, and context-required block families lives in the
 | `core/template-part` | Explicit-marker raw-transformable | Requires `data-bfb-template-part="area-or-slug"`. Header/footer-looking layout is not enough. |
 | Rendered navigation markup | Safe fallback | `<nav>` fragments are preserved as `core/html` in default raw conversion because native navigation blocks do not have a valid static serialization shape here. |
 | Native `core/navigation*` | Context-required | Requires editor-valid serialization, menu intent, site route knowledge, menu-location policy, and optional `wp_navigation` post lifecycle ownership. |
+| `core/navigation-link`, `core/navigation-submenu` | Context-required | These are native navigation children. Standalone links and nested lists are static content unless a compiler owns the parent navigation block contract. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Context-required | Requires site identity metadata. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image`, and related post-data blocks | Context-required | Requires current template and post context. |
 | `core/query*`, `core/post-template` | Context-required | Requires content model and loop intent. |
 | `core/comments*`, `core/comment-*` | Context-required | Requires comment-template context. |
 | Dynamic utility blocks | Context-required | Archives, categories, latest posts, RSS, tag cloud, loginout, and similar blocks require site data intent. |
+| WooCommerce product/catalog blocks | Context-required | Requires explicit commerce/product context, product identity, and importer policy. Static product cards remain editable static blocks by default. |
 | Interactive or stateful app blocks | Intentionally unsupported | Arbitrary HTML is not enough to infer application state, data sources, or editor controls. |
 
 The important rule is that rendered HTML is not identity. The same `<h1>` could
@@ -86,6 +88,39 @@ Native navigation belongs to a higher-level WordPress integration layer that own
 editor validation, optional `wp_navigation` entity lifecycle, and site policy
 decisions.
 
+## Commerce Product Boundary
+
+Rendered product cards can describe visible catalog content, but they do not prove
+WooCommerce product identity or checkout behavior. A static card like this is
+only rendered output:
+
+```html
+<article class="product-card" data-product-slug="country-sourdough">
+  <img src="/products/country-sourdough.jpg" alt="Country sourdough loaf" />
+  <h3>Country Sourdough</h3>
+  <p>A 48-hour cold-fermented loaf.</p>
+  <span class="product-card__price">$14 per loaf</span>
+  <a href="/shop/country-sourdough/">View loaf</a>
+</article>
+```
+
+Default raw conversion should preserve that content as editable static blocks,
+not as WooCommerce-native state. This is intentional:
+
+- No WooCommerce products are created, queried, or matched.
+- No `woocommerce/*` blocks are emitted from visual similarity alone.
+- Prices, badges, CTAs, images, and product-looking classes stay visible in the
+  serialized static output.
+- Diagnostics and fixtures should make unmatched or low-confidence commerce
+  regions observable without changing normal content conversion.
+
+WooCommerce-native blocks or materialized product placeholders belong to an
+importer/compiler layer that owns explicit product context, SKU/slug matching,
+inventory policy, checkout routing, and any WooCommerce entity lifecycle. For the
+current implementation ladder, h2bc only provides the safe raw-transform substrate
+and gated fixture coverage; product data creation and context forwarding remain
+owned by upstream Static Site Importer and Block Format Bridge work.
+
 ## Theme Block Classification
 
 | Block family | Classification | Why |
@@ -99,6 +134,7 @@ decisions.
 | `core/query`, `core/post-template`, query pagination/title blocks | Compiler-only | Requires query args, loop intent, and content-model context. |
 | `core/comments` and `core/comment-*` blocks | Compiler-only | Requires comment-query context and per-comment state. |
 | Dynamic utility blocks | Unsupported | Raw HTML does not carry site-data intent for archives, latest posts, RSS, search, calendars, login state, or tag clouds. |
+| WooCommerce product/catalog blocks | Compiler-only | Requires explicit commerce context and product identity. Product-looking static cards remain static layout/content unless an importer has already supplied product data and materialization policy. |
 
 ## Future Block Theme Compiler Layer
 
