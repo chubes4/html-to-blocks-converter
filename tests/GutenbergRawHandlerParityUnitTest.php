@@ -48,8 +48,7 @@ class GutenbergRawHandlerParityUnitTest extends WP_UnitTestCase {
 	 * the paste/editor behavior that remains intentionally out of scope.
 	 */
 	public function test_parity_document_names_scope_boundary(): void {
-		global $wp_filesystem;
-		$doc = $wp_filesystem->get_contents( dirname( __DIR__ ) . '/docs/gutenberg-rawhandler-parity.md' );
+		$doc = file_get_contents( dirname( __DIR__ ) . '/docs/gutenberg-rawhandler-parity.md' );
 
 		$this->assertIsString( $doc );
 		$this->assertStringContainsString( 'deterministic static HTML', $doc );

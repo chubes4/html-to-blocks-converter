@@ -16,7 +16,6 @@ if ( ! function_exists( 'html_to_blocks_generate_core_block_inventory' ) ) {
 	 * @return array{generated_from:string,block_count:int,blocks:array<int,array<string,mixed>>}
 	 */
 	function html_to_blocks_generate_core_block_inventory( string $blocks_dir ): array {
-		global $wp_filesystem;
 		$blocks_dir = rtrim( $blocks_dir, DIRECTORY_SEPARATOR );
 		$files      = glob( $blocks_dir . '/*/block.json' );
 		if ( ! is_array( $files ) || empty( $files ) ) {
@@ -25,7 +24,7 @@ if ( ! function_exists( 'html_to_blocks_generate_core_block_inventory' ) ) {
 
 		$blocks = [];
 		foreach ( $files as $file ) {
-			$raw  = $wp_filesystem->get_contents( $file );
+			$raw  = file_get_contents( $file );
 			$data = is_string( $raw ) ? json_decode( $raw, true ) : null;
 			if ( ! is_array( $data ) || empty( $data['name'] ) ) {
 				throw new RuntimeException( "Invalid block metadata: {$file}" );
@@ -57,7 +56,7 @@ if ( ! function_exists( 'html_to_blocks_generate_core_block_inventory' ) ) {
 
 if ( PHP_SAPI === 'cli' && realpath( $_SERVER['SCRIPT_FILENAME'] ?? '' ) === __FILE__ ) {
 	$blocks_dir = $argv[1] ?? '';
-	if ( '' === $blocks_dir || ! is_dir( $blocks_dir ) ) {
+	if ( $blocks_dir === '' || ! is_dir( $blocks_dir ) ) {
 		fwrite( STDERR, "Usage: php tools/generate-core-block-inventory.php /path/to/wp-includes/blocks\n" );
 		exit( 1 );
 	}
