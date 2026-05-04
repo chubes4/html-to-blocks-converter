@@ -299,6 +299,76 @@ $form_owned_button = new HTML_To_Blocks_HTML_Element(
 $smoke_assert( $find_transform( $form_owned_button ) === null, 'form-owned-button-falls-through' );
 
 // -------------------------------------------------------------------------
+// Static visual buttons with inline JS handlers: handlers are dropped, label
+// and class semantics survive as a native paragraph (no core/html fallback).
+// Issue: https://github.com/chubes4/html-to-blocks-converter/issues/234
+// -------------------------------------------------------------------------
+
+$onclick_tab_button = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'tab-btn active', 'onclick' => "showDay('day1', this)" ],
+	'<button class="tab-btn active" onclick="showDay(\'day1\', this)">Day 1 — Friday, Sept 18</button>',
+	'Day 1 — Friday, Sept 18'
+);
+$onclick_tab_button_transform = $find_transform( $onclick_tab_button );
+$onclick_tab_button_block     = call_user_func( $onclick_tab_button_transform['transform'], $onclick_tab_button );
+
+$smoke_assert( $onclick_tab_button_transform['blockName'] === 'core/paragraph', 'onclick-tab-button-becomes-paragraph' );
+$smoke_assert( $onclick_tab_button_block['attrs']['content'] === 'Day 1 — Friday, Sept 18', 'onclick-tab-button-label-preserved' );
+$smoke_assert( $onclick_tab_button_block['attrs']['className'] === 'tab-btn active', 'onclick-tab-button-class-preserved' );
+$smoke_assert( strpos( $onclick_tab_button_block['innerHTML'], 'onclick' ) === false, 'onclick-tab-button-strips-inline-handler' );
+$smoke_assert( strpos( $onclick_tab_button_block['innerHTML'], 'showDay' ) === false, 'onclick-tab-button-strips-handler-payload' );
+
+$onclick_tab_row = new HTML_To_Blocks_HTML_Element(
+	'div',
+	[ 'class' => 'tab-bar' ],
+	'<div class="tab-bar"><button class="tab-btn active" onclick="showDay(\'day1\', this)">Day 1 — Friday, Sept 18</button><button class="tab-btn" onclick="showDay(\'day2\', this)">Day 2 — Saturday, Sept 19</button></div>',
+	'<button class="tab-btn active" onclick="showDay(\'day1\', this)">Day 1 — Friday, Sept 18</button><button class="tab-btn" onclick="showDay(\'day2\', this)">Day 2 — Saturday, Sept 19</button>'
+);
+$onclick_tab_row_transform = $find_transform( $onclick_tab_row );
+$onclick_tab_row_block     = call_user_func( $onclick_tab_row_transform['transform'], $onclick_tab_row, $handler );
+
+$smoke_assert( $onclick_tab_row_transform['blockName'] === 'core/group', 'onclick-tab-row-becomes-group' );
+$smoke_assert( $onclick_tab_row_block['attrs']['className'] === 'tab-bar', 'onclick-tab-row-wrapper-class-preserved' );
+$smoke_assert( count( $onclick_tab_row_block['innerBlocks'] ) === 2, 'onclick-tab-row-children-preserved' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][0]['blockName'] === 'core/paragraph', 'onclick-tab-row-first-child-becomes-paragraph' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][1]['blockName'] === 'core/paragraph', 'onclick-tab-row-second-child-becomes-paragraph' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][0]['attrs']['content'] === 'Day 1 — Friday, Sept 18', 'onclick-tab-row-first-label-preserved' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][1]['attrs']['content'] === 'Day 2 — Saturday, Sept 19', 'onclick-tab-row-second-label-preserved' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][0]['attrs']['className'] === 'tab-btn active', 'onclick-tab-row-first-class-preserved' );
+$smoke_assert( $onclick_tab_row_block['innerBlocks'][1]['attrs']['className'] === 'tab-btn', 'onclick-tab-row-second-class-preserved' );
+$smoke_assert( strpos( $onclick_tab_row_block['innerHTML'], 'onclick' ) === false, 'onclick-tab-row-wrapper-strips-handler' );
+foreach ( $onclick_tab_row_block['innerBlocks'] as $index => $child_block ) {
+	$smoke_assert( strpos( $child_block['innerHTML'], 'onclick' ) === false, 'onclick-tab-row-child-' . $index . '-strips-handler' );
+	$smoke_assert( strpos( $child_block['innerHTML'], 'showDay' ) === false, 'onclick-tab-row-child-' . $index . '-strips-handler-payload' );
+}
+$smoke_assert( strpos( $onclick_tab_row_block['innerHTML'], '<!-- wp:html -->' ) === false, 'onclick-tab-row-avoids-wp-html' );
+
+// Other on* handlers (onmouseover, onfocus, etc.) should also be dropped without falling back.
+$onmouseover_chip = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'filter-chip', 'onmouseover' => 'highlight(this)' ],
+	'<button class="filter-chip" onmouseover="highlight(this)">Hover me</button>',
+	'Hover me'
+);
+$onmouseover_chip_transform = $find_transform( $onmouseover_chip );
+$onmouseover_chip_block     = call_user_func( $onmouseover_chip_transform['transform'], $onmouseover_chip );
+
+$smoke_assert( $onmouseover_chip_transform['blockName'] === 'core/paragraph', 'onmouseover-chip-becomes-paragraph' );
+$smoke_assert( $onmouseover_chip_block['attrs']['content'] === 'Hover me', 'onmouseover-chip-label-preserved' );
+$smoke_assert( strpos( $onmouseover_chip_block['innerHTML'], 'onmouseover' ) === false, 'onmouseover-chip-strips-handler' );
+
+// Form-control buttons with on* handlers must still fall through to a fallback,
+// because dropping the handler would silently change behavior for real controls.
+$onclick_submit_button = new HTML_To_Blocks_HTML_Element(
+	'button',
+	[ 'class' => 'tab-btn', 'type' => 'submit', 'onclick' => 'submitForm()' ],
+	'<button class="tab-btn" type="submit" onclick="submitForm()">Submit</button>',
+	'Submit'
+);
+$smoke_assert( $find_transform( $onclick_submit_button ) === null, 'onclick-submit-button-falls-through' );
+
+// -------------------------------------------------------------------------
 // Labels: static visual UI labels become text, real form labels fall through.
 // -------------------------------------------------------------------------
 

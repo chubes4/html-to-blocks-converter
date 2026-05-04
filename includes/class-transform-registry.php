@@ -1071,6 +1071,10 @@ class HTML_To_Blocks_Transform_Registry {
 	/**
 	 * Checks whether a button is static visual UI text rather than a form control.
 	 *
+	 * Inline `on*` event handlers (e.g. `onclick`) do not disqualify the button:
+	 * the block factory only carries class-based block support attributes, so the
+	 * handler is dropped from the output instead of being preserved as raw HTML.
+	 *
 	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
 	 * @return bool True when the button can safely become editable paragraph text.
 	 */
@@ -1086,12 +1090,6 @@ class HTML_To_Blocks_Transform_Registry {
 		$type = strtolower( trim( (string) ( $element->get_attribute( 'type' ) ?? '' ) ) );
 		if ( in_array( $type, [ 'submit', 'reset' ], true ) ) {
 			return false;
-		}
-
-		foreach ( $element->get_attributes() as $name => $value ) {
-			if ( preg_match( '/^on/i', (string) $name ) === 1 ) {
-				return false;
-			}
 		}
 
 		if ( preg_match( '/<\s*[a-z][^>]*>/i', $element->get_inner_html() ) === 1 || trim( $element->get_text_content() ) === '' ) {
