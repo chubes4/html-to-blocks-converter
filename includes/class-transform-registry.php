@@ -21,7 +21,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Array of transform definitions
 	 */
 	public static function get_raw_transforms() {
-		if ( self::$transforms !== null ) {
+		if ( null !== self::$transforms ) {
 			return self::$transforms;
 		}
 
@@ -169,22 +169,6 @@ class HTML_To_Blocks_Transform_Registry {
 
 		$slug = trim( (string) $element->get_attribute( 'data-bfb-template-part' ) );
 		return preg_match( '/^[a-z0-9_.-]+$/i', $slug ) === 1 ? $slug : '';
-	}
-
-	/**
-	 * Removes known direct child markup and returns remaining meaningful content.
-	 *
-	 * @param string $inner_html Inner HTML to inspect.
-	 * @param array  $children   Child elements to remove.
-	 * @return string Remaining non-whitespace content.
-	 */
-	private static function strip_child_markup( string $inner_html, array $children ): string {
-		$remaining = $inner_html;
-		foreach ( $children as $child ) {
-			$remaining = str_replace( $child->get_outer_html(), '', $remaining );
-		}
-
-		return trim( wp_strip_all_tags( $remaining ) );
 	}
 
 	/**
@@ -531,7 +515,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string
 	 */
 	private static function get_embed_provider_slug( string $url ): string {
-		$host = parse_url( $url, PHP_URL_HOST );
+		$host = wp_parse_url( $url, PHP_URL_HOST );
 		$host = $host ? strtolower( preg_replace( '/^www\./', '', $host ) ) : '';
 
 		$providers = array(
@@ -2334,7 +2318,7 @@ class HTML_To_Blocks_Transform_Registry {
 				$current_section = 'foot';
 			} elseif ( 'TR' === $tag && ! $is_closer ) {
 				$current_row = array();
-			} elseif ( 'TR' === $tag && $is_closer ) {
+			} elseif ( 'TR' === $tag ) {
 				if ( ! empty( $current_row ) ) {
 					$row_data = array( 'cells' => $current_row );
 					if ( 'head' === $current_section ) {

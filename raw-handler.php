@@ -64,11 +64,13 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	$processor = WP_HTML_Processor::create_fragment( $html );
 	if ( ! $processor ) {
-		error_log( sprintf(
-			'[HTML to Blocks] create_fragment() failed | HTML length: %d | Preview: %s',
-			strlen( $html ),
-			substr( $html, 0, 300 )
-		) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf(
+				'[HTML to Blocks] create_fragment() failed | HTML length: %d | Preview: %s',
+				strlen( $html ),
+				substr( $html, 0, 300 )
+			) );
+		}
 		return array();
 	}
 
@@ -121,12 +123,14 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
 
 		if ( ! $element_html ) {
-			error_log( sprintf(
-				'[HTML to Blocks] Element extraction failed | Tag: %s | Occurrence: %d | HTML preview: %s',
-				$tag_name,
-				$occurrence,
-				substr( $html, 0, 300 )
-			) );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf(
+					'[HTML to Blocks] Element extraction failed | Tag: %s | Occurrence: %d | HTML preview: %s',
+					$tag_name,
+					$occurrence,
+					substr( $html, 0, 300 )
+				) );
+			}
 			continue;
 		}
 
@@ -168,7 +172,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			$transform_fn = $raw_transform['transform'] ?? null;
 
 			if ( $transform_fn && is_callable( $transform_fn ) ) {
-				$raw_handler_fn       = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
+				$raw_handler_fn       = 'html_to_blocks_raw_handler';
 				$raw_handler_callback = function ( $nested_args ) use ( $args, $raw_handler_fn ) {
 					$nested_args = is_array( $nested_args ) ? $nested_args : array();
 					return call_user_func( $raw_handler_fn, array_merge( $args, $nested_args ) );
@@ -203,13 +207,15 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	// Check if processor bailed due to unsupported HTML
 	$last_error = $processor->get_last_error();
 	if ( null !== $last_error ) {
-		error_log( sprintf(
-			'[HTML to Blocks] WP_HTML_Processor bailed | Error: %s | Blocks created: %d | HTML length: %d | Preview: %s',
-			$last_error,
-			count( $blocks ),
-			$original_html_length,
-			substr( $html, 0, 500 )
-		) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf(
+				'[HTML to Blocks] WP_HTML_Processor bailed | Error: %s | Blocks created: %d | HTML length: %d | Preview: %s',
+				$last_error,
+				count( $blocks ),
+				$original_html_length,
+				substr( $html, 0, 500 )
+			) );
+		}
 	}
 
 	if ( empty( $blocks ) && trim( wp_strip_all_tags( $html ) ) !== '' && trim( $html ) === trim( wp_strip_all_tags( $html ) ) ) {
@@ -225,14 +231,16 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$diagnostic_html_length = max( 0, $original_html_length - $ignored_decorative_html_length );
 
 	if ( $diagnostic_html_length > 100 && $output_content_length < ( $diagnostic_html_length * 0.1 ) ) {
-		error_log( sprintf(
-			'[HTML to Blocks] Significant content loss detected | Input: %d chars | Output: %d chars | Blocks: %d | Processor error: %s | Preview: %s',
-			$diagnostic_html_length,
-			$output_content_length,
-			count( $blocks ),
-			$last_error ?? 'none',
-			substr( $html, 0, 500 )
-		) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf(
+				'[HTML to Blocks] Significant content loss detected | Input: %d chars | Output: %d chars | Blocks: %d | Processor error: %s | Preview: %s',
+				$diagnostic_html_length,
+				$output_content_length,
+				count( $blocks ),
+				$last_error ?? 'none',
+				substr( $html, 0, 500 )
+			) );
+		}
 	}
 
 	return $blocks;

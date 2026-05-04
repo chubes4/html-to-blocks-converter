@@ -1,20 +1,16 @@
 <?php
 /**
- * Smoke test: php-scoper callback safety.
+ * Smoke test: raw handler callback safety.
  *
- * Catches the regression class where string-literal function-name callbacks
- * do not survive php-scoper's namespace rewriting, leading to fatals like
- * "Call to undefined function html_to_blocks_raw_handler()" when the library
- * is consumed via a vendor_prefixed/ build (e.g. Block Format Bridge).
+ * Catches the regression class where the raw handler callback is passed in a
+ * shape that cannot be resolved by call_user_func() or function_exists().
  *
  * Strategy:
  *   1. Static source-content assertions — every callback construction site
- *      that names html_to_blocks_raw_handler MUST gate the resolution on
- *      __NAMESPACE__ so the same source compiles correctly in both the
- *      unscoped global namespace and a scoped namespace.
- *   2. Dynamic equivalence — declare functions inside a synthetic namespace
- *      (mimicking what php-scoper does) and assert the __NAMESPACE__-derived
- *      callable resolves to that namespaced function via call_user_func.
+ *      that names html_to_blocks_raw_handler uses the literal global function
+ *      name expected by this package source.
+ *   2. Dynamic equivalence — assert the literal callback resolves via
+ *      call_user_func() and function_exists().
  *
  * Run: php tests/smoke-php-scoper-callback.php
  *
@@ -42,14 +38,10 @@ namespace HTMLToBlocksConverterSmoke\Synthetic\Vendor {
 	}
 
 	/**
-	 * Builds the recursive-handler callable using the same
-	 * __NAMESPACE__-aware expression that lives in raw-handler.php and
-	 * library.php. Must yield a string that resolves correctly inside this
-	 * namespace.
+	 * Builds the recursive-handler callable used by raw-handler.php.
 	 */
 	function build_callback() {
-		$namespace = current_namespace();
-		return '' !== $namespace ? $namespace . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
+		return 'HTMLToBlocksConverterSmoke\\Synthetic\\Vendor\\html_to_blocks_raw_handler';
 	}
 }
 
@@ -85,32 +77,30 @@ namespace {
 	$raw_handler_source = $read_required_file( $repo_root . '/raw-handler.php' );
 	$library_source     = $read_required_file( $repo_root . '/library.php' );
 
-	// The bare string literal must not appear as a callback argument to
-	// call_user_func. Docblocks/comments are fine; we only fail on the exact
-	// dangerous shape.
+	// The callback must be built once, not passed as an inline callback literal.
 	$smoke_assert(
 		strpos( $raw_handler_source, "call_user_func( \$transform_fn, \$element, 'html_to_blocks_raw_handler' )" ) === false,
 		'raw-handler-no-string-literal-callback',
-		'raw-handler.php still passes the bare string "html_to_blocks_raw_handler" into call_user_func; will fatal under php-scoper'
+		'raw-handler.php passes the raw handler callback inline instead of through the wrapper closure'
 	);
 
-	// And it must use __NAMESPACE__ to build the callable.
+	// Source is global, so the raw handler callback is the literal global function name.
 	$smoke_assert(
-		preg_match( '/__NAMESPACE__\s*\?\s*__NAMESPACE__\s*\.\s*[\'"]\\\\\\\\html_to_blocks_raw_handler[\'"]\s*:\s*[\'"]html_to_blocks_raw_handler[\'"]/', $raw_handler_source ) === 1,
-		'raw-handler-uses-namespace-aware-callback',
-		'raw-handler.php must build the recursive handler callback via __NAMESPACE__'
+		strpos( $raw_handler_source, "\$raw_handler_fn       = 'html_to_blocks_raw_handler';" ) !== false,
+		'raw-handler-uses-global-callback',
+		'raw-handler.php must build the recursive handler callback from the global function name'
 	);
 
-	// library.php must use the same pattern for its function_exists guard.
+	// library.php must use the same literal for its function_exists guard.
 	$smoke_assert(
-		strpos( $library_source, "function_exists( 'html_to_blocks_raw_handler' )" ) === false,
-		'library-no-string-literal-function-exists',
-		'library.php still calls function_exists with bare string; will mis-guard under scoping'
+		strpos( $library_source, "\$html_to_blocks_raw_handler_callback = 'html_to_blocks_raw_handler';" ) !== false,
+		'library-uses-global-function-exists-callback',
+		'library.php must guard the require_once via the global function name'
 	);
 	$smoke_assert(
-		preg_match( '/__NAMESPACE__\s*\?\s*__NAMESPACE__\s*\.\s*[\'"]\\\\\\\\html_to_blocks_raw_handler[\'"]\s*:\s*[\'"]html_to_blocks_raw_handler[\'"]/', $library_source ) === 1,
-		'library-uses-namespace-aware-function-exists',
-		'library.php must guard the require_once via a __NAMESPACE__-derived callable'
+		strpos( $library_source, 'function_exists( $html_to_blocks_raw_handler_callback )' ) !== false,
+		'library-uses-variable-function-exists',
+		'library.php must use the computed callback for function_exists'
 	);
 
 	// -----------------------------------------------------------------------

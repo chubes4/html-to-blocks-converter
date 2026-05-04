@@ -101,7 +101,6 @@ class HTML_To_Blocks_Attribute_Parser {
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $element   HTML element wrapper
 	 * @param string|null                 $selector  CSS-like selector
-	 * @param string|null                 $multiline Multiline tag type
 	 * @return string|null
 	 */
 	private static function get_inner_html( $element, $selector) {

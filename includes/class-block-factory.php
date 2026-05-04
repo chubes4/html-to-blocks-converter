@@ -94,7 +94,7 @@ class HTML_To_Blocks_Block_Factory {
 	/**
 	 * Resolves an allowed HTML tagName attribute with a safe default.
 	 *
-	 * @param string $default    Default tag name.
+	 * @param string $default_value Default tag name.
 	 * @param array  $attributes Block attributes.
 	 * @param array  $allowed    Allowed lowercase tag names.
 	 * @return string Safe tag name.
