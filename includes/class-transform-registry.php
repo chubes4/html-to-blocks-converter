@@ -2486,8 +2486,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'isMatch'   => function ( $element ) {
 					return self::is_repeated_card_grid_element( $element );
 				},
-				'transform' => function ( $element, $handler ) {
-					return self::create_repeated_card_grid_group( $element, $handler );
+				'transform' => function ( $element, $handler, $args = array() ) {
+					return self::create_repeated_card_grid_group( $element, $handler, $args );
 				},
 			),
 			array(
@@ -3280,8 +3280,13 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param callable                    $handler Recursive raw handler.
 	 * @return array Block array.
 	 */
-	private static function create_repeated_card_grid_group( $element, callable $handler ): array {
+	private static function create_repeated_card_grid_group( $element, callable $handler, array $args = array() ): array {
 		$inner_blocks = array();
+		$diagnostic   = self::get_commerce_product_grid_diagnostic( $element, $args );
+
+		if ( null !== $diagnostic && function_exists( 'do_action' ) ) {
+			do_action( 'html_to_blocks_commerce_product_grid_detected', $diagnostic, $element, $args );
+		}
 
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( self::is_empty_decorative_element( $child ) ) {
@@ -3296,6 +3301,95 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_common_layout_attributes( $element ),
 			$inner_blocks
 		);
+	}
+
+	/**
+	 * Builds a diagnostic payload for explicit commerce-context product grids.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The grid wrapper.
+	 * @param array                       $args Raw handler arguments.
+	 * @return array|null Diagnostic payload, or null when the commerce gate is closed.
+	 */
+	private static function get_commerce_product_grid_diagnostic( $element, array $args ): ?array {
+		if ( ! self::has_explicit_commerce_context( $args ) || ! self::is_product_grid_element( $element ) ) {
+			return null;
+		}
+
+		$products = array();
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( self::is_empty_decorative_element( $child ) ) {
+				continue;
+			}
+
+			$products[] = array_filter(
+				array(
+					'slug'        => $child->get_attribute( 'data-product-slug' ) ?? '',
+					'name'        => self::get_first_text_for_selectors( $child, array( '.product-card__name', '.ss-product-name', 'h1', 'h2', 'h3', 'h4' ) ),
+					'price'       => self::get_first_text_for_selectors( $child, array( '.product-card__price', '.ss-product-price' ) ),
+					'category'    => self::get_first_text_for_selectors( $child, array( '.product-card__category', '.ss-product-category' ) ),
+					'badge'       => self::get_first_text_for_selectors( $child, array( '.product-card__badge', '.ss-product-badge' ) ),
+					'cta'         => self::get_first_text_for_selectors( $child, array( '.product-card__cta', '.ss-product-cta', 'a' ) ),
+					'has_image'   => null !== $child->query_selector( 'img' ),
+					'placeholder' => null !== $child->query_selector( '.product-card__image-placeholder' ),
+				),
+				function ( $value ) {
+					return ! is_string( $value ) || '' !== $value;
+				}
+			);
+		}
+
+		return array(
+			'type'          => 'commerce_product_grid',
+			'status'        => 'static_editable_placeholder',
+			'product_count' => count( $products ),
+			'products'      => $products,
+			'message'       => 'Explicit commerce context detected; h2bc preserved editor-valid static product cards for downstream materialization.',
+		);
+	}
+
+	/**
+	 * Checks whether raw-handler args explicitly opt into commerce-aware handling.
+	 *
+	 * @param array $args Raw handler arguments.
+	 * @return bool True when explicit commerce context is present.
+	 */
+	private static function has_explicit_commerce_context( array $args ): bool {
+		$context = $args['context'] ?? array();
+		if ( ! is_array( $context ) ) {
+			return false;
+		}
+
+		return ! empty( $context['commerce'] ) || ! empty( $context['products'] ) || ! empty( $context['product_context'] );
+	}
+
+	/**
+	 * Checks whether a repeated card grid carries high-confidence product-grid markers.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The grid wrapper.
+	 * @return bool True when the grid is product-like.
+	 */
+	private static function is_product_grid_element( $element ): bool {
+		return self::class_matches( $element, '/(?:^|[-_\s])products?(?:$|[-_\s])/i' )
+			|| self::class_matches( $element, '/(?:^|[-_\s])shop(?:$|[-_\s])/i' )
+			|| 'product-grid' === ( $element->get_attribute( 'data-commerce-region' ) ?? '' );
+	}
+
+	/**
+	 * Gets the first non-empty text from a simple selector list.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @param array                       $selectors Simple selectors to inspect.
+	 * @return string Text content or empty string.
+	 */
+	private static function get_first_text_for_selectors( $element, array $selectors ): string {
+		foreach ( $selectors as $selector ) {
+			$match = $element->query_selector( $selector );
+			if ( $match && trim( $match->get_text_content() ) !== '' ) {
+				return trim( $match->get_text_content() );
+			}
+		}
+
+		return '';
 	}
 
 	/**
