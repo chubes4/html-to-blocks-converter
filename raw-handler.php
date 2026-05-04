@@ -51,6 +51,36 @@ function html_to_blocks_raw_handler( $args ) {
 }
 
 /**
+ * Calculate elapsed wall time in milliseconds.
+ *
+ * @param float $started Started timestamp from microtime(true).
+ * @return float Elapsed milliseconds.
+ */
+function html_to_blocks_elapsed_ms( float $started ): float {
+	return ( microtime( true ) - $started ) * 1000;
+}
+
+/**
+ * Accumulate per-transform trace metrics.
+ *
+ * @param array  $metrics Metrics accumulator.
+ * @param string $name    Transform metric key.
+ * @param string $field   Metric field.
+ * @param float  $value   Value to add.
+ * @return void
+ */
+function html_to_blocks_record_transform_metric( array &$metrics, string $name, string $field, float $value ): void {
+	if ( ! isset( $metrics['transforms'][ $name ] ) ) {
+		$metrics['transforms'][ $name ] = array(
+			'count'      => 0,
+			'execute_ms' => 0.0,
+		);
+	}
+
+	$metrics['transforms'][ $name ][ $field ] = ( $metrics['transforms'][ $name ][ $field ] ?? 0 ) + $value;
+}
+
+/**
  * Converts HTML directly to blocks using registered transforms
  *
  * @param string $html HTML to convert
@@ -60,6 +90,25 @@ function html_to_blocks_raw_handler( $args ) {
 function html_to_blocks_convert( $html, $args = array() ) {
 	if ( empty( trim( $html ) ) ) {
 		return array();
+	}
+
+	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );
+	$metrics         = null;
+	$convert_started = 0.0;
+	if ( $collect_metrics ) {
+		$metrics = array(
+			'html_bytes'              => strlen( $html ),
+			'token_count'             => 0,
+			'top_level_element_count' => 0,
+			'extract_ms'              => 0.0,
+			'element_parse_ms'        => 0.0,
+			'transform_match_ms'      => 0.0,
+			'transform_execute_ms'    => 0.0,
+			'content_measure_ms'      => 0.0,
+			'total_ms'                => 0.0,
+			'transforms'              => array(),
+		);
+		$convert_started = microtime( true );
 	}
 
 	$processor = WP_HTML_Processor::create_fragment( $html );
@@ -86,6 +135,9 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$ignored_decorative_html_length = 0;
 
 	while ( $processor->next_token() ) {
+		if ( $collect_metrics ) {
+			++$metrics['token_count'];
+		}
 		$token_type = $processor->get_token_type();
 		$depth      = $processor->get_current_depth();
 
@@ -120,8 +172,15 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		if ( $depth !== $top_level_depth ) {
 			continue;
 		}
+		if ( $collect_metrics ) {
+			++$metrics['top_level_element_count'];
+		}
 
+		$phase_started = $collect_metrics ? microtime( true ) : 0.0;
 		$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
+		if ( $collect_metrics ) {
+			$metrics['extract_ms'] += html_to_blocks_elapsed_ms( $phase_started );
+		}
 
 		if ( ! $element_html ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -136,7 +195,11 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			continue;
 		}
 
+		$phase_started = $collect_metrics ? microtime( true ) : 0.0;
 		$element = HTML_To_Blocks_HTML_Element::from_html( $element_html );
+		if ( $collect_metrics ) {
+			$metrics['element_parse_ms'] += html_to_blocks_elapsed_ms( $phase_started );
+		}
 		if ( ! $element ) {
 			$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
 				$element_html,
@@ -159,9 +222,16 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			continue;
 		}
 
+		$phase_started = $collect_metrics ? microtime( true ) : 0.0;
 		$raw_transform = html_to_blocks_find_transform( $element, $transforms );
+		if ( $collect_metrics ) {
+			$metrics['transform_match_ms'] += html_to_blocks_elapsed_ms( $phase_started );
+		}
 
 		if ( ! $raw_transform ) {
+			if ( $collect_metrics ) {
+				html_to_blocks_record_transform_metric( $metrics, 'fallback:no_transform', 'count', 1 );
+			}
 			$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
 				$element_html,
 				array(
@@ -172,14 +242,24 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			);
 		} else {
 			$transform_fn = $raw_transform['transform'] ?? null;
+			$metric_name  = (string) ( $raw_transform['blockName'] ?? 'unknown' ) . ':p' . (string) ( $raw_transform['priority'] ?? 'default' );
+			if ( $collect_metrics ) {
+				html_to_blocks_record_transform_metric( $metrics, $metric_name, 'count', 1 );
+			}
 
 			if ( $transform_fn && is_callable( $transform_fn ) ) {
+				$phase_started       = $collect_metrics ? microtime( true ) : 0.0;
 				$raw_handler_fn       = 'html_to_blocks_raw_handler';
 				$raw_handler_callback = function ( $nested_args ) use ( $args, $raw_handler_fn ) {
 					$nested_args = is_array( $nested_args ) ? $nested_args : array();
 					return call_user_func( $raw_handler_fn, array_merge( $args, $nested_args ) );
 				};
 				$block                = call_user_func( $transform_fn, $element, $raw_handler_callback, $args );
+				if ( $collect_metrics ) {
+					$elapsed                         = html_to_blocks_elapsed_ms( $phase_started );
+					$metrics['transform_execute_ms'] += $elapsed;
+					html_to_blocks_record_transform_metric( $metrics, $metric_name, 'execute_ms', $elapsed );
+				}
 
 				if ( $element->has_attribute( 'class' ) ) {
 					$existing_class = $block['attrs']['className'] ?? '';
@@ -196,12 +276,18 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 				$blocks[] = $block;
 			} else {
+				$phase_started = $collect_metrics ? microtime( true ) : 0.0;
 				$block_name = $raw_transform['blockName'];
 				$attributes = HTML_To_Blocks_Attribute_Parser::get_block_attributes(
 					$block_name,
 					$element_html
 				);
 				$blocks[]   = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
+				if ( $collect_metrics ) {
+					$elapsed                         = html_to_blocks_elapsed_ms( $phase_started );
+					$metrics['transform_execute_ms'] += $elapsed;
+					html_to_blocks_record_transform_metric( $metrics, $metric_name, 'execute_ms', $elapsed );
+				}
 			}
 		}
 	}
@@ -229,7 +315,13 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	}
 
 	// Check for significant content loss (input had content but output is empty/minimal)
+	$phase_started         = $collect_metrics ? microtime( true ) : 0.0;
 	$output_content_length = html_to_blocks_measure_block_content_length( $blocks );
+	if ( $collect_metrics ) {
+		$metrics['content_measure_ms'] += html_to_blocks_elapsed_ms( $phase_started );
+		$metrics['total_ms']            = html_to_blocks_elapsed_ms( $convert_started );
+		do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
+	}
 
 	$diagnostic_html_length = max( 0, $original_html_length - $ignored_decorative_html_length );
 
@@ -688,26 +780,26 @@ function html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $positi
  * @return string|null Balanced element HTML or null
  */
 function html_to_blocks_extract_balanced_element( $html, $tag_name ) {
-	$depth = 0;
-	$len   = strlen( $html );
-	$i     = 0;
+	$depth         = 0;
+	$tag_pattern   = '/<\/?' . preg_quote( $tag_name, '/' ) . '(?:\s[^>]*)?>/i';
+	$matched_count = preg_match_all( $tag_pattern, $html, $matches, PREG_OFFSET_CAPTURE );
+	if ( false === $matched_count || 0 === $matched_count ) {
+		return null;
+	}
 
-	$open_pattern  = '/^<' . preg_quote( $tag_name, '/' ) . '(?:\s|>)/i';
-	$close_pattern = '/^<\/' . preg_quote( $tag_name, '/' ) . '\s*>/i';
+	foreach ( $matches[0] as $match ) {
+		$tag_markup = $match[0];
+		$offset     = $match[1];
 
-	while ( $i < $len ) {
-		$remaining = substr( $html, $i );
-
-		if ( preg_match( $open_pattern, $remaining ) ) {
-			++$depth;
-		} elseif ( preg_match( $close_pattern, $remaining, $close_match ) ) {
+		if ( 0 === strpos( $tag_markup, '</' ) ) {
 			--$depth;
 			if ( 0 === $depth ) {
-				return substr( $html, 0, $i + strlen( $close_match[0] ) );
+				return substr( $html, 0, $offset + strlen( $tag_markup ) );
 			}
+			continue;
 		}
 
-		++$i;
+		++$depth;
 	}
 
 	return null;

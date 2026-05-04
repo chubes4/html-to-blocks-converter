@@ -72,6 +72,18 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Balanced element extraction should preserve nested same-tag content.
+	 */
+	public function test_balanced_element_extraction_preserves_nested_same_tag_content(): void {
+		$html = '<div class="outer"><div class="inner">Nested</div><p>After</p></div><div>Sibling</div>';
+
+		$this->assertSame(
+			'<div class="outer"><div class="inner">Nested</div><p>After</p></div>',
+			html_to_blocks_extract_balanced_element( $html, 'DIV' )
+		);
+	}
+
+	/**
 	 * Supported fixture matrix.
 	 *
 	 * @return array<string,array{html:string,expected_names:string[],snippets?:string[]}>
