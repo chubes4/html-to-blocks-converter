@@ -3308,7 +3308,10 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_card_grid_item_group( $element, callable $handler ): array {
 		$link_element = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element );
 		$content_html = $link_element ? $link_element->get_inner_html() : $element->get_inner_html();
-		$inner_blocks = $handler( array( 'HTML' => $content_html ) );
+		$inner_blocks = self::create_card_grid_item_inner_blocks( $link_element ?: $element );
+		if ( null === $inner_blocks ) {
+			$inner_blocks = $handler( array( 'HTML' => $content_html ) );
+		}
 
 		if ( $link_element && $link_element->has_attribute( 'href' ) ) {
 			$inner_blocks[] = self::create_button_block_from_anchor( self::create_card_grid_cta_anchor( $link_element ) );
@@ -3319,6 +3322,81 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_common_layout_attributes( $element ),
 			$inner_blocks
 		);
+	}
+
+	/**
+	 * Convert common repeated-card children without re-entering the full raw handler.
+	 *
+	 * This keeps repeated card grids on the WordPress HTML API path while avoiding a
+	 * fresh full transform pass for every card in large static exports.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Card content element.
+	 * @return array<int,array<string,mixed>>|null Blocks, or null when the shape needs the generic handler.
+	 */
+	private static function create_card_grid_item_inner_blocks( $element ): ?array {
+		$blocks = array();
+		foreach ( $element->get_child_elements() as $child ) {
+			$block = self::create_card_grid_child_block( $child );
+			if ( null === $block ) {
+				return null;
+			}
+
+			if ( ! empty( $block ) ) {
+				$blocks[] = $block;
+			}
+		}
+
+		return $blocks;
+	}
+
+	/**
+	 * Convert one common card child to a native block.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $child Card child element.
+	 * @return array<string,mixed>|array{}|null Block, empty array for ignored decorative children, or null for fallback.
+	 */
+	private static function create_card_grid_child_block( $child ): ?array {
+		if ( self::is_empty_decorative_element( $child ) ) {
+			return array();
+		}
+
+		$tag = $child->get_tag_name();
+		if ( preg_match( '/^H[1-6]$/', $tag ) ) {
+			return HTML_To_Blocks_Block_Factory::create_block(
+				'core/heading',
+				array_merge(
+					self::get_block_support_attributes( $child, array( 'anchor' => true, 'class_name' => true ) ),
+					array(
+						'level'   => (int) substr( $tag, 1 ),
+						'content' => $child->get_inner_html(),
+					)
+				)
+			);
+		}
+
+		if ( 'IMG' === $tag ) {
+			return self::create_image_block_from_img( $child );
+		}
+
+		if ( in_array( $tag, array( 'OL', 'UL' ), true ) ) {
+			return self::create_list_block_from_element( $child );
+		}
+
+		if ( 'P' === $tag || 'SPAN' === $tag ) {
+			return HTML_To_Blocks_Block_Factory::create_block(
+				'core/paragraph',
+				array_merge(
+					self::get_block_support_attributes( $child, array( 'anchor' => true, 'class_name' => true ) ),
+					array( 'content' => $child->get_inner_html() )
+				)
+			);
+		}
+
+		if ( 'A' === $tag && self::is_button_like_anchor( $child ) ) {
+			return HTML_To_Blocks_Block_Factory::create_block( 'core/buttons', array(), array( self::create_button_block_from_anchor( $child ) ) );
+		}
+
+		return null;
 	}
 
 	/**
