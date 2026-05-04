@@ -74,7 +74,7 @@ $assertions = 0;
 $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 	$assertions++;
 	if ( ! $condition ) {
-		$failures[] = 'FAIL [' . $label . ']' . ( $detail !== '' ? ': ' . $detail : '' );
+		$failures[] = 'FAIL [' . $label . ']' . ( '' !== $detail ? ': ' . $detail : '' );
 	}
 };
 
@@ -92,7 +92,7 @@ foreach ( HTML_To_Blocks_Transform_Registry::get_raw_transforms() as $transform 
 	}
 }
 
-$assert( $preformatted_transform !== null, 'preformatted-transform-registered' );
+$assert( null !== $preformatted_transform, 'preformatted-transform-registered' );
 
 $assert( $preformatted_transform['isMatch']( $source ) === true, 'preformatted-transform-matches-pre-without-code' );
 

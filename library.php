@@ -38,10 +38,13 @@ $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_p
 	if ( ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-svg-icon-classifier.php';
 	}
+	if ( ! function_exists( 'html_to_blocks_classify_inline_svg_icon' ) ) {
+		require_once $html_to_blocks_library_path . '/includes/svg-icon-functions.php';
+	}
 	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-transform-registry.php';
 	}
-	$html_to_blocks_raw_handler_callback = __NAMESPACE__ ? __NAMESPACE__ . '\\html_to_blocks_raw_handler' : 'html_to_blocks_raw_handler';
+	$html_to_blocks_raw_handler_callback = 'html_to_blocks_raw_handler';
 	if ( ! function_exists( $html_to_blocks_raw_handler_callback ) ) {
 		require_once $html_to_blocks_library_path . '/raw-handler.php';
 	}
