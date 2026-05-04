@@ -1228,6 +1228,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the anchor is already WordPress-button-shaped.
 	 */
 	private static function is_button_like_anchor( $element ): bool {
+		// @phpstan-ignore-next-line booleanNot.alwaysFalse -- Defensive public API guard for untyped external callers.
 		if ( ! $element || $element->get_tag_name() !== 'A' ) {
 			return false;
 		}
@@ -1263,6 +1264,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when class ownership is more important than button shape.
 	 */
 	private static function is_class_sensitive_cta_anchor( $element ): bool {
+		// @phpstan-ignore-next-line booleanNot.alwaysFalse -- Defensive public API guard for untyped external callers.
 		if ( ! $element || $element->get_tag_name() !== 'A' ) {
 			return false;
 		}

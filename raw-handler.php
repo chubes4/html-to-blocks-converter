@@ -65,6 +65,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$processor = WP_HTML_Processor::create_fragment( $html );
 	if ( ! $processor ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Gated diagnostic logging for WP_DEBUG.
 			error_log( sprintf(
 				'[HTML to Blocks] create_fragment() failed | HTML length: %d | Preview: %s',
 				strlen( $html ),
@@ -124,6 +125,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 		if ( ! $element_html ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Gated diagnostic logging for WP_DEBUG.
 				error_log( sprintf(
 					'[HTML to Blocks] Element extraction failed | Tag: %s | Occurrence: %d | HTML preview: %s',
 					$tag_name,
@@ -208,6 +210,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$last_error = $processor->get_last_error();
 	if ( null !== $last_error ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Gated diagnostic logging for WP_DEBUG.
 			error_log( sprintf(
 				'[HTML to Blocks] WP_HTML_Processor bailed | Error: %s | Blocks created: %d | HTML length: %d | Preview: %s',
 				$last_error,
@@ -232,6 +235,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	if ( $diagnostic_html_length > 100 && $output_content_length < ( $diagnostic_html_length * 0.1 ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Gated diagnostic logging for WP_DEBUG.
 			error_log( sprintf(
 				'[HTML to Blocks] Significant content loss detected | Input: %d chars | Output: %d chars | Blocks: %d | Processor error: %s | Preview: %s',
 				$diagnostic_html_length,

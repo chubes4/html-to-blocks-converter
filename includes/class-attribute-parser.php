@@ -196,6 +196,7 @@ class HTML_To_Blocks_Attribute_Parser {
 	 * @return HTML_To_Blocks_HTML_Element|null
 	 */
 	public static function query_selector( $element, $selector ) {
+		// @phpstan-ignore-next-line booleanNot.alwaysFalse -- Defensive public API guard for untyped external callers.
 		if ( ! $element ) {
 			return null;
 		}
@@ -217,6 +218,7 @@ class HTML_To_Blocks_Attribute_Parser {
 	 * @return array
 	 */
 	public static function query_selector_all( $element, $selector ) {
+		// @phpstan-ignore-next-line booleanNot.alwaysFalse -- Defensive public API guard for untyped external callers.
 		if ( ! $element || empty( $selector ) ) {
 			return array();
 		}
