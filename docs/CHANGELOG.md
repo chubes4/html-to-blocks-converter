@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-05-04
+
+### Added
+- expose safe inline SVG icon contract
+
+### Changed
+- add gated product grid fixture
+- cover rich UI cluster fallback regression
+- Create LICENSE
+
+### Fixed
+- resolve lint residuals (#236)
+- convert static visual buttons with inline JS handlers to native blocks
+- convert decorative product placeholders
+- thread raw handler context through transforms
+- preserve CTA anchor class ownership
+- serialize separators with opacity class
+- normalize group border support extraction
+- convert terminal blank spacer spans natively
+- accept safe SVG primitive icon attributes
+- cover text-only metric stat cards
+- convert project card status divs
+- convert decorative and CTA wrapper divs
+- drop empty code dot chrome
+- Fix SVG image resize serialization
+- recurse through generic wrapper sections
+- fix decorative group inline styles
+- convert repeated card grids
+- localize form fallback scope
+- convert task-check status divs
+- convert traffic-light decorative dots
+- convert static button tabs
+- convert decorative empty div classes
+- convert progress fill divs
+- convert code comparison panels
+- convert static visual labels to paragraphs
+
 ## [0.6.12] - 2026-05-03
 
 ### Fixed
