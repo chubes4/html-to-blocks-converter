@@ -83,7 +83,7 @@ class HTML_To_Blocks_Block_Factory {
 				$classes[] = 'has-text-color';
 			}
 
-			if ( ! empty( $style['color']['background'] ) ) {
+			if ( ! empty( $style['color']['background'] ) || ! empty( $style['color']['gradient'] ) ) {
 				$classes[] = 'has-background';
 			}
 		}
@@ -162,6 +162,11 @@ class HTML_To_Blocks_Block_Factory {
 		$background_color = $style['color']['background'] ?? null;
 		if ( is_string( $background_color ) && $background_color !== '' ) {
 			$declarations[] = 'background-color:' . $background_color;
+		}
+
+		$background_gradient = $style['color']['gradient'] ?? null;
+		if ( is_string( $background_gradient ) && $background_gradient !== '' ) {
+			$declarations[] = 'background:' . $background_gradient;
 		}
 
 		$spacing = $style['spacing'] ?? [];

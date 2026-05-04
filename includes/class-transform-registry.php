@@ -2512,6 +2512,33 @@ class HTML_To_Blocks_Transform_Registry {
 			],
 			[
 				'blockName' => 'core/group',
+				'priority'  => 14,
+				'isMatch'   => function ( $element ) {
+					return self::is_decorative_figure_with_caption( $element );
+				},
+				'transform' => function ( $element ) {
+					$children       = $element->get_child_elements();
+					$visual        = $children[0];
+					$caption       = $children[1];
+					$caption_attrs = self::get_block_support_attributes( $caption, [ 'class_name' => true ] );
+
+					$caption_attrs['content'] = trim( $caption->get_inner_html() );
+
+					return HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $element ),
+						[
+							HTML_To_Blocks_Block_Factory::create_block(
+								'core/group',
+								self::get_empty_decorative_group_attributes( $visual )
+							),
+							HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs ),
+						]
+					);
+				},
+			],
+			[
+				'blockName' => 'core/group',
 				'priority'  => 15,
 				'isMatch'   => function ( $element ) {
 					return self::is_group_element( $element );
@@ -2544,6 +2571,10 @@ class HTML_To_Blocks_Transform_Registry {
 				'anchor'     => true,
 				'class_name' => true,
 				'align'      => true,
+				'colors'     => true,
+				'dimensions' => true,
+				'spacing'    => true,
+				'border'     => true,
 			]
 		);
 	}
@@ -2708,7 +2739,11 @@ class HTML_To_Blocks_Transform_Registry {
 
 		$background = self::extract_background_color( $style );
 		if ( $background !== '' ) {
-			$attributes['style']['color']['background'] = $background;
+			if ( stripos( $background, 'gradient(' ) !== false ) {
+				$attributes['style']['color']['gradient'] = $background;
+			} else {
+				$attributes['style']['color']['background'] = $background;
+			}
 		}
 	}
 
@@ -3422,8 +3457,49 @@ class HTML_To_Blocks_Transform_Registry {
 		return self::is_empty_element( $element )
 			&& (
 				self::is_project_card_status_element( $element )
-				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|blank|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
+				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|blank|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|img|image|media|photo|picture|thumb|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
+				|| self::has_visual_placeholder_background( $element )
 			);
+	}
+
+	/**
+	 * Checks whether a figure wraps a decorative visual placeholder and caption.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the figure can become an editable group with caption.
+	 */
+	private static function is_decorative_figure_with_caption( $element ): bool {
+		if ( 'FIGURE' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		$children = $element->get_child_elements();
+		if ( count( $children ) !== 2 ) {
+			return false;
+		}
+
+		return self::is_empty_decorative_element( $children[0] )
+			&& 'FIGCAPTION' === $children[1]->get_tag_name()
+			&& trim( wp_strip_all_tags( $children[1]->get_inner_html() ) ) !== '';
+	}
+
+	/**
+	 * Checks whether an empty element carries visual background styling.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when source style provides a native block background.
+	 */
+	private static function has_visual_placeholder_background( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), [ 'DIV', 'SPAN' ], true ) ) {
+			return false;
+		}
+
+		$style = $element->has_attribute( 'style' ) ? $element->get_attribute( 'style' ) : '';
+		if ( $style === '' || preg_match( '/url\s*\(/i', $style ) === 1 ) {
+			return false;
+		}
+
+		return self::extract_background_color( $style ) !== '';
 	}
 
 	/**
