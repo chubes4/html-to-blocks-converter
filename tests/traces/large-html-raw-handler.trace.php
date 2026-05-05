@@ -138,7 +138,8 @@ if ( ! is_string( $results_file ) || '' === $results_file ) {
 	exit( 2 );
 }
 
-$html = html_to_blocks_trace_large_repeated_cards( 131072 );
+$target_bytes = (int) ( getenv( 'H2BC_TRACE_TARGET_BYTES' ) ?: 131072 );
+$html         = html_to_blocks_trace_large_repeated_cards( $target_bytes );
 $started = microtime( true );
 $blocks  = html_to_blocks_raw_handler( array( 'HTML' => $html ) );
 $total_ms = ( microtime( true ) - $started ) * 1000;
@@ -215,7 +216,7 @@ file_put_contents(
 			'component_id'     => 'html-to-blocks-converter',
 			'scenario_id'      => getenv( 'HOMEBOY_TRACE_SCENARIO' ) ?: 'large-html-raw-handler',
 			'status'           => 'pass',
-			'summary'          => sprintf( '128 KB raw handler: %.1f ms total; transform execution %.1f ms; matching %.1f ms; top transform %s %.1f ms (%d calls)', $total_ms, (float) ( $main_metrics['transform_execute_ms'] ?? 0 ), (float) ( $main_metrics['transform_match_ms'] ?? 0 ), $top_transform_name, (float) ( $top_transform_stats['execute_ms'] ?? 0 ), (int) ( $top_transform_stats['count'] ?? 0 ) ),
+			'summary'          => sprintf( '%d KB raw handler: %.1f ms total; transform execution %.1f ms; matching %.1f ms; top transform %s %.1f ms (%d calls)', (int) round( $target_bytes / 1024 ), $total_ms, (float) ( $main_metrics['transform_execute_ms'] ?? 0 ), (float) ( $main_metrics['transform_match_ms'] ?? 0 ), $top_transform_name, (float) ( $top_transform_stats['execute_ms'] ?? 0 ), (int) ( $top_transform_stats['count'] ?? 0 ) ),
 			'timeline'         => $timeline,
 			'span_definitions' => $spans,
 			'assertions'       => array(),

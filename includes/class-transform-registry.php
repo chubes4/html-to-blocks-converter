@@ -15,6 +15,13 @@ class HTML_To_Blocks_Transform_Registry {
 	private static ?array $transforms = null;
 
 	/**
+	 * Repeated-card children validated during transform matching.
+	 *
+	 * @var array<int,array<int,HTML_To_Blocks_HTML_Element>>
+	 */
+	private static array $repeated_card_grid_children = array();
+
+	/**
 	 * Gets all raw transforms for core blocks
 	 * Sorted by priority (lower = higher priority)
 	 *
@@ -3227,6 +3234,9 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when direct children should become editable card groups.
 	 */
 	private static function is_repeated_card_grid_element( $element ): bool {
+		$cache_key = spl_object_id( $element );
+		unset( self::$repeated_card_grid_children[ $cache_key ] );
+
 		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'SECTION' ), true ) ) {
 			return false;
 		}
@@ -3235,7 +3245,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		$card_count = 0;
+		$cards = array();
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( self::is_empty_decorative_element( $child ) ) {
 				continue;
@@ -3245,10 +3255,15 @@ class HTML_To_Blocks_Transform_Registry {
 				return false;
 			}
 
-			++$card_count;
+			$cards[] = $child;
 		}
 
-		return $card_count >= 2;
+		if ( count( $cards ) < 2 ) {
+			return false;
+		}
+
+		self::$repeated_card_grid_children[ $cache_key ] = $cards;
+		return true;
 	}
 
 	/**
@@ -3282,17 +3297,16 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function create_repeated_card_grid_group( $element, callable $handler, array $args = array() ): array {
 		$inner_blocks = array();
+		$cache_key    = spl_object_id( $element );
+		$children     = self::$repeated_card_grid_children[ $cache_key ] ?? $element->get_child_elements();
+		unset( self::$repeated_card_grid_children[ $cache_key ] );
 		$diagnostic   = self::get_commerce_product_grid_diagnostic( $element, $args );
 
 		if ( null !== $diagnostic && function_exists( 'do_action' ) ) {
 			do_action( 'html_to_blocks_commerce_product_grid_detected', $diagnostic, $element, $args );
 		}
 
-		foreach ( $element->get_child_elements() as $child ) {
-			if ( self::is_empty_decorative_element( $child ) ) {
-				continue;
-			}
-
+		foreach ( $children as $child ) {
 			$inner_blocks[] = self::create_card_grid_item_group( $child, $handler );
 		}
 
