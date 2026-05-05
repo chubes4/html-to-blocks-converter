@@ -84,6 +84,18 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Child extraction should preserve direct children with nested same-tag content.
+	 */
+	public function test_child_extraction_preserves_nested_same_tag_content(): void {
+		$element  = HTML_To_Blocks_HTML_Element::from_html( '<section><article class="card"><div class="media"><div class="dot"></div></div><p>Card</p></article><article><p>Second</p></article></section>' );
+		$children = $element ? $element->get_child_elements() : array();
+
+		$this->assertCount( 2, $children );
+		$this->assertStringContainsString( '<div class="dot"></div>', $children[0]->get_outer_html() );
+		$this->assertSame( 'ARTICLE', $children[0]->get_tag_name() );
+	}
+
+	/**
 	 * Supported fixture matrix.
 	 *
 	 * @return array<string,array{html:string,expected_names:string[],snippets?:string[]}>
