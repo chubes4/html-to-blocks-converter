@@ -42,12 +42,77 @@ function html_to_blocks_raw_handler( $args ) {
 			continue;
 		}
 
-		$piece  = html_to_blocks_normalise_blocks( $piece );
+		if ( ! html_to_blocks_can_skip_normalise_blocks( $piece ) ) {
+			$piece = html_to_blocks_normalise_blocks( $piece );
+		}
 		$blocks = html_to_blocks_convert( $piece, array_merge( $args, array( 'HTML' => $piece ) ) );
 		$result = array_merge( $result, $blocks );
 	}
 
 	return array_filter( $result );
+}
+
+/**
+ * Determine whether block normalization can be skipped for an already wrapped fragment.
+ *
+ * Normalization only needs to repair top-level phrasing content. A fragment that is
+ * already one complete block-like root can go straight to raw conversion, avoiding
+ * an extra full scan of large generated HTML pages.
+ *
+ * @param string $html HTML fragment.
+ * @return bool True when normalization can be skipped.
+ */
+function html_to_blocks_can_skip_normalise_blocks( string $html ): bool {
+	$html = trim( $html );
+	if ( '' === $html || '<' !== $html[0] || ! preg_match( '/^<\s*([a-z0-9:-]+)/i', $html, $matches ) ) {
+		return false;
+	}
+
+	$tag_name = strtoupper( $matches[1] );
+	if ( in_array( $tag_name, html_to_blocks_phrasing_tag_names(), true ) ) {
+		return false;
+	}
+
+	return trim( (string) html_to_blocks_extract_balanced_element( $html, $tag_name ) ) === $html;
+}
+
+/**
+ * Gets tag names treated as phrasing content by block normalization.
+ *
+ * @return string[] Uppercase tag names.
+ */
+function html_to_blocks_phrasing_tag_names(): array {
+	return array(
+		'A',
+		'ABBR',
+		'B',
+		'BDI',
+		'BDO',
+		'BR',
+		'CITE',
+		'CODE',
+		'DATA',
+		'DFN',
+		'EM',
+		'I',
+		'KBD',
+		'MARK',
+		'Q',
+		'RP',
+		'RT',
+		'RUBY',
+		'S',
+		'SAMP',
+		'SMALL',
+		'SPAN',
+		'STRONG',
+		'SUB',
+		'SUP',
+		'TIME',
+		'U',
+		'VAR',
+		'WBR',
+	);
 }
 
 /**
@@ -889,37 +954,7 @@ function html_to_blocks_normalise_blocks( $html ) {
 		return $html;
 	}
 
-	$phrasing_tags = array(
-		'A',
-		'ABBR',
-		'B',
-		'BDI',
-		'BDO',
-		'BR',
-		'CITE',
-		'CODE',
-		'DATA',
-		'DFN',
-		'EM',
-		'I',
-		'KBD',
-		'MARK',
-		'Q',
-		'RP',
-		'RT',
-		'RUBY',
-		'S',
-		'SAMP',
-		'SMALL',
-		'SPAN',
-		'STRONG',
-		'SUB',
-		'SUP',
-		'TIME',
-		'U',
-		'VAR',
-		'WBR',
-	);
+	$phrasing_tags = html_to_blocks_phrasing_tag_names();
 
 	$body_depth       = 2;
 	$top_level_depth  = $body_depth + 1;

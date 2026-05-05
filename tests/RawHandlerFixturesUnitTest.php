@@ -96,6 +96,15 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Already wrapped block-like fragments should skip normalization.
+	 */
+	public function test_single_block_root_can_skip_normalization(): void {
+		$this->assertTrue( html_to_blocks_can_skip_normalise_blocks( '<main><section><p>Wrapped</p></section></main>' ) );
+		$this->assertFalse( html_to_blocks_can_skip_normalise_blocks( '<span>Inline</span>' ) );
+		$this->assertFalse( html_to_blocks_can_skip_normalise_blocks( '<section>One</section><section>Two</section>' ) );
+	}
+
+	/**
 	 * Supported fixture matrix.
 	 *
 	 * @return array<string,array{html:string,expected_names:string[],snippets?:string[]}>
