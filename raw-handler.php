@@ -423,6 +423,10 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 	}
 
 	$attributes = $element->get_attributes();
+	if ( 'DIV' === $element->get_tag_name() && array() === $attributes ) {
+		return true;
+	}
+
 	$class_name = isset( $attributes['class'] ) ? (string) $attributes['class'] : '';
 	$style      = isset( $attributes['style'] ) ? (string) $attributes['style'] : '';
 	$role       = isset( $attributes['role'] ) ? strtolower( trim( (string) $attributes['role'] ) ) : '';
