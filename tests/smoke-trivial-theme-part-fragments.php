@@ -151,6 +151,7 @@ $flatten_blocks = static function ( array $blocks ) use ( &$flatten_blocks ): ar
 $html = <<<'HTML'
 <div class="hero-grid"></div>
 <div class="hero-glow"></div>
+<div></div>
 <br>
 <span class="dot dot-r"></span>
 <span class="dot dot-y"></span>
@@ -175,6 +176,7 @@ $assert( count( $fallback_events ) === 0, 'trivial-fragments-emit-no-fallback-ev
 $assert( in_array( 'core/group', $names, true ), 'hero-grid-converts-to-native-group', implode( ', ', $names ) );
 $assert( in_array( 'core/image', $names, true ), 'footer-svg-img-converts-to-core-image', implode( ', ', $names ) );
 $assert( ! str_contains( $serialized, '<!-- wp:html -->' ), 'serialized-output-has-no-wp-html', $serialized );
+$assert( ! str_contains( $serialized, '<div></div>' ), 'empty-structural-div-is-dropped', $serialized );
 $assert( ! str_contains( $serialized, '<!-- wp:html --><br>' ), 'standalone-br-does-not-serialize-as-html', $serialized );
 $assert( str_contains( $serialized, 'theme-part-footer-1-4532f13fa9ef8514.svg' ), 'footer-image-url-survives', $serialized );
 $assert( str_contains( $serialized, 'nav-logo-mark' ), 'svg-wrapper-class-survives', $serialized );
