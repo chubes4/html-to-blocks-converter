@@ -3414,10 +3414,11 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_card_grid_item_group( $element, callable $handler ): array {
-		$link_element = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element );
-		$content_html = $link_element ? $link_element->get_inner_html() : $element->get_inner_html();
-		$inner_blocks = self::create_card_grid_item_inner_blocks( $link_element ?: $element );
+		$children     = $element->get_child_elements();
+		$link_element = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element, $children );
+		$inner_blocks = self::create_card_grid_item_inner_blocks( $link_element ?: $element, $link_element ? null : $children );
 		if ( null === $inner_blocks ) {
+			$content_html = $link_element ? $link_element->get_inner_html() : $element->get_inner_html();
 			$inner_blocks = $handler( array( 'HTML' => $content_html ) );
 		}
 
@@ -3441,9 +3442,9 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param HTML_To_Blocks_HTML_Element $element Card content element.
 	 * @return array<int,array<string,mixed>>|null Blocks, or null when the shape needs the generic handler.
 	 */
-	private static function create_card_grid_item_inner_blocks( $element ): ?array {
+	private static function create_card_grid_item_inner_blocks( $element, ?array $children = null ): ?array {
 		$blocks = array();
-		foreach ( $element->get_child_elements() as $child ) {
+		foreach ( $children ?? $element->get_child_elements() as $child ) {
 			$block = self::create_card_grid_child_block( $child );
 			if ( null === $block ) {
 				return null;
@@ -3513,10 +3514,10 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param HTML_To_Blocks_HTML_Element $element The card item.
 	 * @return HTML_To_Blocks_HTML_Element|null Anchor child or null.
 	 */
-	private static function get_single_complex_card_anchor_child( $element ): ?HTML_To_Blocks_HTML_Element {
+	private static function get_single_complex_card_anchor_child( $element, ?array $children = null ): ?HTML_To_Blocks_HTML_Element {
 		$children = array_values(
 			array_filter(
-				$element->get_child_elements(),
+				$children ?? $element->get_child_elements(),
 				function ( $child ) {
 					return ! self::is_empty_decorative_element( $child );
 				}
