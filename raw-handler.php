@@ -31,6 +31,11 @@ function html_to_blocks_raw_handler( $args ) {
 		if ( ! $is_single_freeform ) {
 			return html_to_blocks_normalize_parsed_image_html_blocks( $blocks );
 		}
+
+		$freeform_html = html_to_blocks_get_parsed_block_html( $blocks[0] );
+		if ( '' !== trim( $freeform_html ) ) {
+			$html = $freeform_html;
+		}
 	}
 
 	$pieces = html_to_blocks_shortcode_converter( $html );
@@ -50,6 +55,31 @@ function html_to_blocks_raw_handler( $args ) {
 	}
 
 	return array_filter( $result );
+}
+
+/**
+ * Gets the HTML payload from a parsed block.
+ *
+ * @param array $block Parsed block array.
+ * @return string Block HTML.
+ */
+function html_to_blocks_get_parsed_block_html( array $block ): string {
+	if ( isset( $block['innerHTML'] ) && is_string( $block['innerHTML'] ) ) {
+		return $block['innerHTML'];
+	}
+
+	if ( empty( $block['innerContent'] ) || ! is_array( $block['innerContent'] ) ) {
+		return '';
+	}
+
+	$html = '';
+	foreach ( $block['innerContent'] as $content ) {
+		if ( is_string( $content ) ) {
+			$html .= $content;
+		}
+	}
+
+	return $html;
 }
 
 /**
@@ -161,7 +191,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$metrics         = null;
 	$convert_started = 0.0;
 	if ( $collect_metrics ) {
-		$metrics = array(
+		$metrics         = array(
 			'html_bytes'              => strlen( $html ),
 			'token_count'             => 0,
 			'top_level_element_count' => 0,
@@ -242,7 +272,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		}
 
 		$phase_started = $collect_metrics ? microtime( true ) : 0.0;
-		$element_html = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
+		$element_html  = html_to_blocks_extract_element_at_occurrence( $html, $tag_name, $tag_positions[ $tag_name ], $occurrence );
 		if ( $collect_metrics ) {
 			$metrics['extract_ms'] += html_to_blocks_elapsed_ms( $phase_started );
 		}
@@ -261,7 +291,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		}
 
 		$phase_started = $collect_metrics ? microtime( true ) : 0.0;
-		$element = HTML_To_Blocks_HTML_Element::from_html( $element_html );
+		$element       = HTML_To_Blocks_HTML_Element::from_html( $element_html );
 		if ( $collect_metrics ) {
 			$metrics['element_parse_ms'] += html_to_blocks_elapsed_ms( $phase_started );
 		}
@@ -313,7 +343,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			}
 
 			if ( $transform_fn && is_callable( $transform_fn ) ) {
-				$phase_started       = $collect_metrics ? microtime( true ) : 0.0;
+				$phase_started        = $collect_metrics ? microtime( true ) : 0.0;
 				$raw_handler_fn       = 'html_to_blocks_raw_handler';
 				$raw_handler_callback = function ( $nested_args ) use ( $args, $raw_handler_fn ) {
 					$nested_args = is_array( $nested_args ) ? $nested_args : array();
@@ -321,7 +351,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 				};
 				$block                = call_user_func( $transform_fn, $element, $raw_handler_callback, $args );
 				if ( $collect_metrics ) {
-					$elapsed                         = html_to_blocks_elapsed_ms( $phase_started );
+					$elapsed                          = html_to_blocks_elapsed_ms( $phase_started );
 					$metrics['transform_execute_ms'] += $elapsed;
 					html_to_blocks_record_transform_metric( $metrics, $metric_name, 'execute_ms', $elapsed );
 				}
@@ -342,14 +372,14 @@ function html_to_blocks_convert( $html, $args = array() ) {
 				$blocks[] = $block;
 			} else {
 				$phase_started = $collect_metrics ? microtime( true ) : 0.0;
-				$block_name = $raw_transform['blockName'];
-				$attributes = HTML_To_Blocks_Attribute_Parser::get_block_attributes(
+				$block_name    = $raw_transform['blockName'];
+				$attributes    = HTML_To_Blocks_Attribute_Parser::get_block_attributes(
 					$block_name,
 					$element_html
 				);
-				$blocks[]   = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
+				$blocks[]      = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
 				if ( $collect_metrics ) {
-					$elapsed                         = html_to_blocks_elapsed_ms( $phase_started );
+					$elapsed                          = html_to_blocks_elapsed_ms( $phase_started );
 					$metrics['transform_execute_ms'] += $elapsed;
 					html_to_blocks_record_transform_metric( $metrics, $metric_name, 'execute_ms', $elapsed );
 				}
