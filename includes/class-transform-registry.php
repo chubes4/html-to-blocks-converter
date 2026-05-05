@@ -2482,7 +2482,7 @@ class HTML_To_Blocks_Transform_Registry {
 			),
 			array(
 				'blockName' => 'core/group',
-				'priority'  => 12,
+				'priority'  => 3,
 				'isMatch'   => function ( $element ) {
 					return self::is_repeated_card_grid_element( $element );
 				},
