@@ -3753,7 +3753,7 @@ class HTML_To_Blocks_Transform_Registry {
 		return self::is_empty_element( $element )
 			&& (
 				self::is_project_card_status_element( $element )
-				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|blank|overlay|grain|noise|glow|gradient|dot|mark|bullet|icon|orb|blob|fill|img|image|media|photo|picture|thumb|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
+				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|line|blank|overlay|grain|noise|glow|gradient|scan|dot|mark|bullet|icon|orb|blob|fill|img|image|media|photo|picture|thumb|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
 				|| self::has_visual_placeholder_background( $element )
 			);
 	}
