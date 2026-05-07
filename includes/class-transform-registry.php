@@ -609,6 +609,18 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_list_transforms() {
 		return array(
 			array(
+				'blockName' => 'core/list',
+				'priority'  => 9,
+				'selector'  => 'dl',
+				'isMatch'   => function ( $element ) {
+					return 'DL' === $element->get_tag_name()
+						&& ! empty( self::get_definition_list_pairs( $element ) );
+				},
+				'transform' => function ( $element ) {
+					return self::create_definition_list_block_from_element( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 9,
 				'selector'  => 'ol,ul',
@@ -632,6 +644,137 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 		);
+	}
+
+	/**
+	 * Creates an unordered list block from a simple definition list.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $definition_list The dl element.
+	 * @return array Block array.
+	 */
+	private static function create_definition_list_block_from_element( $definition_list ): array {
+		$list_attributes = self::get_block_support_attributes( $definition_list, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'colors'     => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
+		$list_attributes = array_merge( $list_attributes, array( 'ordered' => false ) );
+
+		$inner_blocks = array();
+		foreach ( self::get_definition_list_pairs( $definition_list ) as $pair ) {
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/list-item',
+				array( 'content' => $pair['term'] . ': ' . $pair['description'] )
+			);
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/list', $list_attributes, $inner_blocks );
+	}
+
+	/**
+	 * Gets simple term/description pairs from a dl element.
+	 *
+	 * Supports generated fragments shaped as dl > div > dt + dd and plain
+	 * dl > dt + dd. More complex definition lists intentionally keep falling
+	 * through so unsupported structure remains visible to diagnostics.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $definition_list The dl element.
+	 * @return array<int,array{term:string,description:string}> Definition pairs.
+	 */
+	private static function get_definition_list_pairs( $definition_list ): array {
+		$children = $definition_list->get_child_elements();
+		if ( empty( $children ) ) {
+			return array();
+		}
+
+		if ( self::definition_list_has_only_wrapper_pairs( $children ) ) {
+			$pairs = array();
+			foreach ( $children as $child ) {
+				$pairs[] = self::get_definition_pair_from_wrapper( $child );
+			}
+
+			return array_values( array_filter( $pairs ) );
+		}
+
+		return self::get_direct_definition_list_pairs( $children );
+	}
+
+	/**
+	 * Checks whether all direct dl children are div wrappers around dt/dd pairs.
+	 *
+	 * @param array<int,HTML_To_Blocks_HTML_Element> $children Direct dl children.
+	 * @return bool True when every direct child is a simple pair wrapper.
+	 */
+	private static function definition_list_has_only_wrapper_pairs( array $children ): bool {
+		foreach ( $children as $child ) {
+			if ( 'DIV' !== $child->get_tag_name() || ! self::get_definition_pair_from_wrapper( $child ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Gets a term/description pair from a simple wrapper element.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $wrapper Candidate wrapper element.
+	 * @return array{term:string,description:string}|null Definition pair or null.
+	 */
+	private static function get_definition_pair_from_wrapper( $wrapper ): ?array {
+		$children = $wrapper->get_child_elements();
+		if ( count( $children ) !== 2 || 'DT' !== $children[0]->get_tag_name() || 'DD' !== $children[1]->get_tag_name() ) {
+			return null;
+		}
+
+		return self::create_definition_pair( $children[0], $children[1] );
+	}
+
+	/**
+	 * Gets term/description pairs from a dl with direct dt/dd children.
+	 *
+	 * @param array<int,HTML_To_Blocks_HTML_Element> $children Direct dl children.
+	 * @return array<int,array{term:string,description:string}> Definition pairs.
+	 */
+	private static function get_direct_definition_list_pairs( array $children ): array {
+		$pairs = array();
+		$count = count( $children );
+
+		for ( $index = 0; $index < $count; $index += 2 ) {
+			$term        = $children[ $index ] ?? null;
+			$description = $children[ $index + 1 ] ?? null;
+
+			if ( ! $term || ! $description || 'DT' !== $term->get_tag_name() || 'DD' !== $description->get_tag_name() ) {
+				return array();
+			}
+
+			$pair = self::create_definition_pair( $term, $description );
+			if ( ! $pair ) {
+				return array();
+			}
+
+			$pairs[] = $pair;
+		}
+
+		return $pairs;
+	}
+
+	/**
+	 * Creates a sanitized definition pair from dt and dd elements.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $term        The dt element.
+	 * @param HTML_To_Blocks_HTML_Element $description The dd element.
+	 * @return array{term:string,description:string}|null Definition pair or null.
+	 */
+	private static function create_definition_pair( $term, $description ): ?array {
+		$pair = array(
+			'term'        => trim( $term->get_inner_html() ),
+			'description' => trim( $description->get_inner_html() ),
+		);
+
+		return '' !== wp_strip_all_tags( $pair['term'] ) && '' !== wp_strip_all_tags( $pair['description'] ) ? $pair : null;
 	}
 
 	/**
@@ -3363,7 +3506,7 @@ class HTML_To_Blocks_Transform_Registry {
 		$cache_key    = spl_object_id( $element );
 		$children     = self::$repeated_card_grid_children[ $cache_key ] ?? $element->get_child_elements();
 		unset( self::$repeated_card_grid_children[ $cache_key ] );
-		$diagnostic   = self::get_commerce_product_grid_diagnostic( $element, $args );
+		$diagnostic = self::get_commerce_product_grid_diagnostic( $element, $args );
 
 		if ( null !== $diagnostic && function_exists( 'do_action' ) ) {
 			do_action( 'html_to_blocks_commerce_product_grid_detected', $diagnostic, $element, $args );
@@ -3477,9 +3620,11 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_card_grid_item_group( $element, callable $handler ): array {
-		$children     = $element->get_child_elements();
-		$link_element = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element, $children );
-		$inner_blocks = self::create_card_grid_item_inner_blocks( $link_element ?: $element, $link_element ? null : $children );
+		$children      = $element->get_child_elements();
+		$link_element  = 'A' === $element->get_tag_name() ? $element : self::get_single_complex_card_anchor_child( $element, $children );
+		$card_element  = $link_element ? $link_element : $element;
+		$card_children = $link_element ? null : $children;
+		$inner_blocks  = self::create_card_grid_item_inner_blocks( $card_element, $card_children );
 		if ( null === $inner_blocks ) {
 			$content_html = $link_element ? $link_element->get_inner_html() : $element->get_inner_html();
 			$inner_blocks = $handler( array( 'HTML' => $content_html ) );
@@ -3537,7 +3682,10 @@ class HTML_To_Blocks_Transform_Registry {
 			return HTML_To_Blocks_Block_Factory::create_block(
 				'core/heading',
 				array_merge(
-					self::get_block_support_attributes( $child, array( 'anchor' => true, 'class_name' => true ) ),
+					self::get_block_support_attributes( $child, array(
+						'anchor'     => true,
+						'class_name' => true,
+					) ),
 					array(
 						'level'   => (int) substr( $tag, 1 ),
 						'content' => $child->get_inner_html(),
@@ -3558,7 +3706,10 @@ class HTML_To_Blocks_Transform_Registry {
 			return HTML_To_Blocks_Block_Factory::create_block(
 				'core/paragraph',
 				array_merge(
-					self::get_block_support_attributes( $child, array( 'anchor' => true, 'class_name' => true ) ),
+					self::get_block_support_attributes( $child, array(
+						'anchor'     => true,
+						'class_name' => true,
+					) ),
 					array( 'content' => $child->get_inner_html() )
 				)
 			);
