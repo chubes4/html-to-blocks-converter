@@ -76,7 +76,7 @@ foreach ( [ 'esc_attr', 'esc_html', 'esc_url' ] as $function_name ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $text ) {
-		return wp_strip_all_tags( $text );
+		return trim( preg_replace( '/<[^>]*>/', '', (string) $text ) );
 	}
 }
 
@@ -190,6 +190,33 @@ $unsafe_names    = array_map(
 
 $assert( in_array( 'core/html', $unsafe_names, true ), 'non-empty-task-check-input-still-falls-back', implode( ', ', $unsafe_names ) );
 $assert( count( $fallback_events ) > 0, 'non-empty-task-check-input-emits-fallback-event', (string) count( $fallback_events ) );
+
+$fallback_events          = [];
+$checkbox_label_blocks    = html_to_blocks_raw_handler( [ 'HTML' => '<label><input type="checkbox"> Breathable harvest bag</label>' ] );
+$checkbox_label_names     = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$flatten_blocks( $checkbox_label_blocks )
+);
+$checkbox_label_serialized = serialize_blocks( $checkbox_label_blocks );
+
+$assert( ! in_array( 'core/html', $checkbox_label_names, true ), 'checkbox-label-does-not-use-core-html', implode( ', ', $checkbox_label_names ) );
+$assert( 0 === count( $fallback_events ), 'checkbox-label-emits-no-fallback-events', (string) count( $fallback_events ) );
+$assert( str_contains( $checkbox_label_serialized, 'Breathable harvest bag' ), 'checkbox-label-text-survives', $checkbox_label_serialized );
+$assert( ! str_contains( $checkbox_label_serialized, '<input' ), 'checkbox-label-input-is-dropped', $checkbox_label_serialized );
+
+$fallback_events       = [];
+$form_checkbox_blocks  = html_to_blocks_raw_handler( [ 'HTML' => '<label><input type="checkbox" name="field[]"> Real form option</label>' ] );
+$form_checkbox_names   = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$flatten_blocks( $form_checkbox_blocks )
+);
+
+$assert( in_array( 'core/html', $form_checkbox_names, true ), 'named-checkbox-label-still-falls-back', implode( ', ', $form_checkbox_names ) );
+$assert( count( $fallback_events ) > 0, 'named-checkbox-label-emits-fallback-event', (string) count( $fallback_events ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {

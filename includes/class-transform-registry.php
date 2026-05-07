@@ -3968,7 +3968,11 @@ class HTML_To_Blocks_Transform_Registry {
 						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
-					$content               = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
+					$content = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
+					if ( self::is_static_checkbox_label( $element ) ) {
+						$content = trim( preg_replace( '/<\s*input\b[^>]*>/i', '', $content ) );
+					}
+
 					$attributes            = self::get_block_support_attributes( $element, array(
 						'anchor'     => true,
 						'align'      => true,
@@ -4007,6 +4011,52 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/<\s*(?:input|select|textarea|button|output|meter|progress)\b/i', $inner_html ) !== 1;
+		if ( preg_match( '/<\s*(?:select|textarea|button|output|meter|progress)\b/i', $inner_html ) === 1 ) {
+			return false;
+		}
+
+		if ( preg_match( '/<\s*input\b/i', $inner_html ) !== 1 ) {
+			return true;
+		}
+
+		return self::is_static_checkbox_label( $element );
+	}
+
+	/**
+	 * Checks whether a label contains only decorative checkbox inputs plus visible text.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when checkbox inputs can be dropped and text preserved.
+	 */
+	private static function is_static_checkbox_label( $element ): bool {
+		if ( 'LABEL' !== $element->get_tag_name() || $element->has_attribute( 'for' ) || $element->has_attribute( 'form' ) ) {
+			return false;
+		}
+
+		$inner_html = $element->get_inner_html();
+		if ( trim( wp_strip_all_tags( $inner_html ) ) === '' ) {
+			return false;
+		}
+
+		if ( preg_match_all( '/<\s*input\b[^>]*>/i', $inner_html, $matches ) < 1 ) {
+			return false;
+		}
+
+		foreach ( $matches[0] as $input_html ) {
+			$type = '';
+			if ( preg_match( '/\stype\s*=\s*(["\']?)([^"\'\s>]+)\1/i', $input_html, $type_match ) === 1 ) {
+				$type = strtolower( $type_match[2] );
+			}
+
+			if ( 'checkbox' !== $type ) {
+				return false;
+			}
+
+			if ( preg_match( '/\s(?:id|name|value|form|required|on[a-z0-9_-]*)\b/i', $input_html ) === 1 ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
