@@ -339,9 +339,9 @@ class HTML_To_Blocks_Block_Factory {
 		$is_resized   = $is_svg_image && ! empty( $attributes['width'] ) && ! empty( $attributes['height'] );
 
 		if ( $is_resized ) {
-			$width              = self::image_style_dimension( $attributes['width'] );
-			$height             = self::image_style_dimension( $attributes['height'] );
-			$img_attrs['style'] = 'width:' . $width . ';height:' . $height;
+			$width               = self::image_style_dimension( $attributes['width'] );
+			$height              = self::image_style_dimension( $attributes['height'] );
+			$img_attrs['style']  = 'width:' . $width . ';height:' . $height;
 			$img_attrs['width']  = null;
 			$img_attrs['height'] = null;
 		}
