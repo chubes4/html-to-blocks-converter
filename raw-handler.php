@@ -312,6 +312,29 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			continue;
 		}
 
+		if ( html_to_blocks_is_product_card_container( $element ) ) {
+			$inner_blocks = html_to_blocks_raw_handler(
+				array_merge(
+					$args,
+					array( 'HTML' => $element->get_inner_html() )
+				)
+			);
+
+			if ( ! empty( $inner_blocks ) && ! html_to_blocks_contains_block_name( $inner_blocks, 'core/html' ) ) {
+				$blocks[] = array(
+					'blockName'    => 'core/group',
+					'attrs'        => array(
+						'className' => trim( (string) $element->get_attribute( 'class' ) ),
+						'layout'    => array( 'type' => 'constrained' ),
+					),
+					'innerBlocks'  => $inner_blocks,
+					'innerHTML'    => '',
+					'innerContent' => array(),
+				);
+				continue;
+			}
+		}
+
 		if ( html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
 			$ignored_decorative_html_length += strlen( $element_html );
 			continue;
