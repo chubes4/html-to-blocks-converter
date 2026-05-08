@@ -436,7 +436,6 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	return $blocks;
 }
-
 /**
  * Checks whether an empty div/span is a safe visual-only icon placeholder.
  *
