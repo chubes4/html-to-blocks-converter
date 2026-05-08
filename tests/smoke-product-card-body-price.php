@@ -73,6 +73,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 					'core/group',
 					'core/heading',
 					'core/html',
+					'core/image',
 					'core/paragraph',
 				],
 				true
