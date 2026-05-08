@@ -324,6 +324,18 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		}
 
 		if ( ! $raw_transform ) {
+			if ( html_to_blocks_is_product_card_fragment( $element ) ) {
+				$nested_blocks = call_user_func( 'html_to_blocks_raw_handler', array_merge( $args, array( 'HTML' => $element->get_inner_html() ) ) );
+				$blocks[]      = HTML_To_Blocks_Block_Factory::create_block(
+					'core/group',
+					array(
+						'className' => trim( (string) $element->get_attribute( 'class' ) ),
+					),
+					$nested_blocks
+				);
+				continue;
+			}
+
 			if ( $collect_metrics ) {
 				html_to_blocks_record_transform_metric( $metrics, 'fallback:no_transform', 'count', 1 );
 			}
@@ -435,6 +447,38 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	}
 
 	return $blocks;
+}
+
+/**
+ * Checks whether an unsupported wrapper is a product-card content fragment.
+ *
+ * Product cards commonly arrive as a semantic wrapper around an image, heading,
+ * price text, and CTA link. When no dedicated raw transform matches that wrapper,
+ * preserving the wrapper as a group and recursively converting its children is a
+ * safer structured fallback than emitting the entire card as opaque core/html.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element The source element.
+ * @return bool True when the element looks like a product card wrapper.
+ */
+function html_to_blocks_is_product_card_fragment( $element ): bool {
+	if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'ARTICLE', 'SECTION' ), true ) ) {
+		return false;
+	}
+
+	$class_name = (string) $element->get_attribute( 'class' );
+	if ( preg_match( '/(?:^|[-_\s])product[-_\s]?card(?:$|[-_\s])/i', $class_name ) !== 1 ) {
+		return false;
+	}
+
+	$inner_html = $element->get_inner_html();
+	$has_media  = preg_match( '/<(?:figure|img)\b/i', $inner_html ) === 1;
+	$has_title  = preg_match( '/<h[1-6]\b/i', $inner_html ) === 1;
+	$has_price  = preg_match( '/class=["\'][^"\']*(?:^|[-_\s])price(?:$|[-_\s])[^"\']*["\']/i', $inner_html ) === 1
+		|| preg_match( '/(?:\$|€|£)\s*\d/', wp_strip_all_tags( $inner_html ) ) === 1;
+	$has_cta    = preg_match( '/<a\b[^>]*class=["\'][^"\']*(?:^|[-_\s])cta(?:$|[-_\s])[^"\']*["\']/i', $inner_html ) === 1
+		|| preg_match( '/<a\b[^>]*>\s*(?:buy|shop|add to cart|view product)/i', $inner_html ) === 1;
+
+	return $has_media && $has_title && $has_price && $has_cta;
 }
 
 /**
