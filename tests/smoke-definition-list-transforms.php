@@ -151,6 +151,15 @@ $direct_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl><dt>Origin</dt><dd
 $assert( ( $direct_blocks[0]['blockName'] ?? '' ) === 'core/list', 'direct-definition-list-becomes-list' );
 $assert( ( $direct_blocks[0]['innerBlocks'][0]['attrs']['content'] ?? '' ) === 'Origin: Charleston', 'direct-definition-list-content' );
 
+$wrapper_stat_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl class="hero-stats" aria-label="Store highlights"><div><dt>5</dt><dd>workflow categories</dd></div><div><dt>18+</dt><dd>bench-ready tools</dd></div><div><dt>0</dt><dd>guesswork mornings</dd></div></dl>' ] );
+$assert( count( $wrapper_stat_blocks ) === 1, 'wrapped-stat-definition-list-produces-single-block' );
+$assert( ( $wrapper_stat_blocks[0]['blockName'] ?? '' ) === 'core/list', 'wrapped-stat-definition-list-becomes-list' );
+$assert( ( $wrapper_stat_blocks[0]['attrs']['className'] ?? '' ) === 'hero-stats', 'wrapped-stat-definition-list-preserves-class' );
+$assert( count( $wrapper_stat_blocks[0]['innerBlocks'] ?? [] ) === 3, 'wrapped-stat-definition-list-keeps-pair-count' );
+$assert( ( $wrapper_stat_blocks[0]['innerBlocks'][0]['attrs']['content'] ?? '' ) === '5: workflow categories', 'wrapped-stat-definition-list-first-content' );
+$assert( ( $wrapper_stat_blocks[0]['innerBlocks'][1]['attrs']['content'] ?? '' ) === '18+: bench-ready tools', 'wrapped-stat-definition-list-second-content' );
+$assert( ( $wrapper_stat_blocks[0]['innerBlocks'][2]['attrs']['content'] ?? '' ) === '0: guesswork mornings', 'wrapped-stat-definition-list-third-content' );
+
 $complex_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl><div><dt>Term</dt><dd>Description</dd><p>Extra</p></div></dl>' ] );
 $complex_names  = $flatten_block_names( $complex_blocks );
 $assert( in_array( 'core/html', $complex_names, true ), 'complex-definition-list-still-falls-back', implode( ', ', $complex_names ) );
