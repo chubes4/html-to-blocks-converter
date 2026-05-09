@@ -200,6 +200,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/group', 'core/heading', 'core/paragraph' ),
 				'snippets'       => array( 'site-shell', 'hero', 'Site Editor Template Smoke', 'Template raw HTML should become blocks.' ),
 			),
+			'plain-hero-section' => array(
+				'html'           => '<section class="hero"><h1>Smoke Test Storefront</h1><p>Synthetic fixture for iterator smoke runs.</p></section>',
+				'expected_names' => array( 'core/group', 'core/heading', 'core/paragraph' ),
+				'snippets'       => array( 'hero', 'Smoke Test Storefront', 'Synthetic fixture for iterator smoke runs.' ),
+			),
 			'columns'          => array(
 				'html'           => '<div class="wp-block-columns"><div class="wp-block-column"><p>Left</p></div><div class="wp-block-column"><p>Right</p></div></div>',
 				'expected_names' => array( 'core/columns', 'core/column', 'core/paragraph', 'core/column', 'core/paragraph' ),
