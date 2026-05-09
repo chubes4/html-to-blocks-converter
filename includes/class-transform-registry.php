@@ -3159,7 +3159,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/(?:^|\s)(?:hero|cover|banner|masthead)(?:\s|$)/i', $element->get_attribute( 'class' ) ) === 1;
+		return self::class_matches( $element, '/(?:^|[-_\s])(?:hero|cover|banner|masthead)(?:$|[-_\s])/i' );
 	}
 
 	/**
