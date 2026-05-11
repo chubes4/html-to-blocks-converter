@@ -248,6 +248,18 @@ $assert(
 	$custom_separator_block['innerHTML'] ?? ''
 );
 
+$ruler_separator = new Block_Supports_Smoke_Element( 'div', [ 'class' => 'ruler', 'aria-hidden' => 'true' ] );
+$ruler_separator_transform = $find_transform( $ruler_separator, 'core/separator' );
+$ruler_separator_block     = $ruler_separator_transform ? call_user_func( $ruler_separator_transform['transform'], $ruler_separator ) : null;
+
+$assert( $ruler_separator_block && 'core/separator' === $ruler_separator_block['blockName'], 'ruler-separator-transform-found' );
+$assert( ( $ruler_separator_block['attrs']['className'] ?? '' ) === 'ruler', 'ruler-separator-preserves-class' );
+$assert(
+	( $ruler_separator_block['innerHTML'] ?? '' ) === '<hr class="wp-block-separator has-css-opacity ruler"/>',
+	'ruler-separator-serializes-as-native-separator',
+	$ruler_separator_block['innerHTML'] ?? ''
+);
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
