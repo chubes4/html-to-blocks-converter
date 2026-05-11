@@ -2475,6 +2475,28 @@ class HTML_To_Blocks_Transform_Registry {
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/separator', $attributes );
 				},
 			),
+			array(
+				'blockName' => 'core/separator',
+				'priority'  => 11,
+				'selector'  => 'div,span',
+				'isMatch'   => function ( $element ) {
+					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )
+						&& self::is_empty_element( $element )
+						&& self::class_matches( $element, '/(?:^|[-_\s])(divider|separator|rule|ruler)(?:$|[-_\s]|\d)/i' );
+				},
+				'transform' => function ( $element ) {
+					$attributes = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'class_name' => true,
+						'align'      => true,
+						'colors'     => true,
+						'spacing'    => true,
+						'border'     => true,
+					) );
+
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/separator', $attributes );
+				},
+			),
 		);
 	}
 
