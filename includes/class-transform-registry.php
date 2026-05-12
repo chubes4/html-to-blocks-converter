@@ -39,6 +39,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_list_transforms(),
 			self::get_form_transforms(),
 			self::get_button_transforms(),
+			self::get_form_transforms(),
 			self::get_media_transforms(),
 			self::get_image_transforms(),
 			self::get_details_transforms(),
