@@ -229,6 +229,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/buttons', 'core/button', 'core/button' ),
 				'snippets'       => array( 'hero-actions', '/early-access/', 'btn btn-primary', 'Get Early Access', '/proof/', 'btn btn-ghost', 'See the Proof' ),
 			),
+			'static-placeholder-form' => array(
+				'html'           => '<form class="intake-form" action="#" method="post" aria-label="Short consultation intake form"><label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email" placeholder="you@example.com"></label><input type="submit" value="Request consultation"></form>',
+				'expected_names' => array( 'core/group', 'core/paragraph', 'core/paragraph', 'core/buttons', 'core/button' ),
+				'snippets'       => array( 'intake-form', 'Parent or guardian name', 'Email', 'Request consultation' ),
+			),
 			'cta-actions'      => array(
 				'html'           => '<div class="cta-actions"><a href="/signup/" class="cta-primary">Start Now <img src="/assets/arrow.svg" alt="" class="materialized-icon"></a><a href="/contact/" class="cta-secondary">Contact Us</a></div>',
 				'expected_names' => array( 'core/buttons', 'core/button', 'core/button' ),
