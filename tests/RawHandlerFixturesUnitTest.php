@@ -205,6 +205,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/heading', 'core/paragraph' ),
 				'snippets'       => array( 'hero', 'Smoke Test Storefront', 'Synthetic fixture for iterator smoke runs.' ),
 			),
+			'static-placeholder-form' => array(
+				'html'           => '<form class="intake-form" action="#" method="post" aria-label="Short consultation intake form"><label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email" placeholder="you@example.com"></label><label>Upcoming meeting date <input type="date" name="meeting-date"></label><label>What do you need help with? <textarea name="details" placeholder="Briefly describe your IEP question"></textarea></label><button type="submit">Request consultation details</button></form>',
+				'expected_names' => array( 'core/group', 'core/paragraph', 'core/paragraph', 'core/paragraph', 'core/paragraph', 'core/buttons', 'core/button' ),
+				'snippets'       => array( 'intake-form', 'Parent or guardian name', 'Email', 'Upcoming meeting date', 'What do you need help with?', 'Request consultation details' ),
+			),
 			'columns'          => array(
 				'html'           => '<div class="wp-block-columns"><div class="wp-block-column"><p>Left</p></div><div class="wp-block-column"><p>Right</p></div></div>',
 				'expected_names' => array( 'core/columns', 'core/column', 'core/paragraph', 'core/column', 'core/paragraph' ),
@@ -300,6 +305,12 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/html' ),
 				'fallback_tag'   => 'X-CARD',
 				'snippet'        => 'Custom payload',
+			),
+			'current-url-form'       => array(
+				'html'           => '<form class="intake-form" method="post"><label>Name <input type="text" name="name"></label><button type="submit">Submit</button></form>',
+				'expected_names' => array( 'core/html' ),
+				'fallback_tag'   => 'FORM',
+				'snippet'        => 'intake-form',
 			),
 			'app-widget'              => array(
 				'html'           => '<div data-widget="stock-ticker"><span>AAPL</span></div>',
