@@ -37,6 +37,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_svg_icon_transforms(),
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
+			self::get_form_transforms(),
 			self::get_button_transforms(),
 			self::get_media_transforms(),
 			self::get_image_transforms(),
@@ -1046,6 +1047,130 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return null;
+	}
+
+	/**
+	 * core/group transform for static placeholder forms.
+	 *
+	 * Static-site generators often use non-submitting form markup to show an intended
+	 * intake path. When a form has no real action target, preserve the visible labels
+	 * and submit text as editable blocks instead of falling back to core/html.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_form_transforms() {
+		return array(
+			array(
+				'blockName' => 'core/group',
+				'priority'  => 8,
+				'selector'  => 'form',
+				'isMatch'   => function ( $element ) {
+					return self::is_static_placeholder_form( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_placeholder_form_group( $element );
+				},
+			),
+		);
+	}
+
+	/**
+	 * Checks whether a form is a non-submitting static placeholder.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the form can safely become editable static blocks.
+	 */
+	private static function is_static_placeholder_form( $element ): bool {
+		if ( 'FORM' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		$action = trim( (string) ( $element->get_attribute( 'action' ) ?? '' ) );
+		if ( '' !== $action && '#' !== $action ) {
+			return false;
+		}
+
+		if ( preg_match( '/\son[a-z]+\s*=/i', $element->get_outer_html() ) === 1 ) {
+			return false;
+		}
+
+		return ! empty( self::get_static_placeholder_form_items( $element->get_inner_html() ) );
+	}
+
+	/**
+	 * Creates a group from static form labels and submit controls.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Form element.
+	 * @return array Block array.
+	 */
+	private static function create_static_placeholder_form_group( $element ): array {
+		$blocks = array();
+		foreach ( self::get_static_placeholder_form_items( $element->get_inner_html() ) as $item ) {
+			$blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/paragraph',
+				array( 'content' => self::escape_static_text_for_block( $item ) )
+			);
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			$blocks
+		);
+	}
+
+	/**
+	 * Extracts visible static text from label and submit-like controls.
+	 *
+	 * @param string $html Inner form HTML.
+	 * @return array<int,string> Visible form item text.
+	 */
+	private static function get_static_placeholder_form_items( string $html ): array {
+		$items = array();
+
+		if ( preg_match_all( '/<label\b[^>]*>(.*?)<\/label>/is', $html, $label_matches ) ) {
+			foreach ( $label_matches[1] as $label_html ) {
+				$text = trim( preg_replace( '/\s+/', ' ', strip_tags( $label_html ) ) );
+				if ( '' !== $text ) {
+					$items[] = $text;
+				}
+			}
+		}
+
+		if ( preg_match_all( '/<button\b([^>]*)>(.*?)<\/button>/is', $html, $button_matches, PREG_SET_ORDER ) ) {
+			foreach ( $button_matches as $match ) {
+				$attributes = self::parse_attribute_string( $match[1] );
+				$type       = strtolower( trim( (string) ( $attributes['type'] ?? 'submit' ) ) );
+				if ( in_array( $type, array( '', 'button', 'submit' ), true ) ) {
+					$text = trim( preg_replace( '/\s+/', ' ', strip_tags( $match[2] ) ) );
+					if ( '' !== $text ) {
+						$items[] = $text;
+					}
+				}
+			}
+		}
+
+		if ( preg_match_all( '/<input\b([^>]*)>/is', $html, $input_matches, PREG_SET_ORDER ) ) {
+			foreach ( $input_matches as $match ) {
+				$attributes = self::parse_attribute_string( $match[1] );
+				$type       = strtolower( trim( (string) ( $attributes['type'] ?? 'text' ) ) );
+				if ( in_array( $type, array( 'button', 'submit' ), true ) && ! empty( $attributes['value'] ) ) {
+					$items[] = trim( preg_replace( '/\s+/', ' ', (string) $attributes['value'] ) );
+				}
+			}
+		}
+
+		return array_values( array_unique( $items ) );
+	}
+
+	/**
+	 * Escapes plain static text for paragraph content.
+	 *
+	 * @param string $text Text content.
+	 * @return string Escaped text.
+	 */
+	private static function escape_static_text_for_block( string $text ): string {
+		return htmlspecialchars( html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' ), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 	}
 
 	/**
