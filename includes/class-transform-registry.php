@@ -38,6 +38,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
 			self::get_button_transforms(),
+			self::get_form_transforms(),
 			self::get_media_transforms(),
 			self::get_image_transforms(),
 			self::get_details_transforms(),
@@ -176,6 +177,105 @@ class HTML_To_Blocks_Transform_Registry {
 
 		$slug = trim( (string) $element->get_attribute( 'data-bfb-template-part' ) );
 		return preg_match( '/^[a-z0-9_.-]+$/i', $slug ) === 1 ? $slug : '';
+	}
+
+	/**
+	 * core/group transforms for static placeholder form markup.
+	 *
+	 * Static generated sites often include non-submitting intake/contact mockups with
+	 * labels, inputs, and a submit-looking control to communicate intended UX. When
+	 * the form cannot submit anywhere, preserve its visible copy as editable native
+	 * blocks instead of retaining the whole form as core/html.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_form_transforms() {
+		return array(
+			array(
+				'blockName' => 'core/group',
+				'priority'  => 4,
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'FORM' && self::is_static_placeholder_form( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_placeholder_form_group( $element );
+				},
+			),
+		);
+	}
+
+	/**
+	 * Checks whether a form is a non-submitting static placeholder.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Form element.
+	 * @return bool
+	 */
+	private static function is_static_placeholder_form( $element ) {
+		$action = trim( (string) ( $element->get_attribute( 'action' ) ?? '' ) );
+		$method = strtolower( trim( (string) ( $element->get_attribute( 'method' ) ?? '' ) ) );
+
+		if ( ! in_array( $action, array( '', '#' ), true ) ) {
+			return false;
+		}
+
+		if ( '' !== $method && ! in_array( $method, array( 'get', 'post' ), true ) ) {
+			return false;
+		}
+
+		$fields = array_merge(
+			$element->query_selector_all( 'input' ),
+			$element->query_selector_all( 'textarea' ),
+			$element->query_selector_all( 'select' )
+		);
+
+		if ( empty( $fields ) ) {
+			return false;
+		}
+
+		foreach ( $fields as $field ) {
+			if ( $field->has_attribute( 'required' ) || $field->has_attribute( 'formaction' ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Creates an editable native block group from visible static form copy.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Form element.
+	 * @return array Block structure.
+	 */
+	private static function create_static_placeholder_form_group( $element ) {
+		$inner_blocks = array();
+		$labels       = $element->query_selector_all( 'label' );
+
+		foreach ( $labels as $label ) {
+			$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $label->get_inner_html() ) ) );
+			if ( '' !== $text ) {
+				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', array( 'content' => esc_html( $text ) ) );
+			}
+		}
+
+		$buttons = array_merge( $element->query_selector_all( 'button' ), $element->query_selector_all( 'input[type=submit]' ) );
+		foreach ( $buttons as $button ) {
+			$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $button->get_inner_html() ) ) );
+			if ( '' === $text ) {
+				$text = trim( (string) ( $button->get_attribute( 'value' ) ?? '' ) );
+			}
+			if ( '' !== $text ) {
+				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/buttons', array(), array(
+					HTML_To_Blocks_Block_Factory::create_block( 'core/button', array( 'text' => esc_html( $text ), 'url' => '#' ) ),
+				) );
+			}
+		}
+
+		if ( empty( $inner_blocks ) ) {
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', array( 'content' => esc_html( trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $element->get_inner_html() ) ) ) ) ) );
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/group', array( 'className' => trim( (string) ( $element->get_attribute( 'class' ) ?? '' ) ) ), $inner_blocks );
 	}
 
 	/**
