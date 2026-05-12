@@ -257,7 +257,7 @@ class HTML_To_Blocks_Block_Factory {
 				return '<pre' . self::html_attrs( array( 'class' => self::merge_block_class( 'wp-block-preformatted', $attributes ) ) ) . '>' . $content . '</pre>';
 
 			case 'core/separator':
-				return '<hr' . self::html_attrs( array( 'class' => self::merge_block_class( 'wp-block-separator has-css-opacity', $attributes ) ) ) . '/>';
+				return '<hr' . self::html_attrs( array( 'class' => self::merge_block_class( 'wp-block-separator has-css-opacity', $attributes ) ) ) . ' />';
 
 			case 'core/table':
 				return self::generate_table_html( $attributes );
