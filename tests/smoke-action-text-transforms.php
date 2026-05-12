@@ -103,6 +103,34 @@ $handler = function ( $args ) {
 };
 
 // -------------------------------------------------------------------------
+// Static placeholder forms: non-submitting form UI becomes editable text.
+// -------------------------------------------------------------------------
+
+$placeholder_form = new HTML_To_Blocks_HTML_Element(
+	'form',
+	[ 'class' => 'intake-form', 'action' => '#', 'method' => 'post', 'aria-label' => 'Short consultation intake form' ],
+	'<form class="intake-form" action="#" method="post" aria-label="Short consultation intake form"><label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email" placeholder="you@example.com"></label><label>Upcoming meeting date <input type="date" name="meeting-date"></label><label>What do you need help with? <textarea name="details"></textarea></label><button type="submit">Request consultation details</button></form>',
+	'<label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email" placeholder="you@example.com"></label><label>Upcoming meeting date <input type="date" name="meeting-date"></label><label>What do you need help with? <textarea name="details"></textarea></label><button type="submit">Request consultation details</button>'
+);
+$placeholder_form_transform = $find_transform( $placeholder_form );
+$placeholder_form_block     = call_user_func( $placeholder_form_transform['transform'], $placeholder_form, $handler );
+
+$smoke_assert( 'core/group' === $placeholder_form_transform['blockName'], 'placeholder-form-transform-selected' );
+$smoke_assert( 'core/group' === $placeholder_form_block['blockName'], 'placeholder-form-wrapper-block-name' );
+$smoke_assert( count( $placeholder_form_block['innerBlocks'] ) === 5, 'placeholder-form-has-static-text-items' );
+$smoke_assert( 'core/paragraph' === $placeholder_form_block['innerBlocks'][0]['blockName'], 'placeholder-form-first-item-paragraph' );
+$smoke_assert( 'Parent or guardian name' === $placeholder_form_block['innerBlocks'][0]['attrs']['content'], 'placeholder-form-label-text-preserved' );
+$smoke_assert( 'Request consultation details' === $placeholder_form_block['innerBlocks'][4]['attrs']['content'], 'placeholder-form-submit-text-preserved' );
+
+$active_form = new HTML_To_Blocks_HTML_Element(
+	'form',
+	[ 'action' => '/contact', 'method' => 'post' ],
+	'<form action="/contact" method="post"><label>Email <input type="email" name="email"></label><button type="submit">Send</button></form>',
+	'<label>Email <input type="email" name="email"></label><button type="submit">Send</button>'
+);
+$smoke_assert( null === $find_transform( $active_form ), 'active-form-does-not-transform' );
+
+// -------------------------------------------------------------------------
 // Buttons: native WordPress button anchors become core/buttons > core/button.
 // -------------------------------------------------------------------------
 
