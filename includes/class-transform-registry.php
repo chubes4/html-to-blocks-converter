@@ -2682,8 +2682,12 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		$action = $element->has_attribute( 'action' ) ? trim( (string) $element->get_attribute( 'action' ) ) : '';
-		if ( '' !== $action && '#' !== $action ) {
+		if ( ! $element->has_attribute( 'action' ) ) {
+			return false;
+		}
+
+		$action = trim( (string) $element->get_attribute( 'action' ) );
+		if ( '#' !== $action ) {
 			return false;
 		}
 

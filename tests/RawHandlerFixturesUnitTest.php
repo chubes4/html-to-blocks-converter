@@ -306,6 +306,12 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'fallback_tag'   => 'X-CARD',
 				'snippet'        => 'Custom payload',
 			),
+			'current-url-form'       => array(
+				'html'           => '<form class="intake-form" method="post"><label>Name <input type="text" name="name"></label><button type="submit">Submit</button></form>',
+				'expected_names' => array( 'core/html' ),
+				'fallback_tag'   => 'FORM',
+				'snippet'        => 'intake-form',
+			),
 			'app-widget'              => array(
 				'html'           => '<div data-widget="stock-ticker"><span>AAPL</span></div>',
 				'expected_names' => array( 'core/html' ),
