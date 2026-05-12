@@ -38,6 +38,7 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_heading_transforms(),
 			self::get_list_transforms(),
 			self::get_button_transforms(),
+			self::get_form_transforms(),
 			self::get_media_transforms(),
 			self::get_image_transforms(),
 			self::get_details_transforms(),
@@ -1046,6 +1047,157 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Static placeholder form transforms.
+	 *
+	 * WordPress core has no native form block. For non-submitting design placeholder
+	 * forms, keep the visible intake copy as native group/paragraph/button blocks
+	 * instead of preserving inert controls as core/html.
+	 *
+	 * @return array Transform definitions
+	 */
+	private static function get_form_transforms() {
+		return array(
+			array(
+				'blockName' => 'core/group',
+				'priority'  => 7,
+				'selector'  => 'form',
+				'isMatch'   => function ( $element ) {
+					return self::is_static_placeholder_form( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_placeholder_form_group( $element );
+				},
+			),
+		);
+	}
+
+	/**
+	 * Checks whether a form is an inert design placeholder rather than a live form.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the form can safely become static native blocks.
+	 */
+	private static function is_static_placeholder_form( $element ): bool {
+		if ( 'FORM' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		$action = trim( (string) $element->get_attribute( 'action' ) );
+		if ( '' !== $action && '#' !== $action ) {
+			return false;
+		}
+
+		$inner_html = $element->get_inner_html();
+		if ( 1 !== preg_match( '/<(?:label|input|textarea|select|button)\b/i', $inner_html ) ) {
+			return false;
+		}
+
+		return 1 === preg_match( '/\b(?:placeholder|aria-label|data-placeholder)\b|static\s+form|design\s+placeholder/i', $element->get_outer_html() );
+	}
+
+	/**
+	 * Creates a native group representation of a static placeholder form.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Form element.
+	 * @return array Block array.
+	 */
+	private static function create_static_placeholder_form_group( $element ): array {
+		$inner_blocks = array();
+
+		foreach ( self::get_static_form_line_items( $element->get_inner_html() ) as $line ) {
+			if ( '' === $line ) {
+				continue;
+			}
+
+			if ( self::is_static_form_submit_label( $line ) ) {
+				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+					'core/buttons',
+					array(),
+					array(
+						HTML_To_Blocks_Block_Factory::create_block(
+							'core/button',
+							array(
+								'text' => esc_html( $line ),
+								'url'  => '#',
+							)
+						),
+					)
+				);
+				continue;
+			}
+
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/paragraph',
+				array( 'content' => esc_html( $line ) )
+			);
+		}
+
+		if ( array() === $inner_blocks ) {
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/paragraph',
+				array( 'content' => esc_html( trim( wp_strip_all_tags( $element->get_inner_html() ) ) ) )
+			);
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Extract visible labels, placeholders, and button text from a placeholder form.
+	 *
+	 * @param string $html Form inner HTML.
+	 * @return array<int,string> Visible line items.
+	 */
+	private static function get_static_form_line_items( string $html ): array {
+		$items = array();
+
+		if ( preg_match_all( '/<label\b[^>]*>(.*?)<\/label>/is', $html, $label_matches ) ) {
+			foreach ( $label_matches[1] as $label_html ) {
+				$label_text = trim( wp_strip_all_tags( preg_replace( '/<(?:input|textarea|select|button)\b.*$/is', '', $label_html ) ) );
+				if ( '' !== $label_text ) {
+					$items[] = html_entity_decode( $label_text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				}
+			}
+		}
+
+		if ( preg_match_all( '/<(?:input|textarea)\b[^>]*\bplaceholder=["\']([^"\']+)["\'][^>]*>/i', $html, $placeholder_matches ) ) {
+			foreach ( $placeholder_matches[1] as $placeholder ) {
+				$items[] = html_entity_decode( trim( $placeholder ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			}
+		}
+
+		if ( preg_match_all( '/<button\b[^>]*>(.*?)<\/button>/is', $html, $button_matches ) ) {
+			foreach ( $button_matches[1] as $button_html ) {
+				$button_text = trim( wp_strip_all_tags( $button_html ) );
+				if ( '' !== $button_text ) {
+					$items[] = html_entity_decode( $button_text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				}
+			}
+		}
+
+		$text = trim( wp_strip_all_tags( preg_replace( '/<(?:label|input|textarea|select|button)\b.*?(?:<\/label>|<\/textarea>|<\/select>|<\/button>|>)/is', ' ', $html ) ) );
+		if ( '' !== $text ) {
+			$items[] = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'trim', $items ) ) ) );
+	}
+
+	/**
+	 * Checks whether a static form label should be represented as a button block.
+	 *
+	 * @param string $line Visible text line.
+	 * @return bool True when the line is submit/action copy.
+	 */
+	private static function is_static_form_submit_label( string $line ): bool {
+		return 1 === preg_match( '/\b(?:submit|send|request|schedule|book|consultation|contact)\b/i', $line );
 	}
 
 	/**
