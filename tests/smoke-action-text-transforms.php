@@ -252,6 +252,33 @@ $ordinary_link = new HTML_To_Blocks_HTML_Element(
 $ordinary_link_transform = $find_transform( $ordinary_link );
 $smoke_assert( 'core/paragraph' === $ordinary_link_transform['blockName'], 'ordinary-link-stays-paragraph' );
 
+$placeholder_form = new HTML_To_Blocks_HTML_Element(
+	'form',
+	[ 'class' => 'intake-form', 'action' => '#', 'method' => 'post' ],
+	'<form class="intake-form" action="#" method="post" aria-label="Short consultation intake form"><label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email"></label><label>What do you need help with? <textarea name="details"></textarea></label><button type="submit">Request consultation details</button></form>',
+	'<label>Parent or guardian name <input type="text" name="name" placeholder="Your name"></label><label>Email <input type="email" name="email"></label><label>What do you need help with? <textarea name="details"></textarea></label><button type="submit">Request consultation details</button>'
+);
+$placeholder_form_transform = $find_transform( $placeholder_form );
+$placeholder_form_block     = call_user_func( $placeholder_form_transform['transform'], $placeholder_form, $handler );
+
+$smoke_assert( 'core/group' === $placeholder_form_transform['blockName'], 'placeholder-form-transform-selected' );
+$smoke_assert( 'core/group' === $placeholder_form_block['blockName'], 'placeholder-form-block-name' );
+$smoke_assert( 'intake-form' === $placeholder_form_block['attrs']['className'], 'placeholder-form-class-preserved' );
+$smoke_assert( count( $placeholder_form_block['innerBlocks'] ) === 4, 'placeholder-form-visible-fields-and-button-preserved' );
+$smoke_assert( strpos( $placeholder_form_block['innerBlocks'][0]['attrs']['content'], 'Parent or guardian name' ) !== false, 'placeholder-form-first-label-preserved' );
+$smoke_assert( strpos( $placeholder_form_block['innerBlocks'][2]['attrs']['content'], 'What do you need help with?' ) !== false, 'placeholder-form-textarea-label-preserved' );
+$smoke_assert( 'core/buttons' === $placeholder_form_block['innerBlocks'][3]['blockName'], 'placeholder-form-submit-control-becomes-buttons' );
+$smoke_assert( 'Request consultation details' === $placeholder_form_block['innerBlocks'][3]['innerBlocks'][0]['attrs']['text'], 'placeholder-form-submit-text-preserved' );
+
+$required_form = new HTML_To_Blocks_HTML_Element(
+	'form',
+	[ 'class' => 'contact-form', 'action' => '#', 'method' => 'post' ],
+	'<form class="contact-form" action="#" method="post"><label>Email <input type="email" required></label><button type="submit">Send</button></form>',
+	'<label>Email <input type="email" required></label><button type="submit">Send</button>'
+);
+$required_form_transform = $find_transform( $required_form );
+$smoke_assert( 'core/group' !== $required_form_transform['blockName'], 'required-form-avoids-placeholder-transform' );
+
 $static_button_tabs = new HTML_To_Blocks_HTML_Element(
 	'div',
 	[ 'class' => 'use-case-tabs' ],
