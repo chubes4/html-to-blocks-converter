@@ -4102,6 +4102,11 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$children = $element->get_child_elements();
+		if ( count( $children ) === 1 ) {
+			return 'FIGCAPTION' === $children[0]->get_tag_name()
+				&& trim( wp_strip_all_tags( $children[0]->get_inner_html() ) ) !== '';
+		}
+
 		if ( count( $children ) !== 2 ) {
 			return false;
 		}
