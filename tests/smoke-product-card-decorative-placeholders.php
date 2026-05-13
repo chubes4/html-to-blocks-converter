@@ -220,6 +220,23 @@ $assert( str_contains( $figure_serialized, 'Walnut board in daily use — @molly
 $assert( str_contains( $figure_serialized, 'linear-gradient(135deg' ), 'gallery-gradient-survives', $figure_serialized );
 $assert( ! str_contains( $figure_serialized, '<!-- wp:html -->' ), 'gallery-serialized-output-has-no-wp-html', $figure_serialized );
 
+$caption_only_html = <<<'HTML'
+<figure class="gallery-tile tile-room"><figcaption>Black-box chairs set close to the stage</figcaption></figure>
+HTML;
+
+$caption_only_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $caption_only_html ] );
+$caption_only_names      = $block_names( $caption_only_blocks );
+$caption_only_classes    = $class_names( $caption_only_blocks );
+$caption_only_serialized = html_entity_decode( serialize_blocks( $caption_only_blocks ), ENT_QUOTES, 'UTF-8' );
+
+$assert( count( $caption_only_blocks ) === 1, 'caption-only-figure-single-wrapper', (string) count( $caption_only_blocks ) );
+$assert( ! in_array( 'core/html', $caption_only_names, true ), 'caption-only-figure-does-not-use-core-html', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'core/group', $caption_only_names, true ), 'caption-only-figure-uses-group', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'core/paragraph', $caption_only_names, true ), 'caption-only-figure-caption-becomes-paragraph', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'gallery-tile tile-room', $caption_only_classes, true ), 'caption-only-figure-classes-survive', implode( ', ', $caption_only_classes ) );
+$assert( str_contains( $caption_only_serialized, 'Black-box chairs set close to the stage' ), 'caption-only-figure-caption-text-survives', $caption_only_serialized );
+$assert( ! str_contains( $caption_only_serialized, '<!-- wp:html -->' ), 'caption-only-serialized-output-has-no-wp-html', $caption_only_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
