@@ -2953,22 +2953,24 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 				'transform' => function ( $element ) {
 					$children      = $element->get_child_elements();
-					$visual        = $children[0];
-					$caption       = $children[1];
+					$caption       = count( $children ) === 1 ? $children[0] : $children[1];
 					$caption_attrs = self::get_block_support_attributes( $caption, array( 'class_name' => true ) );
+					$inner_blocks  = array();
+
+					if ( count( $children ) === 2 ) {
+						$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+							'core/group',
+							self::get_empty_decorative_group_attributes( $children[0] )
+						);
+					}
 
 					$caption_attrs['content'] = trim( $caption->get_inner_html() );
+					$inner_blocks[]           = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs );
 
 					return HTML_To_Blocks_Block_Factory::create_block(
 						'core/group',
 						self::get_common_layout_attributes( $element ),
-						array(
-							HTML_To_Blocks_Block_Factory::create_block(
-								'core/group',
-								self::get_empty_decorative_group_attributes( $visual )
-							),
-							HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $caption_attrs ),
-						)
+						$inner_blocks
 					);
 				},
 			),
