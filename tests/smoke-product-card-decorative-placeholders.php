@@ -213,6 +213,21 @@ $assert( ! in_array( 'core/html', $figure_names, true ), 'gallery-figure-does-no
 $assert( count( $fallback_events ) === 0, 'gallery-figure-emits-no-fallback-events', (string) count( $fallback_events ) );
 $assert( in_array( 'core/group', $figure_names, true ), 'gallery-figure-uses-groups', implode( ', ', $figure_names ) );
 $assert( in_array( 'core/paragraph', $figure_names, true ), 'gallery-caption-becomes-paragraph', implode( ', ', $figure_names ) );
+
+$caption_only_html = <<<'HTML'
+<figure class="gallery-tile tile-room"><figcaption>Black-box chairs set close to the stage</figcaption></figure>
+HTML;
+
+$caption_only_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $caption_only_html ] );
+$caption_only_names      = $block_names( $caption_only_blocks );
+$caption_only_serialized = html_entity_decode( serialize_blocks( $caption_only_blocks ), ENT_QUOTES, 'UTF-8' );
+
+$assert( count( $caption_only_blocks ) === 1, 'caption-only-figure-single-wrapper', (string) count( $caption_only_blocks ) );
+$assert( ! in_array( 'core/html', $caption_only_names, true ), 'caption-only-figure-does-not-use-core-html', implode( ', ', $caption_only_names ) );
+$assert( count( $fallback_events ) === 0, 'caption-only-figure-emits-no-fallback-events', (string) count( $fallback_events ) );
+$assert( in_array( 'core/group', $caption_only_names, true ), 'caption-only-figure-uses-group', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'core/paragraph', $caption_only_names, true ), 'caption-only-figure-caption-becomes-paragraph', implode( ', ', $caption_only_names ) );
+$assert( strpos( $caption_only_serialized, 'Black-box chairs set close to the stage' ) !== false, 'caption-only-figure-caption-preserved' );
 $assert( in_array( 'gallery-item animated', $figure_classes, true ), 'gallery-figure-classes-survive', implode( ', ', $figure_classes ) );
 $assert( in_array( 'gallery-item-bg', $figure_classes, true ), 'gallery-bg-class-survives', implode( ', ', $figure_classes ) );
 $assert( in_array( 'gallery-caption', $figure_classes, true ), 'gallery-caption-class-survives', implode( ', ', $figure_classes ) );
