@@ -220,6 +220,27 @@ $assert( str_contains( $figure_serialized, 'Walnut board in daily use — @molly
 $assert( str_contains( $figure_serialized, 'linear-gradient(135deg' ), 'gallery-gradient-survives', $figure_serialized );
 $assert( ! str_contains( $figure_serialized, '<!-- wp:html -->' ), 'gallery-serialized-output-has-no-wp-html', $figure_serialized );
 
+$caption_only_figure_html = <<<'HTML'
+<figure class="gallery-tile tile-board"><figcaption>Lobby board with auditions and readings</figcaption></figure>
+HTML;
+
+$caption_only_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $caption_only_figure_html ] );
+$caption_only_names      = $block_names( $caption_only_blocks );
+$caption_only_classes    = $class_names( $caption_only_blocks );
+$caption_only_serialized = html_entity_decode( serialize_blocks( $caption_only_blocks ), ENT_QUOTES, 'UTF-8' );
+
+$assert( count( $caption_only_blocks ) === 1, 'caption-only-figure-single-wrapper', (string) count( $caption_only_blocks ) );
+$assert( ! in_array( 'core/html', $caption_only_names, true ), 'caption-only-figure-does-not-use-core-html', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'core/group', $caption_only_names, true ), 'caption-only-figure-uses-group', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'core/paragraph', $caption_only_names, true ), 'caption-only-figcaption-becomes-paragraph', implode( ', ', $caption_only_names ) );
+$assert( in_array( 'gallery-tile tile-board', $caption_only_classes, true ), 'caption-only-figure-classes-survive', implode( ', ', $caption_only_classes ) );
+$assert( str_contains( $caption_only_serialized, 'Lobby board with auditions and readings' ), 'caption-only-figure-caption-survives', $caption_only_serialized );
+$assert( ! str_contains( $caption_only_serialized, '<!-- wp:html -->' ), 'caption-only-serialized-output-has-no-wp-html', $caption_only_serialized );
+
+$empty_figure_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<figure class="gallery-tile tile-board"></figure>' ] );
+$empty_figure_names  = $block_names( $empty_figure_blocks );
+$assert( in_array( 'core/html', $empty_figure_names, true ), 'empty-figure-remains-fallback', implode( ', ', $empty_figure_names ) );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
