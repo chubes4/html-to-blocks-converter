@@ -1090,6 +1090,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 9,
+				'selector'  => 'a',
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'A' && self::is_branded_inline_anchor( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_branded_inline_anchor_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 9,
 				'selector'  => 'a',
@@ -1292,6 +1303,45 @@ class HTML_To_Blocks_Transform_Registry {
 			'border'     => true,
 		) );
 		$attributes['content'] = $element->get_inner_html();
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Checks whether an anchor is a branded inline link with nested visual spans.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the branded link can safely become paragraph markup.
+	 */
+	private static function is_branded_inline_anchor( $element ): bool {
+		if ( 'A' !== $element->get_tag_name() ) {
+			return false;
+		}
+
+		$href = trim( (string) ( $element->get_attribute( 'href' ) ?? '' ) );
+		if ( '' === $href || '#' !== $href[0] ) {
+			return false;
+		}
+
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])brand(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		return preg_match( '/<\s*span\b/i', $element->get_inner_html() ) === 1;
+	}
+
+	/**
+	 * Creates a paragraph preserving a branded inline anchor as editable markup.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Branded anchor element.
+	 * @return array Block array.
+	 */
+	private static function create_branded_inline_anchor_paragraph( $element ): array {
+		$attributes            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+		) );
+		$attributes['content'] = trim( $element->get_outer_html() );
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 	}
