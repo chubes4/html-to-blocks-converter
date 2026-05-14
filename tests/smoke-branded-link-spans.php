@@ -174,6 +174,16 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'brand-with-small-tagline' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Studio home"><span>Studio</span> <small>Tattoo Studio</small></a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Studio home"',
+			'class="brand"',
+			'<span>Studio</span>',
+			'<small>Tattoo Studio</small>',
+		],
+	],
 ];
 
 foreach ( $brand_cases as $case_name => $case ) {
