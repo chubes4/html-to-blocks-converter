@@ -174,6 +174,16 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'footer-brand-without-aria-label' => [
+		'html'     => '<a class="brand footer-brand" href="#top"> <span class="brand-mark" aria-hidden="true">W</span> <span><strong>Wickstead</strong><em>Refill Works</em></span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'class="brand footer-brand"',
+			'<span class="brand-mark" aria-hidden="true">W</span>',
+			'<strong>Wickstead</strong>',
+			'<em>Refill Works</em>',
+		],
+	],
 ];
 
 foreach ( $brand_cases as $case_name => $case ) {
