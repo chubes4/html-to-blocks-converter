@@ -2691,6 +2691,11 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
+		$action = trim( (string) $element->get_attribute( 'action' ) );
+		if ( '#' !== $action ) {
+			return false;
+		}
+
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( in_array( $child->get_tag_name(), array( 'LABEL', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON' ), true ) ) {
 				return true;
