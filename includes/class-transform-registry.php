@@ -2691,8 +2691,22 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
+		return self::static_placeholder_form_has_controls( $element );
+	}
+
+	/**
+	 * Checks whether an element contains static placeholder form controls.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when a supported form control exists in the subtree.
+	 */
+	private static function static_placeholder_form_has_controls( $element ): bool {
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( in_array( $child->get_tag_name(), array( 'LABEL', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON' ), true ) ) {
+				return true;
+			}
+
+			if ( self::static_placeholder_form_has_controls( $child ) ) {
 				return true;
 			}
 		}
@@ -2707,6 +2721,20 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_static_placeholder_form_group( $element ): array {
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			self::get_static_placeholder_form_blocks( $element )
+		);
+	}
+
+	/**
+	 * Collects editable blocks for static placeholder form controls.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return array<int,array<string,mixed>> Inner blocks.
+	 */
+	private static function get_static_placeholder_form_blocks( $element ): array {
 		$inner_blocks = array();
 
 		foreach ( $element->get_child_elements() as $child ) {
@@ -2751,14 +2779,13 @@ class HTML_To_Blocks_Transform_Registry {
 						array( 'content' => esc_html( $content ) )
 					);
 				}
+				continue;
 			}
+
+			$inner_blocks = array_merge( $inner_blocks, self::get_static_placeholder_form_blocks( $child ) );
 		}
 
-		return HTML_To_Blocks_Block_Factory::create_block(
-			'core/group',
-			self::get_common_layout_attributes( $element ),
-			$inner_blocks
-		);
+		return $inner_blocks;
 	}
 
 	/**
