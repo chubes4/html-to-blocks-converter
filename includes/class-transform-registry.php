@@ -2208,7 +2208,7 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 
 			foreach ( $child->get_child_elements() as $inline_child ) {
-				if ( ! in_array( $inline_child->get_tag_name(), array( 'SPAN', 'BR', 'CODE', 'STRONG', 'B', 'EM', 'I' ), true ) ) {
+				if ( ! in_array( $inline_child->get_tag_name(), array( 'SPAN', 'BR', 'CODE', 'STRONG', 'B', 'EM', 'I', 'SMALL' ), true ) ) {
 					return false;
 				}
 			}
