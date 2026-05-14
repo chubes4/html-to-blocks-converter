@@ -4296,7 +4296,7 @@ class HTML_To_Blocks_Transform_Registry {
 						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
-					$content = $element->get_tag_name() === 'A' ? $element->get_outer_html() : $element->get_inner_html();
+					$content = $element->get_tag_name() === 'A' ? self::get_paragraph_anchor_content( $element ) : $element->get_inner_html();
 					if ( self::is_static_checkbox_label( $element ) ) {
 						$content = trim( preg_replace( '/<\s*input\b[^>]*>/i', '', $content ) );
 					}
@@ -4311,12 +4311,25 @@ class HTML_To_Blocks_Transform_Registry {
 						'border'     => true,
 						'class_name' => true,
 					) );
+					if ( $element->get_tag_name() === 'A' ) {
+						unset( $attributes['className'] );
+					}
 					$attributes['content'] = $content;
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 				},
 			),
 		);
+	}
+
+	/**
+	 * Gets paragraph content for a standalone anchor element.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $anchor Anchor element.
+	 * @return string Paragraph content with link-owned attributes preserved.
+	 */
+	private static function get_paragraph_anchor_content( $anchor ): string {
+		return $anchor->get_outer_html();
 	}
 
 	/**
