@@ -3280,14 +3280,6 @@ class HTML_To_Blocks_Transform_Registry {
 		if ( preg_match( '/(?:^|\s)is-nowrap(?:\s|$)/i', $classes ) || strtolower( self::extract_css_property( $style, 'flex-wrap' ) ) === 'nowrap' ) {
 			$attributes['layout']['flexWrap'] = 'nowrap';
 		}
-
-		if ( empty( $attributes['layout'] ) && $element && self::is_hero_like_section( $element ) ) {
-			$attributes['layout'] = array(
-				'type'           => 'flex',
-				'orientation'    => 'vertical',
-				'justifyContent' => 'center',
-			);
-		}
 	}
 
 	/**
