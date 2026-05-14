@@ -187,6 +187,10 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		return array();
 	}
 
+	if ( html_to_blocks_is_standalone_hash_anchor_fragment( $html ) ) {
+		$html = html_to_blocks_normalise_blocks( $html );
+	}
+
 	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );
 	$metrics         = null;
 	$convert_started = 0.0;
@@ -973,6 +977,26 @@ function html_to_blocks_parse_shortcode( $shortcode ) {
 		'core/shortcode',
 		array( 'text' => $shortcode )
 	);
+}
+
+/**
+ * Checks whether an HTML fragment is one same-page hash anchor.
+ *
+ * @param string $html HTML fragment.
+ * @return bool True when the fragment is a standalone hash anchor.
+ */
+function html_to_blocks_is_standalone_hash_anchor_fragment( string $html ): bool {
+	$element = HTML_To_Blocks_HTML_Element::from_html( $html );
+	if ( ! $element || 'A' !== $element->get_tag_name() ) {
+		return false;
+	}
+
+	$href = trim( (string) $element->get_attribute( 'href' ) );
+	if ( '' === $href || '#' !== $href[0] ) {
+		return false;
+	}
+
+	return trim( $element->get_outer_html() ) === trim( $html );
 }
 
 /**
