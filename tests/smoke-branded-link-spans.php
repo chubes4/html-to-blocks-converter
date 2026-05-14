@@ -191,6 +191,11 @@ foreach ( $brand_cases as $case_name => $case ) {
 	}
 }
 
+$external_brand = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<a class="brand" href="https://example.com" aria-label="External brand"><span>External</span></a>' ] ) );
+$assert( str_contains( $external_brand, '<!-- wp:paragraph' ), 'external-brand-still-falls-through-to-paragraph', $external_brand );
+$assert( str_contains( $external_brand, 'href="https://example.com"' ), 'external-brand-preserves-link-href', $external_brand );
+$assert( ! str_contains( $external_brand, '<!-- wp:buttons' ), 'external-brand-does-not-become-button', $external_brand );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
