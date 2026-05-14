@@ -210,6 +210,11 @@ class RawHandlerFixturesUnitTest extends WP_UnitTestCase {
 				'expected_names' => array( 'core/group', 'core/paragraph', 'core/paragraph', 'core/paragraph', 'core/paragraph', 'core/buttons', 'core/button' ),
 				'snippets'       => array( 'intake-form', 'Parent or guardian name', 'Email', 'Upcoming meeting date', 'What do you need help with?', 'Request consultation details' ),
 			),
+			'nested-static-placeholder-form' => array(
+				'html'           => '<form class="contact-card" action="#"><div class="form-grid"><div class="field"><label>Your name <input type="text" name="name"></label></div><div class="field"><label>Project notes <textarea name="notes" placeholder="Tell us what you need"></textarea></label></div></div><div class="form-actions"><button type="submit">Send inquiry</button></div></form>',
+				'expected_names' => array( 'core/group', 'core/paragraph', 'core/paragraph', 'core/buttons', 'core/button' ),
+				'snippets'       => array( 'contact-card', 'Your name', 'Project notes', 'Send inquiry' ),
+			),
 			'columns'          => array(
 				'html'           => '<div class="wp-block-columns"><div class="wp-block-column"><p>Left</p></div><div class="wp-block-column"><p>Right</p></div></div>',
 				'expected_names' => array( 'core/columns', 'core/column', 'core/paragraph', 'core/column', 'core/paragraph' ),
