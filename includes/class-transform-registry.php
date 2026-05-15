@@ -4104,7 +4104,31 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return count( $children ) === 1 || self::is_empty_decorative_element( $children[0] );
+		return count( $children ) === 1
+			|| self::is_empty_decorative_element( $children[0] )
+			|| self::is_nested_empty_decorative_element( $children[0] );
+	}
+
+	/**
+	 * Checks whether an element and its descendants are inert decorative chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the subtree has no meaningful content or controls.
+	 */
+	private static function is_nested_empty_decorative_element( $element ): bool {
+		if ( ! $element->has_attribute( 'aria-hidden' ) || 'true' !== strtolower( $element->get_attribute( 'aria-hidden' ) ) ) {
+			return false;
+		}
+
+		if ( trim( wp_strip_all_tags( $element->get_inner_html() ) ) !== '' ) {
+			return false;
+		}
+
+		foreach ( $element->query_selector_all( 'a, button, input, select, textarea, img, video, audio, iframe, object, embed, svg' ) as $functional_child ) {
+			return false;
+		}
+
+		return ! empty( $element->get_child_elements() );
 	}
 
 	/**
