@@ -174,6 +174,15 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'div-wrapped-logo-brand' => [
+		'html'     => '<a class="footer-logo" href="#"><div class="footer-logo-mark"><img src="/logo.svg" alt="" decoding="async" width="16" height="16" aria-hidden="true"></div>Relay Atlas</a>',
+		'snippets' => [
+			'href="#"',
+			'class="footer-logo"',
+			'<span class="footer-logo-mark"><img src="/logo.svg" alt="" decoding="async" width="16" height="16" aria-hidden="true"></span>',
+			'Relay Atlas',
+		],
+	],
 ];
 
 foreach ( $brand_cases as $case_name => $case ) {
@@ -188,6 +197,7 @@ foreach ( $brand_cases as $case_name => $case ) {
 		foreach ( $case['snippets'] as $snippet ) {
 			$assert( str_contains( $serialized, $snippet ), $label . '-preserves-' . md5( $snippet ), $serialized );
 		}
+		$assert( ! str_contains( $serialized, '<div' ), $label . '-normalizes-block-wrappers', $serialized );
 	}
 }
 
