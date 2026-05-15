@@ -174,6 +174,17 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'formatted-span-brand-with-source-spacing' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Wickstead Refill Works home"> <span class="brand-mark" aria-hidden="true">W</span> <span> <strong>Wickstead</strong> <em>Refill Works</em> </span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Wickstead Refill Works home"',
+			'class="brand"',
+			'<span class="brand-mark" aria-hidden="true">W</span>',
+			'<strong>Wickstead</strong>',
+			'<em>Refill Works</em>',
+		],
+	],
 ];
 
 foreach ( $brand_cases as $case_name => $case ) {
