@@ -4329,7 +4329,14 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string Paragraph content with link-owned attributes preserved.
 	 */
 	private static function get_paragraph_anchor_content( $anchor ): string {
-		return $anchor->get_outer_html();
+		$html  = $anchor->get_outer_html();
+		$class = $anchor->has_attribute( 'class' ) ? (string) $anchor->get_attribute( 'class' ) : '';
+		if ( preg_match( '/(^|[-_\s])(brand|logo)([-_\s]|$)/i', $class ) ) {
+			$html = preg_replace( '/<\s*div\b([^>]*)>/i', '<span$1>', $html ) ?? $html;
+			$html = preg_replace( '/<\s*\/\s*div\s*>/i', '</span>', $html ) ?? $html;
+		}
+
+		return $html;
 	}
 
 	/**
