@@ -1426,7 +1426,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/(?:^|\s)(?:cta-(?:btn|link)|(?:btn|link)-cta)(?:$|\s)/i', $class_name ) === 1;
+		return preg_match( '/(?:^|\s)(?:cta-(?:btn|link)|(?:btn|link)-cta|button-(?:primary|secondary))(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
