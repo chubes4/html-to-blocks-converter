@@ -243,6 +243,26 @@ $class_sensitive_cta_row_transform = $find_transform( $class_sensitive_cta_row )
 
 $smoke_assert( 'core/buttons' !== $class_sensitive_cta_row_transform['blockName'], 'class-sensitive-cta-row-avoids-buttons' );
 
+$source_button_class_row = new HTML_To_Blocks_HTML_Element(
+	'div',
+	[ 'class' => 'hero-actions' ],
+	'<div class="hero-actions"><a class="button button-primary" href="#symptoms">Start with your clock’s symptom</a><a class="button button-secondary" href="#boundaries">Know when to stop</a></div>',
+	'<a class="button button-primary" href="#symptoms">Start with your clock’s symptom</a><a class="button button-secondary" href="#boundaries">Know when to stop</a>'
+);
+$source_button_class_row_transform = $find_transform( $source_button_class_row );
+$smoke_assert( 'core/buttons' !== $source_button_class_row_transform['blockName'], 'button-primary-secondary-row-keeps-anchor-owned-classes' );
+
+$button_primary_anchor = new HTML_To_Blocks_HTML_Element(
+	'a',
+	[ 'class' => 'button button-primary', 'href' => '#symptoms' ],
+	'<a class="button button-primary" href="#symptoms">Start with your clock’s symptom</a>',
+	'Start with your clock’s symptom'
+);
+$button_primary_transform = $find_transform( $button_primary_anchor );
+$button_primary_block     = call_user_func( $button_primary_transform['transform'], $button_primary_anchor, $handler );
+$smoke_assert( 'core/paragraph' === $button_primary_transform['blockName'], 'button-primary-anchor-stays-paragraph' );
+$smoke_assert( strpos( $button_primary_block['attrs']['content'], '<a class="button button-primary" href="#symptoms">Start with your clock’s symptom</a>' ) !== false, 'button-primary-anchor-class-remains-on-link' );
+
 $ordinary_link = new HTML_To_Blocks_HTML_Element(
 	'p',
 	[],
