@@ -187,6 +187,30 @@ $smoke_assert( count( $custom_button_row_block['innerBlocks'] ) === 2, 'custom-b
 $smoke_assert( 'hero-actions' === $custom_button_row_block['attrs']['className'], 'custom-button-row-wrapper-class-preserved' );
 $smoke_assert( '#order' === $custom_button_row_block['innerBlocks'][0]['attrs']['url'], 'custom-button-row-first-url-preserved' );
 $smoke_assert( '#our-bakes' === $custom_button_row_block['innerBlocks'][1]['attrs']['url'], 'custom-button-row-second-url-preserved' );
+
+$button_class_row = new HTML_To_Blocks_HTML_Element(
+	'div',
+	[ 'class' => 'hero-actions' ],
+	'<div class="hero-actions"><a href="#symptoms" class="button button-primary">Start with your clock’s symptom</a><a href="#boundaries" class="button button-secondary">Know when to stop</a></div>',
+	'<a href="#symptoms" class="button button-primary">Start with your clock’s symptom</a><a href="#boundaries" class="button button-secondary">Know when to stop</a>'
+);
+$button_class_row_transform = $find_transform( $button_class_row );
+$button_class_row_block     = call_user_func( $button_class_row_transform['transform'], $button_class_row, $handler );
+
+$smoke_assert( 'core/buttons' === $button_class_row_transform['blockName'], 'button-class-row-becomes-buttons' );
+$smoke_assert( count( $button_class_row_block['innerBlocks'] ) === 2, 'button-class-row-has-two-buttons' );
+$smoke_assert( '#symptoms' === $button_class_row_block['innerBlocks'][0]['attrs']['url'], 'button-class-row-first-url-preserved' );
+$smoke_assert( '#boundaries' === $button_class_row_block['innerBlocks'][1]['attrs']['url'], 'button-class-row-second-url-preserved' );
+
+$cta_button_anchor = new HTML_To_Blocks_HTML_Element(
+	'a',
+	[ 'class' => 'cta-button', 'href' => '#contact' ],
+	'<a class="cta-button" href="#contact">Contact us</a>',
+	'Contact us'
+);
+$cta_button_transform = $find_transform( $cta_button_anchor );
+
+$smoke_assert( 'core/buttons' !== $cta_button_transform['blockName'], 'class-sensitive-cta-button-avoids-buttons' );
 $smoke_assert( 'btn btn-primary' === $custom_button_row_block['innerBlocks'][0]['attrs']['className'], 'custom-button-row-first-class-preserved' );
 $smoke_assert( 'btn btn-ghost' === $custom_button_row_block['innerBlocks'][1]['attrs']['className'], 'custom-button-row-second-class-preserved' );
 
