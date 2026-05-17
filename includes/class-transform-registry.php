@@ -1068,6 +1068,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'div',
+				'isMatch'   => function ( $element ) {
+					return self::is_visual_diagram_span_container( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_aria_hidden_inline_span_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1334,6 +1345,28 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( 'true' !== strtolower( trim( (string) $element->get_attribute( 'aria-hidden' ) ) ) ) {
+			return false;
+		}
+
+		if ( '' === trim( $element->get_text_content() ) ) {
+			return false;
+		}
+
+		return self::html_contains_only_direct_spans( $element->get_inner_html() );
+	}
+
+	/**
+	 * Checks whether a visible diagram div contains only inline span labels.
+	 *
+	 * Diagram layers commonly position direct span labels. Keep those labels as
+	 * direct paragraph content instead of wrapping them in an inserted paragraph
+	 * inside a group, which changes diagram sizing and vertical rhythm.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper can safely become paragraph markup.
+	 */
+	private static function is_visual_diagram_span_container( $element ): bool {
+		if ( 'DIV' !== $element->get_tag_name() || ! self::class_matches( $element, '/(?:^|[-_\s])diagram(?:$|[-_\s])/i' ) ) {
 			return false;
 		}
 
