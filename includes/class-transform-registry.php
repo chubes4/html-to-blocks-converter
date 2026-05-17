@@ -1339,7 +1339,6 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_branded_inline_anchor_paragraph( $element ): array {
 		$attributes            = self::get_block_support_attributes( $element, array(
 			'anchor'     => true,
-			'class_name' => true,
 		) );
 		$attributes['content'] = trim( $element->get_outer_html() );
 
@@ -3369,20 +3368,6 @@ class HTML_To_Blocks_Transform_Registry {
 
 		return preg_match( '/^[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?$/i', $value ) === 1
 			|| preg_match( '/^calc\(\s*[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?\s*[-+]\s*[0-9.]+(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?\s*\)$/i', $value ) === 1;
-	}
-
-	/**
-	 * Checks whether a section is a high-confidence full-bleed hero wrapper.
-	 *
-	 * @param HTML_To_Blocks_HTML_Element $element The source element.
-	 * @return bool True when a default flow group would lose hero centering intent.
-	 */
-	private static function is_hero_like_section( $element ): bool {
-		if ( $element->get_tag_name() !== 'SECTION' || ! $element->has_attribute( 'class' ) ) {
-			return false;
-		}
-
-		return self::class_matches( $element, '/(?:^|[-_\s])(?:hero|cover|banner|masthead)(?:$|[-_\s])/i' );
 	}
 
 	/**
