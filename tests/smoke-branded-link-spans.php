@@ -174,6 +174,47 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'formatted-span-brand-with-source-spacing' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Wickstead Refill Works home"> <span class="brand-mark" aria-hidden="true">W</span> <span> <strong>Wickstead</strong> <em>Refill Works</em> </span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Wickstead Refill Works home"',
+			'class="brand"',
+			'<span class="brand-mark" aria-hidden="true">W</span>',
+			'<strong>Wickstead</strong>',
+			'<em>Refill Works</em>',
+		],
+	],
+	'brand-with-small-tagline' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Studio home"><span>Studio</span> <small>Tattoo Studio</small></a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Studio home"',
+			'class="brand"',
+			'<span>Studio</span>',
+			'<small>Tattoo Studio</small>',
+		],
+	],
+	'footer-brand-without-aria-label' => [
+		'html'     => '<a class="brand footer-brand" href="#top"> <span class="brand-mark" aria-hidden="true">W</span> <span><strong>Wickstead</strong><em>Refill Works</em></span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'class="brand footer-brand"',
+			'<span class="brand-mark" aria-hidden="true">W</span>',
+			'<strong>Wickstead</strong>',
+			'<em>Refill Works</em>',
+		],
+	],
+	'footer-brand-reversed-class-order' => [
+		'html'     => '<a class="footer-brand brand" href="#top"><span class="brand-mark" aria-hidden="true">W</span><span><strong>Wickstead</strong><em>Refill Works</em></span></a>',
+		'snippets' => [
+			'href="#top"',
+			'class="footer-brand brand"',
+			'<span class="brand-mark" aria-hidden="true">W</span>',
+			'<strong>Wickstead</strong>',
+			'<em>Refill Works</em>',
+		],
+	],
 	'div-wrapped-logo-brand' => [
 		'html'     => '<a class="footer-logo" href="#"><div class="footer-logo-mark"><img src="/logo.svg" alt="" decoding="async" width="16" height="16" aria-hidden="true"></div>Relay Atlas</a>',
 		'snippets' => [
