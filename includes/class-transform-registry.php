@@ -1079,6 +1079,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'span',
+				'isMatch'   => function ( $element ) {
+					return self::is_numeric_label_span( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_numeric_label_span_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1327,6 +1338,43 @@ class HTML_To_Blocks_Transform_Registry {
 		$attributes['content'] = $element->get_inner_html();
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Checks whether a standalone span is a numeric visual label.
+	 *
+	 * Number-only label spans are commonly used as service, step, or index badges.
+	 * Keep the span markup inside a native paragraph so class-based presentation
+	 * survives without falling back to core/html.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the span can safely become paragraph markup.
+	 */
+	private static function is_numeric_label_span( $element ): bool {
+		if ( 'SPAN' !== $element->get_tag_name() || ! $element->has_attribute( 'class' ) ) {
+			return false;
+		}
+
+		if ( preg_match( '/<\s*[a-z][^>]*>/i', $element->get_inner_html() ) === 1 ) {
+			return false;
+		}
+
+		return preg_match( '/^\d+$/', trim( $element->get_text_content() ) ) === 1;
+	}
+
+	/**
+	 * Creates a paragraph preserving numeric label span markup.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Numeric label span.
+	 * @return array Block array.
+	 */
+	private static function create_numeric_label_span_paragraph( $element ): array {
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/paragraph',
+			array(
+				'content' => trim( $element->get_outer_html() ),
+			)
+		);
 	}
 
 	/**
