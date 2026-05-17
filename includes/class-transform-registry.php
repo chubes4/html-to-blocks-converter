@@ -4020,7 +4020,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return self::create_list_block_from_element( $child );
 		}
 
-		if ( self::is_numbered_card_label_span( $child ) ) {
+		if ( self::is_card_label_span_html_island( $child ) ) {
 			return HTML_To_Blocks_Block_Factory::create_block(
 				'core/html',
 				array( 'content' => $child->get_outer_html() )
@@ -4048,21 +4048,21 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Checks whether a card child span is a numbered label that should keep its tag.
+	 * Checks whether a card child span is a label that should keep its tag.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $child Card child element.
 	 * @return bool True when the span should remain source HTML.
 	 */
-	private static function is_numbered_card_label_span( $child ): bool {
+	private static function is_card_label_span_html_island( $child ): bool {
 		if ( 'SPAN' !== $child->get_tag_name() || ! $child->has_attribute( 'class' ) ) {
 			return false;
 		}
 
-		if ( ! self::class_matches( $child, '/(?:^|[-_\s])(?:card[-_\s]?number|item[-_\s]?number|service[-_\s]?number)(?:$|[-_\s])/i' ) ) {
-			return false;
+		if ( self::class_matches( $child, '/(?:^|[-_\s])(?:card[-_\s]?number|item[-_\s]?number|service[-_\s]?number)(?:$|[-_\s])/i' ) ) {
+			return preg_match( '/^\s*\d{1,3}\s*$/', $child->get_text_content() ) === 1;
 		}
 
-		return preg_match( '/^\s*\d{1,3}\s*$/', $child->get_text_content() ) === 1;
+		return self::class_matches( $child, '/(?:^|\s)tag(?:$|\s)/i' );
 	}
 
 	/**
