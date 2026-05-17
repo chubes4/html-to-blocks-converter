@@ -1086,7 +1086,7 @@ class HTML_To_Blocks_Transform_Registry {
 					return self::is_numeric_label_span( $element );
 				},
 				'transform' => function ( $element ) {
-					return self::create_numeric_label_span_paragraph( $element );
+					return self::create_inline_span_label_paragraph( $element );
 				},
 			),
 			array(
@@ -1368,7 +1368,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param HTML_To_Blocks_HTML_Element $element Numeric label span.
 	 * @return array Block array.
 	 */
-	private static function create_numeric_label_span_paragraph( $element ): array {
+	private static function create_inline_span_label_paragraph( $element ): array {
 		return HTML_To_Blocks_Block_Factory::create_block(
 			'core/paragraph',
 			array(
@@ -4068,11 +4068,8 @@ class HTML_To_Blocks_Transform_Registry {
 			return self::create_list_block_from_element( $child );
 		}
 
-		if ( self::is_numbered_card_label_span( $child ) ) {
-			return HTML_To_Blocks_Block_Factory::create_block(
-				'core/html',
-				array( 'content' => $child->get_outer_html() )
-			);
+		if ( self::is_card_label_span( $child ) ) {
+			return self::create_inline_span_label_paragraph( $child );
 		}
 
 		if ( 'P' === $tag || 'SPAN' === $tag ) {
@@ -4096,21 +4093,21 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Checks whether a card child span is a numbered label that should keep its tag.
+	 * Checks whether a card child span is a visual label that should keep its tag.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $child Card child element.
 	 * @return bool True when the span should remain source HTML.
 	 */
-	private static function is_numbered_card_label_span( $child ): bool {
+	private static function is_card_label_span( $child ): bool {
 		if ( 'SPAN' !== $child->get_tag_name() || ! $child->has_attribute( 'class' ) ) {
 			return false;
 		}
 
-		if ( ! self::class_matches( $child, '/(?:^|[-_\s])(?:card[-_\s]?number|item[-_\s]?number|service[-_\s]?number)(?:$|[-_\s])/i' ) ) {
-			return false;
+		if ( self::class_matches( $child, '/(?:^|[-_\s])(?:card[-_\s]?number|item[-_\s]?number|service[-_\s]?number)(?:$|[-_\s])/i' ) ) {
+			return preg_match( '/^\s*\d{1,3}\s*$/', $child->get_text_content() ) === 1;
 		}
 
-		return preg_match( '/^\s*\d{1,3}\s*$/', $child->get_text_content() ) === 1;
+		return self::class_matches( $child, '/(?:^|\s)tag(?:$|\s)/i' );
 	}
 
 	/**
