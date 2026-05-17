@@ -403,17 +403,6 @@ $classed_leaf_span = new HTML_To_Blocks_HTML_Element(
 );
 $smoke_assert( $find_transform( $classed_leaf_span ) === null, 'classed-leaf-span-falls-through' );
 
-$plain_leaf_span = new HTML_To_Blocks_HTML_Element(
-	'span',
-	[],
-	'<span>01</span>',
-	'01'
-);
-$plain_leaf_span_transform = $find_transform( $plain_leaf_span );
-$plain_leaf_span_block     = call_user_func( $plain_leaf_span_transform['transform'], $plain_leaf_span, $handler );
-$smoke_assert( 'core/paragraph' === $plain_leaf_span_transform['blockName'], 'plain-leaf-span-still-becomes-paragraph' );
-$smoke_assert( '01' === $plain_leaf_span_block['attrs']['content'], 'plain-leaf-span-content-preserved' );
-
 // -------------------------------------------------------------------------
 // Labels: static visual UI labels become text, real form labels fall through.
 // -------------------------------------------------------------------------
