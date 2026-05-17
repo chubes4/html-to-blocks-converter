@@ -1359,7 +1359,11 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/^\d+$/', trim( $element->get_text_content() ) ) === 1;
+		if ( preg_match( '/^\d+$/', trim( $element->get_text_content() ) ) === 1 ) {
+			return true;
+		}
+
+		return self::class_matches( $element, '/(?:^|\s)tag(?:\s|$)/i' );
 	}
 
 	/**
