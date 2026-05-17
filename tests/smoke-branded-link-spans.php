@@ -247,6 +247,17 @@ $assert( str_contains( $external_brand, '<!-- wp:paragraph' ), 'external-brand-s
 $assert( str_contains( $external_brand, 'href="https://example.com"' ), 'external-brand-preserves-link-href', $external_brand );
 $assert( ! str_contains( $external_brand, '<!-- wp:buttons' ), 'external-brand-does-not-become-button', $external_brand );
 
+$aria_hidden_span_ruler = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<div class="ruler" aria-hidden="true"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>' ] ) );
+$assert( ! str_contains( $aria_hidden_span_ruler, '<!-- wp:html -->' ), 'aria-hidden-span-ruler-avoids-core-html', $aria_hidden_span_ruler );
+$assert( str_contains( $aria_hidden_span_ruler, '<!-- wp:paragraph' ), 'aria-hidden-span-ruler-uses-paragraph', $aria_hidden_span_ruler );
+$assert( str_contains( $aria_hidden_span_ruler, 'class="ruler"' ), 'aria-hidden-span-ruler-preserves-class', $aria_hidden_span_ruler );
+$assert( str_contains( $aria_hidden_span_ruler, '<span>0</span><span>6</span><span>12</span><span>18</span><span>24</span>' ), 'aria-hidden-span-ruler-preserves-direct-spans', $aria_hidden_span_ruler );
+$assert( ! str_contains( $aria_hidden_span_ruler, '<div class="wp-block-group ruler' ), 'aria-hidden-span-ruler-does-not-add-group-wrapper', $aria_hidden_span_ruler );
+
+$visible_span_group = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<div class="ruler"><span>0</span><span>6</span></div>' ] ) );
+$assert( ! str_contains( $visible_span_group, '<!-- wp:paragraph' ), 'visible-span-container-does-not-use-aria-hidden-ruler-transform', $visible_span_group );
+$assert( str_contains( $visible_span_group, '<!-- wp:html' ), 'visible-span-container-remains-fallback-html', $visible_span_group );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
