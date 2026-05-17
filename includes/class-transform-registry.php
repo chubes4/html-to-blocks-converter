@@ -1112,6 +1112,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'div,p',
+				'isMatch'   => function ( $element ) {
+					return self::is_class_sensitive_action_link_container( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_class_sensitive_action_link_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1529,6 +1540,52 @@ class HTML_To_Blocks_Transform_Registry {
 		) );
 		self::apply_inline_preservation_paragraph_spacing( $attributes );
 		$attributes['content'] = trim( $element->get_outer_html() );
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Checks whether an action/link wrapper contains class-sensitive CTA anchors.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper should preserve anchor-owned classes as paragraph markup.
+	 */
+	private static function is_class_sensitive_action_link_container( $element ): bool {
+		if ( ! in_array( $element->get_tag_name(), array( 'DIV', 'P' ), true ) || ! self::is_action_link_container( $element ) ) {
+			return false;
+		}
+
+		$children = self::get_direct_anchor_children_from_html( $element->get_inner_html() );
+		if ( count( $children ) < 1 ) {
+			return false;
+		}
+
+		foreach ( $children as $child ) {
+			if ( ! self::is_class_sensitive_cta_anchor( $child ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Creates paragraph markup for an action/link wrapper with class-sensitive CTA anchors.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Action/link wrapper.
+	 * @return array Block array.
+	 */
+	private static function create_class_sensitive_action_link_paragraph( $element ): array {
+		$attributes = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'className'  => true,
+			'spacing'    => true,
+			'background' => true,
+			'textColor'  => true,
+			'border'     => true,
+		) );
+		self::apply_inline_preservation_paragraph_spacing( $attributes );
+		$attributes['content'] = trim( $element->get_inner_html() );
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 	}
