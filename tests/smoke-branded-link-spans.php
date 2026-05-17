@@ -256,7 +256,7 @@ $assert( ! str_contains( $aria_hidden_span_ruler, '<div class="wp-block-group ru
 
 $visible_span_group = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<div class="ruler"><span>0</span><span>6</span></div>' ] ) );
 $assert( ! str_contains( $visible_span_group, '<!-- wp:paragraph' ), 'visible-span-container-does-not-use-aria-hidden-ruler-transform', $visible_span_group );
-$assert( str_contains( $visible_span_group, '<!-- wp:group' ), 'visible-span-container-remains-group', $visible_span_group );
+$assert( str_contains( $visible_span_group, '<!-- wp:html' ), 'visible-span-container-remains-fallback-html', $visible_span_group );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
