@@ -1416,7 +1416,6 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function create_branded_inline_anchor_paragraph( $element ): array {
 		$attributes            = self::get_block_support_attributes( $element, array(
 			'anchor'     => true,
-			'class_name' => true,
 		) );
 		$attributes['content'] = trim( $element->get_outer_html() );
 
@@ -3449,20 +3448,6 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Checks whether a section is a high-confidence full-bleed hero wrapper.
-	 *
-	 * @param HTML_To_Blocks_HTML_Element $element The source element.
-	 * @return bool True when a default flow group would lose hero centering intent.
-	 */
-	private static function is_hero_like_section( $element ): bool {
-		if ( $element->get_tag_name() !== 'SECTION' || ! $element->has_attribute( 'class' ) ) {
-			return false;
-		}
-
-		return self::class_matches( $element, '/(?:^|[-_\s])(?:hero|cover|banner|masthead)(?:$|[-_\s])/i' );
-	}
-
-	/**
 	 * Applies direct border declarations to block support attributes.
 	 *
 	 * @param array  $attributes Block attributes.
@@ -4440,6 +4425,10 @@ class HTML_To_Blocks_Transform_Registry {
 
 					if ( self::is_static_visual_label( $element ) ) {
 						return true;
+					}
+
+					if ( 'SPAN' === $element->get_tag_name() && $element->has_attribute( 'class' ) ) {
+						return false;
 					}
 
 					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )

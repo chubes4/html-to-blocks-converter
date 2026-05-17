@@ -25,7 +25,7 @@ if ( ! function_exists( 'esc_url' ) ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $value ) {
-		return wp_strip_all_tags( (string) $value );
+		return strip_tags( (string) $value );
 	}
 }
 
@@ -390,6 +390,18 @@ $onclick_submit_button = new HTML_To_Blocks_HTML_Element(
 	'Submit'
 );
 $smoke_assert( $find_transform( $onclick_submit_button ) === null, 'onclick-submit-button-falls-through' );
+
+// -------------------------------------------------------------------------
+// Spans: classed leaf spans preserve source display semantics as fallback HTML.
+// -------------------------------------------------------------------------
+
+$classed_leaf_span = new HTML_To_Blocks_HTML_Element(
+	'span',
+	[ 'class' => 'service-number' ],
+	'<span class="service-number">01</span>',
+	'01'
+);
+$smoke_assert( $find_transform( $classed_leaf_span ) === null, 'classed-leaf-span-falls-through' );
 
 // -------------------------------------------------------------------------
 // Labels: static visual UI labels become text, real form labels fall through.
