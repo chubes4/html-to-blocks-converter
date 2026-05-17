@@ -1057,6 +1057,17 @@ class HTML_To_Blocks_Transform_Registry {
 	private static function get_button_transforms() {
 		return array(
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'div',
+				'isMatch'   => function ( $element ) {
+					return self::is_aria_hidden_inline_span_container( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_aria_hidden_inline_span_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1305,6 +1316,72 @@ class HTML_To_Blocks_Transform_Registry {
 		$attributes['content'] = $element->get_inner_html();
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Checks whether an aria-hidden div is only inline span labels.
+	 *
+	 * Decorative rulers and visual scales commonly use direct span ticks inside an
+	 * aria-hidden div. Convert those wrappers to a paragraph so Gutenberg does not
+	 * insert an extra paragraph inside a group and break span-level CSS layouts.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper can safely become paragraph markup.
+	 */
+	private static function is_aria_hidden_inline_span_container( $element ): bool {
+		if ( 'DIV' !== $element->get_tag_name() || ! $element->has_attribute( 'aria-hidden' ) ) {
+			return false;
+		}
+
+		if ( 'true' !== strtolower( trim( (string) $element->get_attribute( 'aria-hidden' ) ) ) ) {
+			return false;
+		}
+
+		if ( '' === trim( $element->get_text_content() ) ) {
+			return false;
+		}
+
+		return self::html_contains_only_direct_spans( $element->get_inner_html() );
+	}
+
+	/**
+	 * Creates a paragraph preserving direct span markup from an aria-hidden div.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Span-only wrapper.
+	 * @return array Block array.
+	 */
+	private static function create_aria_hidden_inline_span_paragraph( $element ): array {
+		$attributes            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'colors'     => true,
+			'typography' => true,
+			'spacing'    => true,
+			'border'     => true,
+		) );
+		$attributes['content'] = trim( $element->get_inner_html() );
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Checks whether HTML contains only sibling span elements and whitespace.
+	 *
+	 * @param string $html Inner HTML to inspect.
+	 * @return bool True when no non-span sibling markup or text remains.
+	 */
+	private static function html_contains_only_direct_spans( string $html ): bool {
+		$remaining = $html;
+
+		if ( ! preg_match_all( '/<span\b[^>]*>.*?<\/span>/is', $html, $matches ) ) {
+			return false;
+		}
+
+		foreach ( $matches[0] as $span_html ) {
+			$remaining = str_replace( $span_html, '', $remaining );
+		}
+
+		return '' === trim( $remaining );
 	}
 
 	/**
