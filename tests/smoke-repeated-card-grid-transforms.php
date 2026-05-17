@@ -278,6 +278,16 @@ $assert( strpos( $service_card_serialized, '<p class="service-number">01</p>' ) 
 $assert( strpos( $service_card_serialized, '<h3 class="wp-block-heading">Heels &amp; soles</h3>' ) !== false, 'service-card-heading-remains-editable', $service_card_serialized );
 $assert( strpos( $service_card_serialized, '<p>Heel lifts and sole patching.</p>' ) !== false, 'service-card-copy-remains-editable', $service_card_serialized );
 
+$hero_actions = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<div class="hero-actions"><a class="button primary" href="#drop-off">Plan your drop-off</a><a class="button secondary" href="#repairs">See what we repair</a></div>' ] ) );
+$assert( strpos( $hero_actions, '<!-- wp:paragraph' ) !== false, 'class-sensitive-action-links-use-paragraph', $hero_actions );
+$assert( strpos( $hero_actions, '<!-- wp:buttons' ) === false, 'class-sensitive-action-links-avoid-buttons-wrapper', $hero_actions );
+$assert( strpos( $hero_actions, '<a class="button primary" href="#drop-off">Plan your drop-off</a>' ) !== false, 'class-sensitive-action-links-preserve-primary-anchor-class', $hero_actions );
+$assert( strpos( $hero_actions, '<a class="button secondary" href="#repairs">See what we repair</a>' ) !== false, 'class-sensitive-action-links-preserve-secondary-anchor-class', $hero_actions );
+
+$mixed_action_links = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => '<div class="hero-actions"><a class="button primary" href="#drop-off">Plan your drop-off</a><a href="/repairs/">See repairs</a></div>' ] ) );
+$assert( strpos( $mixed_action_links, '<!-- wp:paragraph' ) === false, 'mixed-action-links-do-not-use-class-sensitive-paragraph-transform', $mixed_action_links );
+$assert( strpos( $mixed_action_links, '<!-- wp:html' ) !== false, 'mixed-action-links-remain-fallback-html', $mixed_action_links );
+
 $extrachill_shell_grid = <<<'HTML'
 <div class="full-width-breakout ec-edge-shell">
   <div class="home-3x3-grid">
