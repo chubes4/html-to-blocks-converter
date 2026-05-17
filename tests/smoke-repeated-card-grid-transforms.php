@@ -263,7 +263,7 @@ $assert( count( $unsupported_fallback_events ) === 0, 'generic-wrapper-emits-no-
 
 $service_card_grid = <<<'HTML'
 <div class="service-grid">
-  <article class="service-card"><span class="service-number">01</span><h3>Heels &amp; soles</h3><p>Heel lifts and sole patching.</p></article>
+  <article class="service-card"><span class="service-number">01</span><span class="tag">window seats</span><h3>Heels &amp; soles</h3><p>Heel lifts and sole patching.</p></article>
   <article class="service-card"><span class="service-number">02</span><h3>Boot work</h3><p>Waterproofing and zipper repair.</p></article>
 </div>
 HTML;
