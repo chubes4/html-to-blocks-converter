@@ -4365,6 +4365,10 @@ class HTML_To_Blocks_Transform_Registry {
 						return true;
 					}
 
+					if ( 'SPAN' === $element->get_tag_name() && $element->has_attribute( 'class' ) ) {
+						return false;
+					}
+
 					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )
 						&& array() === $element->get_child_elements()
 						&& trim( $element->get_text_content() ) !== '';
