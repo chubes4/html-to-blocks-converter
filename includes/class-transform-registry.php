@@ -3987,6 +3987,13 @@ class HTML_To_Blocks_Transform_Registry {
 			return self::create_list_block_from_element( $child );
 		}
 
+		if ( 'SPAN' === $tag && $child->has_attribute( 'class' ) ) {
+			return HTML_To_Blocks_Block_Factory::create_block(
+				'core/html',
+				array( 'content' => $child->get_outer_html() )
+			);
+		}
+
 		if ( 'P' === $tag || 'SPAN' === $tag ) {
 			return HTML_To_Blocks_Block_Factory::create_block(
 				'core/paragraph',
