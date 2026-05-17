@@ -1079,6 +1079,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/html',
+				'priority'  => 8,
+				'selector'  => 'span',
+				'isMatch'   => function ( $element ) {
+					return self::is_classed_leaf_span( $element );
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/html', array( 'content' => $element->get_outer_html() ) );
+				},
+			),
+			array(
 				'blockName' => 'core/group',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1415,6 +1426,23 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return '' === trim( $remaining );
+	}
+
+	/**
+	 * Checks whether a standalone classed span should preserve its source inline markup.
+	 *
+	 * Visual labels and counters often rely on a span selector for display semantics.
+	 * Keep direct classed span leaves as HTML instead of converting them to paragraphs.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the span should remain source HTML.
+	 */
+	private static function is_classed_leaf_span( $element ): bool {
+		if ( 'SPAN' !== $element->get_tag_name() || ! $element->has_attribute( 'class' ) ) {
+			return false;
+		}
+
+		return trim( $element->get_inner_html() ) === trim( $element->get_text_content() );
 	}
 
 	/**
