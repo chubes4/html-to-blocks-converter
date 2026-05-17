@@ -401,7 +401,26 @@ $classed_leaf_span = new HTML_To_Blocks_HTML_Element(
 	'<span class="service-number">01</span>',
 	'01'
 );
-$smoke_assert( $find_transform( $classed_leaf_span ) === null, 'classed-leaf-span-falls-through' );
+$classed_leaf_span_transform = $find_transform( $classed_leaf_span );
+$classed_leaf_span_block     = call_user_func( $classed_leaf_span_transform['transform'], $classed_leaf_span );
+$smoke_assert( 'core/html' === $classed_leaf_span_transform['blockName'], 'classed-leaf-span-becomes-html' );
+$smoke_assert( '<span class="service-number">01</span>' === $classed_leaf_span_block['attrs']['content'], 'classed-leaf-span-source-markup-preserved' );
+
+$plain_leaf_span = new HTML_To_Blocks_HTML_Element(
+	'span',
+	[],
+	'<span>01</span>',
+	'01'
+);
+$smoke_assert( $find_transform( $plain_leaf_span ) === null, 'plain-leaf-span-falls-through' );
+
+$rich_classed_span = new HTML_To_Blocks_HTML_Element(
+	'span',
+	[ 'class' => 'service-number' ],
+	'<span class="service-number"><strong>01</strong></span>',
+	'01'
+);
+$smoke_assert( $find_transform( $rich_classed_span ) === null, 'rich-classed-span-falls-through' );
 
 // -------------------------------------------------------------------------
 // Labels: static visual UI labels become text, real form labels fall through.
