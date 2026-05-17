@@ -243,6 +243,16 @@ $class_sensitive_cta_row_transform = $find_transform( $class_sensitive_cta_row )
 
 $smoke_assert( 'core/buttons' !== $class_sensitive_cta_row_transform['blockName'], 'class-sensitive-cta-row-avoids-buttons' );
 
+$button_variant_row = new HTML_To_Blocks_HTML_Element(
+	'div',
+	[ 'class' => 'hero-actions cta' ],
+	'<div class="hero-actions cta"><a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a></div>',
+	'<a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a>'
+);
+$button_variant_row_transform = $find_transform( $button_variant_row );
+
+$smoke_assert( 'core/buttons' !== $button_variant_row_transform['blockName'], 'class-sensitive-button-variant-row-avoids-buttons' );
+
 $ordinary_link = new HTML_To_Blocks_HTML_Element(
 	'p',
 	[],
