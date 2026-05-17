@@ -1496,7 +1496,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function create_branded_inline_anchor_paragraph( $element ): array {
 		$attributes            = self::get_block_support_attributes( $element, array(
-			'anchor'     => true,
+			'anchor' => true,
 		) );
 		$attributes['content'] = trim( $element->get_outer_html() );
 
@@ -3315,7 +3315,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( ! empty( $options['layout'] ) ) {
-			self::apply_layout_support_attributes( $attributes, $classes, $style, $element );
+			self::apply_layout_support_attributes( $attributes, $classes, $style );
 		}
 
 		return $attributes;
@@ -3449,7 +3449,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param array  $attributes Block attributes.
 	 * @param string $classes Source class attribute.
 	 */
-	private static function apply_layout_support_attributes( array &$attributes, string $classes, string $style = '', $element = null ): void {
+	private static function apply_layout_support_attributes( array &$attributes, string $classes, string $style = '' ): void {
 		if ( preg_match( '/(?:^|\s)is-layout-(flow|constrained|flex)(?:\s|$)/i', $classes, $matches ) ) {
 			$type                         = strtolower( $matches[1] );
 			$attributes['layout']['type'] = 'flow' === $type ? 'default' : $type;
