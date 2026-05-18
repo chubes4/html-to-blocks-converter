@@ -1083,7 +1083,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'priority'  => 8,
 				'selector'  => 'span',
 				'isMatch'   => function ( $element ) {
-					return self::is_numeric_label_span( $element );
+					return self::is_inline_span_label( $element );
 				},
 				'transform' => function ( $element ) {
 					return self::create_inline_span_label_paragraph( $element );
@@ -1341,16 +1341,16 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Checks whether a standalone span is a numeric visual label.
+	 * Checks whether a standalone span is a visual label.
 	 *
-	 * Number-only label spans are commonly used as service, step, or index badges.
-	 * Keep the span markup inside a native paragraph so class-based presentation
-	 * survives without falling back to core/html.
+	 * Number-only and tag label spans are commonly used as service, step, index,
+	 * and card badges. Keep the span markup inside a native paragraph so
+	 * class-based presentation survives without falling back to core/html.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
 	 * @return bool True when the span can safely become paragraph markup.
 	 */
-	private static function is_numeric_label_span( $element ): bool {
+	private static function is_inline_span_label( $element ): bool {
 		if ( 'SPAN' !== $element->get_tag_name() || ! $element->has_attribute( 'class' ) ) {
 			return false;
 		}
@@ -1359,13 +1359,17 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/^\d+$/', trim( $element->get_text_content() ) ) === 1;
+		if ( preg_match( '/^\d+$/', trim( $element->get_text_content() ) ) === 1 ) {
+			return true;
+		}
+
+		return self::class_matches( $element, '/(?:^|\s)tag(?:\s|$)/i' );
 	}
 
 	/**
-	 * Creates a paragraph preserving numeric label span markup.
+	 * Creates a paragraph preserving inline label span markup.
 	 *
-	 * @param HTML_To_Blocks_HTML_Element $element Numeric label span.
+	 * @param HTML_To_Blocks_HTML_Element $element Inline label span.
 	 * @return array Block array.
 	 */
 	private static function create_inline_span_label_paragraph( $element ): array {
@@ -4556,6 +4560,10 @@ class HTML_To_Blocks_Transform_Registry {
 						return true;
 					}
 
+					if ( self::is_inline_span_label( $element ) ) {
+						return true;
+					}
+
 					if ( self::is_static_visual_label( $element ) ) {
 						return true;
 					}
@@ -4569,6 +4577,10 @@ class HTML_To_Blocks_Transform_Registry {
 						&& trim( $element->get_text_content() ) !== '';
 				},
 				'transform' => function ( $element ) {
+					if ( self::is_inline_span_label( $element ) ) {
+						return self::create_inline_span_label_paragraph( $element );
+					}
+
 					$content = $element->get_tag_name() === 'A' ? self::get_paragraph_anchor_content( $element ) : $element->get_inner_html();
 					if ( self::is_static_checkbox_label( $element ) ) {
 						$content = trim( preg_replace( '/<\s*input\b[^>]*>/i', '', $content ) );
