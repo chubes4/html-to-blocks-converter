@@ -1112,6 +1112,17 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/html',
+				'priority'  => 8,
+				'selector'  => 'div,p',
+				'isMatch'   => function ( $element ) {
+					return self::is_class_sensitive_action_link_container( $element );
+				},
+				'transform' => function ( $element ) {
+					return HTML_To_Blocks_Block_Factory::create_block( 'core/html', array( 'content' => $element->get_outer_html() ) );
+				},
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 8,
 				'selector'  => 'div,p',
@@ -1545,6 +1556,37 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function is_action_link_container( $element ): bool {
 		return self::class_matches( $element, '/(?:^|[-_\s])(?:actions?|buttons?|cta)(?:$|[-_\s])/i' );
+	}
+
+	/**
+	 * Checks whether an action wrapper should preserve class-sensitive anchors as raw HTML.
+	 *
+	 * Some action rows use direct anchors whose source CSS targets the anchor
+	 * classes themselves. Converting those wrappers to core/buttons or flowing the
+	 * anchors through a paragraph moves the effective styling target and changes
+	 * visual rhythm. Keep only explicit action containers with class-sensitive CTA
+	 * anchors as raw HTML; simpler action rows continue through native buttons.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the wrapper should remain raw HTML.
+	 */
+	private static function is_class_sensitive_action_link_container( $element ): bool {
+		if ( ! self::is_action_link_container( $element ) ) {
+			return false;
+		}
+
+		$children = self::get_direct_anchor_children_from_html( $element->get_inner_html() );
+		if ( count( $children ) < 1 ) {
+			return false;
+		}
+
+		foreach ( $children as $child ) {
+			if ( self::is_class_sensitive_cta_anchor( $child ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
