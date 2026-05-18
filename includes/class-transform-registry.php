@@ -1177,8 +1177,12 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( self::is_action_link_container( $element ) ) {
+			if ( self::is_exact_cta_token_container( $element ) ) {
+				return false;
+			}
+
 			foreach ( $children as $child ) {
-				if ( self::is_class_sensitive_cta_anchor( $child ) ) {
+				if ( self::is_class_sensitive_cta_anchor( $child ) && ! self::is_generic_button_variant_anchor( $child ) ) {
 					return false;
 				}
 			}
@@ -1668,6 +1672,37 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return preg_match( '/(?:^|\s)(?:button|cta-(?:btn|link)|(?:btn|link)-cta)(?:$|\s)/i', $class_name ) === 1;
+	}
+
+	/**
+	 * Checks whether a CTA/action container uses an explicit CTA class token.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Container element.
+	 * @return bool True when the container should keep CTA-owned anchor classes.
+	 */
+	private static function is_exact_cta_token_container( $element ): bool {
+		$class_name = $element->get_attribute( 'class' ) ?? '';
+		return preg_match( '/(?:^|\s)(?:cta|cta[-_]?actions)(?:$|\s)/i', $class_name ) === 1;
+	}
+
+	/**
+	 * Checks whether an anchor has the generic button class plus visual variants.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Anchor element.
+	 * @return bool True when the class shape is safe to treat as a native button.
+	 */
+	private static function is_generic_button_variant_anchor( $element ): bool {
+		// @phpstan-ignore-next-line booleanNot.alwaysFalse -- Defensive public API guard for untyped external callers.
+		if ( ! $element || $element->get_tag_name() !== 'A' ) {
+			return false;
+		}
+
+		$class_name = trim( (string) ( $element->get_attribute( 'class' ) ?? '' ) );
+		if ( preg_match( '/(?:^|\s)button(?:$|\s)/i', $class_name ) !== 1 ) {
+			return false;
+		}
+
+		return preg_match( '/(?:^|\s)(?:primary|secondary)(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
