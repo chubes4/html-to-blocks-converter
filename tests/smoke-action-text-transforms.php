@@ -245,13 +245,27 @@ $smoke_assert( 'core/buttons' !== $class_sensitive_cta_row_transform['blockName'
 
 $button_variant_row = new HTML_To_Blocks_HTML_Element(
 	'div',
+	[ 'class' => 'hero-actions' ],
+	'<div class="hero-actions"><a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a></div>',
+	'<a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a>'
+);
+$button_variant_row_transform = $find_transform( $button_variant_row );
+$button_variant_row_block     = call_user_func( $button_variant_row_transform['transform'], $button_variant_row, $handler );
+
+$smoke_assert( 'core/buttons' === $button_variant_row_transform['blockName'], 'generic-button-variant-row-becomes-buttons' );
+$smoke_assert( 'hero-actions' === $button_variant_row_block['attrs']['className'], 'generic-button-variant-row-wrapper-class-preserved' );
+$smoke_assert( '#classes' === $button_variant_row_block['innerBlocks'][0]['attrs']['url'], 'generic-button-variant-row-first-url-preserved' );
+$smoke_assert( '#first-visit' === $button_variant_row_block['innerBlocks'][1]['attrs']['url'], 'generic-button-variant-row-second-url-preserved' );
+
+$cta_button_variant_row = new HTML_To_Blocks_HTML_Element(
+	'div',
 	[ 'class' => 'hero-actions cta' ],
 	'<div class="hero-actions cta"><a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a></div>',
 	'<a class="button primary" href="#classes">Find a class</a><a class="button secondary" href="#first-visit">Plan your first visit</a>'
 );
-$button_variant_row_transform = $find_transform( $button_variant_row );
+$cta_button_variant_row_transform = $find_transform( $cta_button_variant_row );
 
-$smoke_assert( 'core/buttons' !== $button_variant_row_transform['blockName'], 'class-sensitive-button-variant-row-avoids-buttons' );
+$smoke_assert( 'core/buttons' !== $cta_button_variant_row_transform['blockName'], 'class-sensitive-button-variant-row-avoids-buttons' );
 
 $ordinary_link = new HTML_To_Blocks_HTML_Element(
 	'p',
