@@ -241,7 +241,9 @@ $class_sensitive_cta_row = new HTML_To_Blocks_HTML_Element(
 );
 $class_sensitive_cta_row_transform = $find_transform( $class_sensitive_cta_row );
 
-$smoke_assert( 'core/buttons' !== $class_sensitive_cta_row_transform['blockName'], 'class-sensitive-cta-row-avoids-buttons' );
+$smoke_assert( 'core/html' === $class_sensitive_cta_row_transform['blockName'], 'class-sensitive-cta-row-uses-html' );
+$class_sensitive_cta_row_block = call_user_func( $class_sensitive_cta_row_transform['transform'], $class_sensitive_cta_row, $handler );
+$smoke_assert( strpos( $class_sensitive_cta_row_block['attrs']['content'], '<div class="cta-actions"><a class="cta-link" href="#commands">Browse the docs</a></div>' ) !== false, 'class-sensitive-cta-row-preserves-wrapper-html' );
 
 $button_variant_row = new HTML_To_Blocks_HTML_Element(
 	'div',
