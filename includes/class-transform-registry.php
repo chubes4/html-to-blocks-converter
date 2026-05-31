@@ -192,8 +192,8 @@ class HTML_To_Blocks_Transform_Registry {
 				'isMatch'   => function ( $element ) {
 					return self::is_gallery_element( $element );
 				},
-				'transform' => function ( $element ) {
-					return self::create_gallery_block( $element );
+				'transform' => function ( $element, $handler = null, array $args = array() ) {
+					return self::create_gallery_block( $element, $args );
 				},
 			),
 			array(
@@ -204,8 +204,8 @@ class HTML_To_Blocks_Transform_Registry {
 					return preg_match( '/(?:^|\s)(?:wp-block-media-text|media-text)(?:$|\s)/i', $class ) === 1
 						&& ( $element->query_selector( 'img' ) || $element->query_selector( 'video' ) );
 				},
-				'transform' => function ( $element, $handler ) {
-					return self::create_media_text_block( $element, $handler );
+				'transform' => function ( $element, $handler, array $args = array() ) {
+					return self::create_media_text_block( $element, $handler, $args );
 				},
 			),
 			array(
@@ -319,7 +319,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param HTML_To_Blocks_HTML_Element $element Gallery wrapper.
 	 * @return array Block array.
 	 */
-	private static function create_gallery_block( $element ): array {
+	private static function create_gallery_block( $element, array $args = array() ): array {
 		$images       = $element->query_selector_all( 'img' );
 		$captions     = $element->query_selector_all( 'figcaption' );
 		$inner_blocks = array();
@@ -327,7 +327,7 @@ class HTML_To_Blocks_Transform_Registry {
 
 		foreach ( $images as $index => $img ) {
 			$caption        = isset( $captions[ $index ] ) ? $captions[ $index ]->get_inner_html() : '';
-			$image_block    = self::create_image_block_from_img( $img, $caption );
+			$image_block    = self::create_image_block_from_img( $img, $caption, $args );
 			$inner_blocks[] = $image_block;
 
 			if ( isset( $image_block['attrs']['id'] ) ) {
@@ -354,7 +354,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @param string                      $caption Optional caption HTML.
 	 * @return array Block array.
 	 */
-	private static function create_image_block_from_img( $img, string $caption = '' ): array {
+	private static function create_image_block_from_img( $img, string $caption = '', array $args = array() ): array {
 		$attributes = array(
 			'url' => $img->get_attribute( 'src' ) ?? '',
 		);
@@ -366,6 +366,7 @@ class HTML_To_Blocks_Transform_Registry {
 		if ( $img->has_attribute( 'class' ) && preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $img->get_attribute( 'class' ), $matches ) ) {
 			$attributes['id'] = (int) $matches[1];
 		}
+		self::apply_image_asset_metadata( $attributes, $args );
 
 		return HTML_To_Blocks_Block_Factory::create_block( 'core/image', $attributes );
 	}
@@ -385,13 +386,75 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
+	 * Applies caller-resolved asset metadata to image block attributes.
+	 *
+	 * @param array<string,mixed> $attributes Block attributes.
+	 * @param array<string,mixed> $args       Raw handler arguments.
+	 */
+	private static function apply_image_asset_metadata( array &$attributes, array $args ): void {
+		$metadata = self::get_asset_metadata_for_source( $args, (string) ( $attributes['url'] ?? '' ) );
+		if ( empty( $metadata ) ) {
+			return;
+		}
+
+		if ( isset( $metadata['url'] ) && is_scalar( $metadata['url'] ) && '' !== (string) $metadata['url'] ) {
+			$attributes['url'] = (string) $metadata['url'];
+		}
+		if ( isset( $metadata['id'] ) && is_numeric( $metadata['id'] ) && (int) $metadata['id'] > 0 ) {
+			$attributes['id'] = (int) $metadata['id'];
+		}
+		foreach ( array( 'alt', 'width', 'height' ) as $attribute ) {
+			if ( ! isset( $attributes[ $attribute ] ) && isset( $metadata[ $attribute ] ) && is_scalar( $metadata[ $attribute ] ) ) {
+				$attributes[ $attribute ] = (string) $metadata[ $attribute ];
+			}
+		}
+	}
+
+	/**
+	 * Returns caller-provided asset metadata for a source reference.
+	 *
+	 * @param array<string,mixed> $args   Raw handler arguments.
+	 * @param string              $source Source URL/path from the HTML.
+	 * @return array<string,mixed>
+	 */
+	private static function get_asset_metadata_for_source( array $args, string $source ): array {
+		$context = isset( $args['context'] ) && is_array( $args['context'] ) ? $args['context'] : array();
+		$maps    = array( 'asset_metadata', 'resolved_assets', 'assets' );
+
+		foreach ( $maps as $map_key ) {
+			if ( empty( $context[ $map_key ] ) || ! is_array( $context[ $map_key ] ) ) {
+				continue;
+			}
+
+			$map = $context[ $map_key ];
+			if ( isset( $map[ $source ] ) && is_array( $map[ $source ] ) ) {
+				return $map[ $source ];
+			}
+
+			foreach ( $map as $metadata ) {
+				if ( ! is_array( $metadata ) ) {
+					continue;
+				}
+
+				foreach ( array( 'source', 'src', 'path', 'original' ) as $source_key ) {
+					if ( isset( $metadata[ $source_key ] ) && (string) $metadata[ $source_key ] === $source ) {
+						return $metadata;
+					}
+				}
+			}
+		}
+
+		return array();
+	}
+
+	/**
 	 * Creates a media-text block from a recognized two-column wrapper.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $element Media-text wrapper.
 	 * @param callable                    $handler Recursive raw handler.
 	 * @return array Block array.
 	 */
-	private static function create_media_text_block( $element, $handler ): array {
+	private static function create_media_text_block( $element, $handler, array $args = array() ): array {
 		$media      = $element->query_selector( 'img' ) ? $element->query_selector( 'img' ) : $element->query_selector( 'video' );
 		$content    = $element->query_selector( '.wp-block-media-text__content' );
 		$media_type = $media && $media->get_tag_name() === 'VIDEO' ? 'video' : 'image';
@@ -408,6 +471,19 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 		if ( $media && $media->has_attribute( 'class' ) && preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $media->get_attribute( 'class' ), $matches ) ) {
 			$attributes['mediaId'] = (int) $matches[1];
+		}
+
+		$metadata = self::get_asset_metadata_for_source( $args, (string) $attributes['mediaUrl'] );
+		if ( ! empty( $metadata ) ) {
+			if ( isset( $metadata['url'] ) && is_scalar( $metadata['url'] ) && '' !== (string) $metadata['url'] ) {
+				$attributes['mediaUrl'] = (string) $metadata['url'];
+			}
+			if ( isset( $metadata['id'] ) && is_numeric( $metadata['id'] ) && (int) $metadata['id'] > 0 ) {
+				$attributes['mediaId'] = (int) $metadata['id'];
+			}
+			if ( ! isset( $attributes['mediaAlt'] ) && isset( $metadata['alt'] ) && is_scalar( $metadata['alt'] ) ) {
+				$attributes['mediaAlt'] = (string) $metadata['alt'];
+			}
 		}
 		if ( preg_match( '/(?:^|\s)has-media-on-the-right(?:$|\s)/', $element->get_attribute( 'class' ) ?? '' ) ) {
 			$attributes['mediaPosition'] = 'right';
@@ -1917,7 +1993,7 @@ class HTML_To_Blocks_Transform_Registry {
 					$img = $element->query_selector( 'img' );
 					return null !== $img;
 				},
-				'transform' => function ( $element ) {
+				'transform' => function ( $element, $handler = null, array $args = array() ) {
 					$img        = $element->query_selector( 'img' );
 					$figcaption = $element->query_selector( 'figcaption' );
 
@@ -1952,6 +2028,8 @@ class HTML_To_Blocks_Transform_Registry {
 						$attributes['anchor'] = $element->get_attribute( 'id' );
 					}
 
+					self::apply_image_asset_metadata( $attributes, $args );
+
 					$anchor_element = $element->query_selector( 'a' );
 					if ( $anchor_element && $anchor_element->has_attribute( 'href' ) ) {
 						$attributes['href']            = $anchor_element->get_attribute( 'href' );
@@ -1974,7 +2052,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'isMatch'   => function ( $element ) {
 					return $element->get_tag_name() === 'IMG';
 				},
-				'transform' => function ( $element ) {
+				'transform' => function ( $element, $handler = null, array $args = array() ) {
 					$attributes = array(
 						'url' => $element->get_attribute( 'src' ) ?? '',
 					);
@@ -1990,6 +2068,8 @@ class HTML_To_Blocks_Transform_Registry {
 					if ( preg_match( '/(?:^|\s)wp-image-(\d+)(?:$|\s)/', $class_name, $matches ) ) {
 						$attributes['id'] = (int) $matches[1];
 					}
+
+					self::apply_image_asset_metadata( $attributes, $args );
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/image', $attributes );
 				},
