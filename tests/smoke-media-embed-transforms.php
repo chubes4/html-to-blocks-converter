@@ -31,6 +31,11 @@ if ( ! function_exists( 'sanitize_html_class' ) ) {
 		return preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $value );
 	}
 }
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( $url, $component = -1 ) {
+		return parse_url( $url, $component );
+	}
+}
 
 if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 	class WP_Block_Type_Registry {
@@ -75,6 +80,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 			$this->blocks['core/media-text'] = (object) [
 				'attributes' => [
 					'mediaUrl'          => [ 'type' => 'string' ],
+					'mediaId'           => [ 'type' => 'number' ],
 					'mediaAlt'          => $source_string,
 					'mediaType'         => [ 'type' => 'string' ],
 					'mediaPosition'     => [ 'type' => 'string' ],
@@ -174,7 +180,7 @@ $find_transform = function ( $element ) {
 	return null;
 };
 
-$convert = function ( $element ) use ( $find_transform ) {
+$convert = function ( $element, array $args = [] ) use ( $find_transform ) {
 	$transform = $find_transform( $element );
 	if ( ! $transform ) {
 		return null;
@@ -182,7 +188,7 @@ $convert = function ( $element ) use ( $find_transform ) {
 	$handler = function () {
 		return [ HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', [ 'content' => 'Nested text' ] ) ];
 	};
-	return call_user_func( $transform['transform'], $element, $handler );
+	return call_user_func( $transform['transform'], $element, $handler, $args );
 };
 
 $video = $convert( new H2BC_Fake_Element( 'video', [ 'src' => 'movie.mp4', 'poster' => 'poster.jpg', 'controls' => '' ] ) );
@@ -208,6 +214,23 @@ $assert( count( $gallery['innerBlocks'] ) === 2, 'gallery-inner-image-count' );
 $assert( strpos( $gallery['innerHTML'], 'wp-block-gallery' ) !== false, 'gallery-wrapper-html' );
 $assert( strpos( $gallery['innerBlocks'][0]['innerHTML'], 'Caption A' ) !== false, 'gallery-caption-preserved' );
 
+$resolved_gallery = $convert(
+	new H2BC_Fake_Element( 'div', [ 'class' => 'gallery columns-2' ], '', [
+		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'a.jpg', 'alt' => 'A' ] ) ] ),
+		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'b.jpg', 'alt' => 'B' ] ) ] ),
+	] ),
+	[
+		'context' => [
+			'asset_metadata' => [
+				'a.jpg' => [ 'id' => 101, 'url' => 'https://example.test/uploads/a.jpg' ],
+				'b.jpg' => [ 'id' => 102, 'url' => 'https://example.test/uploads/b.jpg' ],
+			],
+		],
+	]
+);
+$assert( [ 101, 102 ] === ( $resolved_gallery['attrs']['ids'] ?? [] ), 'gallery-resolved-ids' );
+$assert( strpos( $resolved_gallery['innerBlocks'][0]['innerHTML'], 'https://example.test/uploads/a.jpg' ) !== false, 'gallery-resolved-image-url' );
+
 $media_text = $convert(
 	new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text' ], '', [
 		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'hero.jpg', 'alt' => 'Hero' ] ) ] ),
@@ -217,6 +240,38 @@ $media_text = $convert(
 $assert( 'core/media-text' === $media_text['blockName'], 'media-text-block' );
 $assert( ( $media_text['attrs']['mediaUrl'] ?? '' ) === 'hero.jpg', 'media-text-media-url' );
 $assert( count( $media_text['innerBlocks'] ) === 1, 'media-text-inner-blocks' );
+
+$resolved_media_text = $convert(
+	new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text' ], '', [
+		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'hero.jpg', 'alt' => 'Hero' ] ) ] ),
+		new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text__content' ], '<p>Copy</p>' ),
+	] ),
+	[
+		'context' => [
+			'asset_metadata' => [
+				'hero.jpg' => [ 'id' => 201, 'url' => 'https://example.test/uploads/hero.jpg', 'alt' => 'Resolved alt' ],
+			],
+		],
+	]
+);
+$assert( ( $resolved_media_text['attrs']['mediaUrl'] ?? '' ) === 'https://example.test/uploads/hero.jpg', 'media-text-resolved-url' );
+$assert( ( $resolved_media_text['attrs']['mediaId'] ?? null ) === 201, 'media-text-resolved-id' );
+$assert( strpos( $resolved_media_text['innerHTML'], 'alt="Hero"' ) !== false, 'media-text-preserves-source-alt' );
+
+$resolved_image = $convert(
+	new H2BC_Fake_Element( 'img', [ 'src' => 'product.jpg', 'alt' => 'Product', 'width' => '640', 'height' => '480' ] ),
+	[
+		'context' => [
+			'asset_metadata' => [
+				'product.jpg' => [ 'id' => 301, 'url' => 'https://example.test/uploads/product.jpg', 'width' => '1280' ],
+			],
+		],
+	]
+);
+$assert( ( $resolved_image['attrs']['id'] ?? null ) === 301, 'image-resolved-id' );
+$assert( strpos( $resolved_image['innerHTML'], 'https://example.test/uploads/product.jpg' ) !== false, 'image-resolved-url' );
+$assert( strpos( $resolved_image['innerHTML'], 'width="640"' ) !== false, 'image-preserves-source-width' );
+$assert( strpos( $resolved_image['innerHTML'], 'https://example.test/uploads/product.jpg' ) !== false, 'image-resolved-inner-html' );
 
 $file = $convert( new H2BC_Fake_Element( 'a', [ 'href' => 'https://example.com/report.pdf' ], 'Download report' ) );
 $assert( 'core/file' === $file['blockName'], 'file-link-block' );
