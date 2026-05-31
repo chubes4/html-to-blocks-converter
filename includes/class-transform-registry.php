@@ -1188,11 +1188,11 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( self::is_action_link_container( $element ) ) {
-			if ( self::is_exact_cta_token_container( $element ) ) {
-				return false;
-			}
-
 			foreach ( $children as $child ) {
+				if ( self::is_exact_cta_token_container( $element ) && self::is_generic_button_variant_anchor( $child ) ) {
+					return false;
+				}
+
 				if ( self::is_class_sensitive_cta_anchor( $child ) && ! self::is_generic_button_variant_anchor( $child ) ) {
 					return false;
 				}
@@ -1585,7 +1585,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		foreach ( $children as $child ) {
-			if ( self::is_class_sensitive_cta_anchor( $child ) ) {
+			if ( self::is_class_sensitive_cta_anchor( $child ) && ! self::is_generic_button_variant_anchor( $child ) ) {
 				return true;
 			}
 		}
@@ -1713,7 +1713,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return preg_match( '/(?:^|\s)(?:button|cta-(?:btn|link)|(?:btn|link)-cta)(?:$|\s)/i', $class_name ) === 1;
+		return preg_match( '/(?:^|\s)(?:cta-(?:btn|link)|(?:btn|link)-cta)(?:$|\s)/i', $class_name ) === 1;
 	}
 
 	/**
@@ -4140,7 +4140,47 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 		}
 
+		foreach ( self::get_direct_image_children_from_html( $element->get_inner_html() ) as $image ) {
+			$image_src = $image->get_attribute( 'src' ) ?? '';
+			$has_image = false;
+			foreach ( $blocks as $block ) {
+				if ( 'core/image' === ( $block['blockName'] ?? '' ) && $image_src === ( $block['attrs']['url'] ?? '' ) ) {
+					$has_image = true;
+					break;
+				}
+			}
+
+			if ( ! $has_image ) {
+				array_unshift( $blocks, self::create_image_block_from_img( $image ) );
+			}
+		}
+
 		return $blocks;
+	}
+
+	/**
+	 * Gets direct image children from raw inner HTML.
+	 *
+	 * @param string $html Inner HTML to inspect.
+	 * @return array Image elements.
+	 */
+	private static function get_direct_image_children_from_html( string $html ): array {
+		$remaining = $html;
+		$images    = array();
+
+		if ( ! preg_match_all( '/<img\b[^>]*\/?>/i', $html, $matches ) ) {
+			return array();
+		}
+
+		foreach ( $matches[0] as $image_html ) {
+			$image = HTML_To_Blocks_HTML_Element::from_html( $image_html );
+			if ( $image ) {
+				$images[] = $image;
+			}
+			$remaining = str_replace( $image_html, '', $remaining );
+		}
+
+		return '' === trim( preg_replace( '/<[^>]+>.*?<\/[^>]+>/s', '', $remaining ) ?? $remaining ) ? $images : array();
 	}
 
 	/**
