@@ -4570,11 +4570,33 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		foreach ( $element->query_selector_all( 'a, button, input, select, textarea, img, video, audio, iframe, object, embed, svg' ) as $functional_child ) {
-			return false;
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( self::is_functional_element_or_descendant( $child ) ) {
+				return false;
+			}
 		}
 
 		return ! empty( $element->get_child_elements() );
+	}
+
+	/**
+	 * Checks whether an element subtree contains controls, media, or embeds.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return bool True when the subtree contains functional markup.
+	 */
+	private static function is_functional_element_or_descendant( $element ): bool {
+		if ( in_array( $element->get_tag_name(), array( 'A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'IMG', 'VIDEO', 'AUDIO', 'IFRAME', 'OBJECT', 'EMBED', 'SVG' ), true ) ) {
+			return true;
+		}
+
+		foreach ( $element->get_child_elements() as $child ) {
+			if ( self::is_functional_element_or_descendant( $child ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
