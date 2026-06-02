@@ -4224,7 +4224,7 @@ class HTML_To_Blocks_Transform_Registry {
 			$image_src = $image->get_attribute( 'src' ) ?? '';
 			$has_image = false;
 			foreach ( $blocks as $block ) {
-				if ( 'core/image' === ( $block['blockName'] ?? '' ) && $image_src === ( $block['attrs']['url'] ?? '' ) ) {
+				if ( 'core/image' === ( $block['blockName'] ?? '' ) && ( $block['attrs']['url'] ?? '' ) === $image_src ) {
 					$has_image = true;
 					break;
 				}
