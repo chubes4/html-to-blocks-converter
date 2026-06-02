@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $html_to_blocks_library_path    = __DIR__;
-$html_to_blocks_library_version = '0.7.1';
+$html_to_blocks_library_version = '0.7.2';
 
 if ( ! class_exists( 'HTML_To_Blocks_Versions', false ) ) {
 	require_once $html_to_blocks_library_path . '/includes/class-html-to-blocks-versions.php';

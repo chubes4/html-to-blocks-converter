@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-06-02
+
+### Changed
+- Preserve class-sensitive action link rows as HTML
+- Preserve generic button variant action rows
+- Preserve semantic tag spans as paragraph labels
+- Reset inline preservation paragraph margins
+- Convert numeric label spans to paragraph blocks
+- Narrow numbered card span fallback
+- Add regression for visible diagram span containers
+- Preserve classed span card children as HTML islands
+- Transform diagram span containers to paragraphs
+- align visible span ruler coverage
+- align leaf span smoke coverage
+- Preserve aria-hidden span rulers as paragraphs
+- Add classed leaf span regression coverage
+- Preserve classed leaf spans as fallback HTML
+- consolidate branded anchor smoke coverage
+- Preserve button variant anchor classes
+- Transform nested decorative figures with captions
+- Normalize brand anchor wrappers before paragraph conversion
+- Allow small tags in branded link text
+- Normalize standalone hash anchors before conversion
+- Transform branded hash anchors to paragraphs
+- Preserve standalone anchor attributes in paragraph fallback
+- Add regression for formatted branded links
+- Avoid inferred hero flex layout
+- Convert caption-only decorative figures to native blocks
+- Tighten placeholder form matching
+- Add static placeholder form transform
+- Add regression for empty ruler separators
+- Transform empty divider elements as separators
+- Treat ruler classes as decorative empty elements
+
+### Fixed
+- satisfy image URL comparison lint
+- Fix decorative figure fallback
+- apply resolved asset metadata
+- Fix action rows and card images
+- keep branded anchor classes inline
+- match separator block serialization
+
 ## [0.7.1] - 2026-05-09
 
 ### Changed
