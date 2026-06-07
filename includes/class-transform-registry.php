@@ -3276,6 +3276,7 @@ class HTML_To_Blocks_Transform_Registry {
 		$haystack   = strtolower( $class . ' ' . $aria_label . ' ' . $text );
 
 		return false !== strpos( $haystack, 'static-form' )
+			|| false !== strpos( $haystack, 'form-card' )
 			|| false !== strpos( $haystack, 'static preview' )
 			|| false !== strpos( $haystack, 'preview form' )
 			|| false !== strpos( $haystack, 'preview only' )
@@ -3289,10 +3290,37 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return array Block array.
 	 */
 	private static function create_static_placeholder_form_group( $element ): array {
+		$inner_blocks = self::create_static_placeholder_form_child_blocks( $element->get_child_elements() );
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_common_layout_attributes( $element ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Creates editable blocks for static placeholder form children.
+	 *
+	 * @param array<int,HTML_To_Blocks_HTML_Element> $children Child elements.
+	 * @return array<int,array<string,mixed>> Block arrays.
+	 */
+	private static function create_static_placeholder_form_child_blocks( array $children ): array {
 		$inner_blocks = array();
 
-		foreach ( $element->get_child_elements() as $child ) {
+		foreach ( $children as $child ) {
 			$tag = $child->get_tag_name();
+
+			if ( preg_match( '/^H([1-6])$/', $tag, $matches ) ) {
+				$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+					'core/heading',
+					array(
+						'level'   => (int) $matches[1],
+						'content' => trim( $child->get_inner_html() ),
+					)
+				);
+				continue;
+			}
 
 			if ( 'LABEL' === $tag ) {
 				$content = self::get_static_form_label_text( $child );
@@ -3302,6 +3330,8 @@ class HTML_To_Blocks_Transform_Registry {
 						array( 'content' => esc_html( $content ) )
 					);
 				}
+
+				$inner_blocks = array_merge( $inner_blocks, self::create_static_placeholder_form_child_blocks( $child->get_child_elements() ) );
 				continue;
 			}
 
@@ -3351,14 +3381,22 @@ class HTML_To_Blocks_Transform_Registry {
 						array( 'content' => esc_html( $content ) )
 					);
 				}
+				continue;
+			}
+
+			if ( in_array( $tag, array( 'DIV', 'SECTION' ), true ) ) {
+				$child_blocks = self::create_static_placeholder_form_child_blocks( $child->get_child_elements() );
+				if ( ! empty( $child_blocks ) ) {
+					$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+						'core/group',
+						self::get_common_layout_attributes( $child ),
+						$child_blocks
+					);
+				}
 			}
 		}
 
-		return HTML_To_Blocks_Block_Factory::create_block(
-			'core/group',
-			self::get_common_layout_attributes( $element ),
-			$inner_blocks
-		);
+		return $inner_blocks;
 	}
 
 	/**
