@@ -5004,7 +5004,7 @@ class HTML_To_Blocks_Transform_Registry {
 			array(
 				'blockName' => 'core/paragraph',
 				'priority'  => 20,
-				'selector'  => 'p,address,a,label,div,span',
+				'selector'  => 'p,address,a,label,div,span,strong,em',
 				'isMatch'   => function ( $element ) {
 					if ( in_array( $element->get_tag_name(), array( 'P', 'ADDRESS', 'A' ), true ) ) {
 						return true;
@@ -5022,6 +5022,11 @@ class HTML_To_Blocks_Transform_Registry {
 						return false;
 					}
 
+					if ( in_array( $element->get_tag_name(), array( 'STRONG', 'EM' ), true ) ) {
+						return array() === $element->get_child_elements()
+							&& trim( $element->get_text_content() ) !== '';
+					}
+
 					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )
 						&& array() === $element->get_child_elements()
 						&& trim( $element->get_text_content() ) !== '';
@@ -5032,6 +5037,9 @@ class HTML_To_Blocks_Transform_Registry {
 					}
 
 					$content = $element->get_tag_name() === 'A' ? self::get_paragraph_anchor_content( $element ) : $element->get_inner_html();
+					if ( in_array( $element->get_tag_name(), array( 'STRONG', 'EM' ), true ) ) {
+						$content = trim( $element->get_outer_html() );
+					}
 					if ( self::is_static_checkbox_label( $element ) ) {
 						$content = trim( preg_replace( '/<\s*input\b[^>]*>/i', '', $content ) );
 					}

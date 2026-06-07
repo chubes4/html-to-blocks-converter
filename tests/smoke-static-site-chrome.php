@@ -401,6 +401,23 @@ $assert( str_contains( $ember_rye_footer_serialized, 'href="mailto:hello@emberan
 $assert( substr_count( $ember_rye_footer_serialized, 'Ember &amp; Rye' ) === 1, 'ember-rye-brand-text-serializes-once', $ember_rye_footer_serialized );
 $assert( substr_count( $ember_rye_footer_serialized, 'Warm hospitality, blistered crust, and neighborhood energy nightly.' ) === 1, 'ember-rye-footer-copy-serializes-once', $ember_rye_footer_serialized );
 
+$ember_menu_category_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div class="menu-sections"><section class="menu-category reveal"><div class="category-heading"><h2>Wood-Fired Pizza</h2><span>12&quot; pies</span></div><div class="menu-item"><div><h3>Ember Margherita</h3><p>San Marzano tomato, fior di latte, basil, olive oil</p></div><strong>$18</strong></div><div class="menu-item"><div><h3>Spicy Soppressata</h3><p>Calabrian chile, honey, oregano</p></div><strong>$22</strong></div></section></div>',
+		]
+	)
+);
+$assert( ! str_contains( $ember_menu_category_serialized, '<!-- wp:html -->' ), 'ember-menu-category-avoids-core-html-fallback', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, 'menu-sections' ), 'ember-menu-section-class-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, 'menu-category reveal' ), 'ember-menu-category-class-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, 'Wood-Fired Pizza' ), 'ember-menu-category-title-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, '12&quot; pies' ), 'ember-menu-category-label-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, 'Ember Margherita' ), 'ember-menu-item-title-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, 'San Marzano tomato' ), 'ember-menu-item-description-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, '<strong>$18</strong>' ), 'ember-menu-price-survives', $ember_menu_category_serialized );
+$assert( str_contains( $ember_menu_category_serialized, '<strong>$22</strong>' ), 'ember-menu-second-price-survives', $ember_menu_category_serialized );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
