@@ -25,7 +25,7 @@ if ( ! function_exists( 'esc_url' ) ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $value ) {
-		return wp_strip_all_tags( (string) $value );
+		return strip_tags( (string) $value );
 	}
 }
 

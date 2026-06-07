@@ -1754,7 +1754,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$href = trim( (string) ( $element->get_attribute( 'href' ) ?? '' ) );
-		if ( '' === $href || '#' !== $href[0] ) {
+		if ( '' === $href || preg_match( '/^(?:https?:|mailto:|tel:|javascript:)/i', $href ) === 1 ) {
 			return false;
 		}
 
