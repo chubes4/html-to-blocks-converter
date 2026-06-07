@@ -242,6 +242,43 @@ $assert( str_contains( $network_search_serialized, '<!-- wp:html --><form action
 $assert( count( $fallback_events ) === 1, 'extrachill-network-search-emits-one-local-form-fallback', (string) count( $fallback_events ) );
 $assert( ( $fallback_events[0][1]['tag_name'] ?? '' ) === 'FORM', 'extrachill-network-search-fallback-context-is-form', print_r( $fallback_events, true ) );
 
+$eastbank_static_preview_form = <<<'HTML'
+<form class="static-form" aria-label="Repair intake preview form">
+  <label for="item">Item</label>
+  <input id="item" name="item" type="text" placeholder="Example: desk lamp, toaster, backpack zipper">
+  <label for="problem">What changed?</label>
+  <textarea id="problem" name="problem" rows="4" placeholder="Tell us what stopped working, what you tried, and whether parts are loose."></textarea>
+  <label for="visit">Preferred visit</label>
+  <select id="visit" name="visit">
+    <option>Thursday afternoon</option>
+    <option>Saturday walk-in counter</option>
+    <option>Next clinic or tool night</option>
+  </select>
+  <button type="button">Prepare my bench note</button>
+  <p class="form-note">Static preview only - bring this information with you or call the shop before visiting.</p>
+</form>
+HTML;
+
+$fallback_events = [];
+$eastbank_form_serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $eastbank_static_preview_form ] ) );
+
+$assert( ! str_contains( $eastbank_form_serialized, '<!-- wp:html -->' ), 'eastbank-static-preview-form-avoids-core-html-fallback', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<div class="wp-block-group static-form" aria-label="Repair intake preview form">' ), 'eastbank-static-preview-form-becomes-group', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'Item' ), 'eastbank-static-preview-label-survives', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'Example: desk lamp, toaster, backpack zipper' ), 'eastbank-static-preview-placeholder-survives', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<!-- wp:list -->' ), 'eastbank-static-preview-select-becomes-list', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'Thursday afternoon' ), 'eastbank-static-preview-option-survives', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'Prepare my bench note' ), 'eastbank-static-preview-button-survives', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'Static preview only' ), 'eastbank-static-preview-note-survives', $eastbank_form_serialized );
+$assert( count( $fallback_events ) === 0, 'eastbank-static-preview-emits-no-fallback-event', (string) count( $fallback_events ) );
+
+$untargeted_real_form = '<form aria-label="Contact form"><label for="email">Email</label><input id="email" name="email" type="email"></form>';
+$fallback_events = [];
+$untargeted_real_form_serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTML' => $untargeted_real_form ] ) );
+
+$assert( str_contains( $untargeted_real_form_serialized, '<!-- wp:html --><form aria-label="Contact form">' ), 'untargeted-real-form-still-falls-back', $untargeted_real_form_serialized );
+$assert( count( $fallback_events ) === 1, 'untargeted-real-form-emits-fallback-event', (string) count( $fallback_events ) );
+
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
 	echo 'ALL PASS' . PHP_EOL;
