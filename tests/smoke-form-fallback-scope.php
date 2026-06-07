@@ -264,9 +264,14 @@ $eastbank_form_serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'HTM
 
 $assert( ! str_contains( $eastbank_form_serialized, '<!-- wp:html -->' ), 'eastbank-static-preview-form-avoids-core-html-fallback', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, '<div class="wp-block-group static-form" aria-label="Repair intake preview form">' ), 'eastbank-static-preview-form-becomes-group', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<div class="wp-block-group static-form-field">' ), 'eastbank-static-preview-label-becomes-field-group', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-label">Item</p>' ), 'eastbank-static-preview-label-has-class', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-input">Example: desk lamp, toaster, backpack zipper</p>' ), 'eastbank-static-preview-input-has-control-class', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-textarea">Tell us what stopped working, what you tried, and whether parts are loose.</p>' ), 'eastbank-static-preview-textarea-has-control-class', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-select">Thursday afternoon</p>' ), 'eastbank-static-preview-select-has-control-class', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Item' ), 'eastbank-static-preview-label-survives', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Example: desk lamp, toaster, backpack zipper' ), 'eastbank-static-preview-placeholder-survives', $eastbank_form_serialized );
-$assert( str_contains( $eastbank_form_serialized, '<!-- wp:list -->' ), 'eastbank-static-preview-select-becomes-list', $eastbank_form_serialized );
+$assert( ! str_contains( $eastbank_form_serialized, '<!-- wp:list -->' ), 'eastbank-static-preview-select-does-not-duplicate-options', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Thursday afternoon' ), 'eastbank-static-preview-option-survives', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Prepare my bench note' ), 'eastbank-static-preview-button-survives', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Static preview only' ), 'eastbank-static-preview-note-survives', $eastbank_form_serialized );
@@ -281,12 +286,16 @@ $ember_form_card_serialized = serialize_blocks( html_to_blocks_raw_handler( [ 'H
 
 $assert( ! str_contains( $ember_form_card_serialized, '<!-- wp:html -->' ), 'ember-form-card-avoids-core-html-fallback', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, '<div class="wp-block-group form-card reveal" aria-label="Reservation request form">' ), 'ember-form-card-becomes-group', $ember_form_card_serialized );
+$assert( str_contains( $ember_form_card_serialized, '<div class="wp-block-group static-form-field">' ), 'ember-form-card-label-becomes-field-group', $ember_form_card_serialized );
+$assert( str_contains( $ember_form_card_serialized, '<p class="static-form-label">Name</p>' ), 'ember-form-card-label-has-class', $ember_form_card_serialized );
+$assert( str_contains( $ember_form_card_serialized, '<p class="static-form-control static-form-input">Your name</p>' ), 'ember-form-card-input-has-control-class', $ember_form_card_serialized );
+$assert( str_contains( $ember_form_card_serialized, '<p class="static-form-control static-form-select">5:00 PM</p>' ), 'ember-form-card-select-has-control-class', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'Request a reservation' ), 'ember-form-card-title-survives', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'Name' ), 'ember-form-card-name-label-survives', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'Your name' ), 'ember-form-card-name-placeholder-survives', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'you@example.com' ), 'ember-form-card-email-placeholder-survives', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'Preferred date' ), 'ember-form-card-date-placeholder-survives', $ember_form_card_serialized );
-$assert( str_contains( $ember_form_card_serialized, '<!-- wp:list -->' ), 'ember-form-card-select-becomes-list', $ember_form_card_serialized );
+$assert( ! str_contains( $ember_form_card_serialized, '<!-- wp:list -->' ), 'ember-form-card-select-does-not-duplicate-options', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, '5:00 PM' ), 'ember-form-card-first-option-survives', $ember_form_card_serialized );
 $assert( str_contains( $ember_form_card_serialized, 'Request Table' ), 'ember-form-card-submit-text-survives', $ember_form_card_serialized );
 $assert( count( $fallback_events ) === 0, 'ember-form-card-emits-no-fallback-event', (string) count( $fallback_events ) );
