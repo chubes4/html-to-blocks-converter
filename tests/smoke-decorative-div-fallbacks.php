@@ -59,7 +59,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 		}
 
 		public function is_registered( $name ) {
-			return in_array( $name, [ 'core/group', 'core/html', 'core/paragraph' ], true );
+			return in_array( $name, [ 'core/group', 'core/html', 'core/paragraph', 'core/separator' ], true );
 		}
 
 		public function get_registered( $name ) {
