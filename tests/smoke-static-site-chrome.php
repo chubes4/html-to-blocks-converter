@@ -33,6 +33,14 @@ if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
 		exit( 1 );
 	}
 
+	$core_root = dirname( $wp_html_api_path );
+	if ( is_file( $core_root . '/class-wp-token-map.php' ) ) {
+		require_once $core_root . '/class-wp-token-map.php';
+	}
+	if ( is_file( $wp_html_api_path . '/html5-named-character-references.php' ) ) {
+		require_once $wp_html_api_path . '/html5-named-character-references.php';
+	}
+
 	foreach ( [
 		'class-wp-html-attribute-token.php',
 		'class-wp-html-span.php',
@@ -62,8 +70,12 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 			return in_array(
 				$name,
 				[
+					'core/button',
+					'core/buttons',
+					'core/heading',
 					'core/group',
 					'core/html',
+					'core/image',
 					'core/list',
 					'core/list-item',
 					'core/paragraph',
@@ -301,6 +313,40 @@ $parsed_decorative_inline_serialized = serialize_blocks(
 $assert( ! str_contains( $parsed_decorative_inline_serialized, '<!-- wp:html -->' ), 'parsed-decorative-inline-spans-avoid-core-html-fallback', $parsed_decorative_inline_serialized );
 $assert( str_contains( $parsed_decorative_inline_serialized, '<span class="topbar-logo-dot"></span>' ), 'parsed-decorative-inline-class-dot-survives', $parsed_decorative_inline_serialized );
 $assert( str_contains( $parsed_decorative_inline_serialized, 'width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;' ), 'parsed-decorative-inline-style-dot-survives', $parsed_decorative_inline_serialized );
+
+$ember_nav_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<nav class="nav container" aria-label="Primary navigation"><a class="brand" href="index.html" aria-label="Ember &amp; Rye home"><img src="assets/img/ember-rye-mark.svg" alt="" width="46" height="46"><span><strong>Ember &amp; Rye</strong><small>Wood-Fired Pizza</small></span></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu"><span class="sr-only">Toggle navigation</span><span></span><span></span><span></span></button><div class="nav-menu" id="primary-menu"><a href="index.html" data-nav="home">Home</a><a href="menu.html" data-nav="menu">Menu</a><a href="reservations.html" data-nav="reservations">Reservations</a><a href="private-events.html" data-nav="events">Private Events</a><a href="contact.html" data-nav="contact">Contact</a><a class="btn btn-small" href="reservations.html">Reserve</a></div></nav>',
+		]
+	)
+);
+$assert( ! str_contains( $ember_nav_serialized, '<!-- wp:html -->' ), 'ember-nav-avoids-core-html-fallback', $ember_nav_serialized );
+$assert( str_contains( $ember_nav_serialized, '<nav class="wp-block-group nav container" aria-label="Primary navigation">' ), 'ember-nav-preserves-wrapper', $ember_nav_serialized );
+$assert( str_contains( $ember_nav_serialized, 'Ember &amp; Rye' ), 'ember-nav-brand-text-survives', $ember_nav_serialized );
+$assert( str_contains( $ember_nav_serialized, 'href="reservations.html"' ), 'ember-nav-links-survive', $ember_nav_serialized );
+
+$ember_footer_column_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div><h2>Visit</h2><p>1247 Hearthside Ave<br>Maplewood, OR 97205</p><a href="contact.html">Directions</a></div>',
+		]
+	)
+);
+$assert( ! str_contains( $ember_footer_column_serialized, '<!-- wp:html -->' ), 'ember-footer-column-avoids-core-html-fallback', $ember_footer_column_serialized );
+$assert( str_contains( $ember_footer_column_serialized, '1247 Hearthside Ave' ), 'ember-footer-column-copy-survives', $ember_footer_column_serialized );
+$assert( str_contains( $ember_footer_column_serialized, 'href="contact.html"' ), 'ember-footer-column-link-survives', $ember_footer_column_serialized );
+
+$ember_hero_copy_serialized = serialize_blocks(
+	html_to_blocks_raw_handler(
+		[
+			'HTML' => '<div class="hero-copy reveal"><p class="eyebrow">Neighborhood hearth • sourdough crust • seasonal toppings</p><h1>Wood-fired pizza with a warm seat at the table.</h1><p>Ember &amp; Rye brings blistered, naturally leavened pies, market-driven small plates, and easy hospitality to the heart of the neighborhood.</p><div class="hero-actions"><a class="btn" href="reservations.html">Book a Table</a><a class="btn btn-ghost" href="menu.html">View Menu</a></div></div>',
+		]
+	)
+);
+$assert( ! str_contains( $ember_hero_copy_serialized, '<!-- wp:html -->' ), 'ember-hero-copy-avoids-core-html-fallback', $ember_hero_copy_serialized );
+$assert( str_contains( $ember_hero_copy_serialized, 'Wood-fired pizza with a warm seat at the table.' ), 'ember-hero-heading-survives', $ember_hero_copy_serialized );
+$assert( str_contains( $ember_hero_copy_serialized, 'Book a Table' ), 'ember-hero-cta-survives', $ember_hero_copy_serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
