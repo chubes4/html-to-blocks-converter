@@ -1280,6 +1280,17 @@ class HTML_To_Blocks_Transform_Registry {
 				'priority'  => 8,
 				'selector'  => 'button',
 				'isMatch'   => function ( $element ) {
+					return self::is_static_navigation_toggle_button( $element );
+				},
+				'transform' => function ( $element ) {
+					return self::create_static_navigation_toggle_paragraph( $element );
+				},
+			),
+			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 8,
+				'selector'  => 'button',
+				'isMatch'   => function ( $element ) {
 					return self::is_static_visual_button( $element );
 				},
 				'transform' => function ( $element ) {
@@ -1344,6 +1355,49 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 		);
+	}
+
+	/**
+	 * Checks whether a button is static responsive-navigation chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
+	 * @return bool True when the button can be represented as native editable text.
+	 */
+	private static function is_static_navigation_toggle_button( $element ): bool {
+		if ( 'BUTTON' !== $element->get_tag_name() || ! $element->has_attribute( 'class' ) ) {
+			return false;
+		}
+
+		if ( ! self::class_matches( $element, '/(?:^|[-_\s])(?:nav|menu)[-_\s]?toggle(?:$|[-_\s])/i' ) ) {
+			return false;
+		}
+
+		if ( $element->has_attribute( 'form' ) || $element->has_attribute( 'name' ) || $element->has_attribute( 'value' ) ) {
+			return false;
+		}
+
+		$type = strtolower( trim( (string) ( $element->get_attribute( 'type' ) ?? '' ) ) );
+		if ( in_array( $type, array( 'submit', 'reset' ), true ) ) {
+			return false;
+		}
+
+		return '' !== trim( $element->get_text_content() );
+	}
+
+	/**
+	 * Creates editable text for static responsive-navigation chrome.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Button element.
+	 * @return array Block array.
+	 */
+	private static function create_static_navigation_toggle_paragraph( $element ): array {
+		$attributes            = self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+		) );
+		$attributes['content'] = esc_html( trim( $element->get_text_content() ) );
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
 	}
 
 	/**
