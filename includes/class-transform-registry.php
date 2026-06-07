@@ -2251,7 +2251,14 @@ class HTML_To_Blocks_Transform_Registry {
 					$summary      = trim( $summary_matches[1] ?? '' );
 					$content_html = trim( preg_replace( '/<summary(?:\s[^>]*)?>.*?<\/summary>/is', '', $inner_html, 1 ) );
 					$inner_blocks = '' !== $content_html ? $handler( array( 'HTML' => $content_html ) ) : array();
-					$attributes   = array( 'summary' => $summary );
+					$attributes   = self::get_block_support_attributes( $element, array(
+						'anchor'     => true,
+						'class_name' => true,
+					) );
+					$attributes['summary'] = $summary;
+					if ( $element->has_attribute( 'open' ) ) {
+						$attributes['showContent'] = true;
+					}
 
 					return HTML_To_Blocks_Block_Factory::create_block( 'core/details', $attributes, $inner_blocks );
 				},
