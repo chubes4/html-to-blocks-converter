@@ -72,6 +72,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 				[
 					'core/button',
 					'core/buttons',
+					'core/details',
 					'core/heading',
 					'core/group',
 					'core/heading',
@@ -417,6 +418,27 @@ $assert( str_contains( $ember_menu_category_serialized, 'Ember Margherita' ), 'e
 $assert( str_contains( $ember_menu_category_serialized, 'San Marzano tomato' ), 'ember-menu-item-description-survives', $ember_menu_category_serialized );
 $assert( str_contains( $ember_menu_category_serialized, '<strong>$18</strong>' ), 'ember-menu-price-survives', $ember_menu_category_serialized );
 $assert( str_contains( $ember_menu_category_serialized, '<strong>$22</strong>' ), 'ember-menu-second-price-survives', $ember_menu_category_serialized );
+
+$ember_faq_html = <<<HTML
+<div class="faq-list reveal">
+  <details open><summary>Do you take walk-ins?</summary><p>Yes. We keep a portion of bar and patio seating open for walk-ins every night.</p></details>
+  <details><summary>Do you offer takeout?</summary><p>Takeout is available Tuesday through Thursday and Sunday, depending on oven volume.</p></details>
+</div>
+HTML;
+
+$ember_faq_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $ember_faq_html ] );
+$ember_faq_names      = html_to_blocks_smoke_block_names( $ember_faq_blocks );
+$ember_faq_serialized = serialize_blocks( $ember_faq_blocks );
+$ember_faq_first      = $ember_faq_blocks[0]['innerBlocks'][0] ?? [];
+
+$assert( ! in_array( 'core/html', $ember_faq_names, true ), 'ember-faq-avoids-core-html-blocks', implode( ', ', $ember_faq_names ) );
+$assert( ! str_contains( $ember_faq_serialized, '<!-- wp:html -->' ), 'ember-faq-serialized-has-no-wp-html', $ember_faq_serialized );
+$assert( str_contains( $ember_faq_serialized, 'faq-list reveal' ), 'ember-faq-wrapper-class-survives', $ember_faq_serialized );
+$assert( true === ( $ember_faq_first['attrs']['showContent'] ?? false ), 'ember-faq-open-state-survives', var_export( $ember_faq_first['attrs'] ?? [], true ) );
+$assert( str_contains( $ember_faq_serialized, 'Do you take walk-ins?' ), 'ember-faq-first-summary-survives', $ember_faq_serialized );
+$assert( str_contains( $ember_faq_serialized, 'Do you offer takeout?' ), 'ember-faq-second-summary-survives', $ember_faq_serialized );
+$assert( str_contains( $ember_faq_serialized, 'bar and patio seating' ), 'ember-faq-first-answer-survives', $ember_faq_serialized );
+$assert( str_contains( $ember_faq_serialized, 'depending on oven volume' ), 'ember-faq-second-answer-survives', $ember_faq_serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
