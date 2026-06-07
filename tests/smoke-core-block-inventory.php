@@ -22,7 +22,9 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 
 $read_json = static function ( string $path ) use ( $assert ): array {
 	global $wp_filesystem;
-	$raw = $wp_filesystem->get_contents( $path );
+	$raw = $wp_filesystem && method_exists( $wp_filesystem, 'get_contents' )
+		? $wp_filesystem->get_contents( $path )
+		: file_get_contents( $path );
 	$assert( is_string( $raw ) && '' !== $raw, basename( $path ) . '-readable', 'Unable to read ' . $path );
 
 	$data = is_string( $raw ) ? json_decode( $raw, true ) : null;
@@ -33,7 +35,9 @@ $read_json = static function ( string $path ) use ( $assert ): array {
 
 $read_required_file = static function ( string $path ) use ( $assert ): string {
 	global $wp_filesystem;
-	$contents = $wp_filesystem->get_contents( $path );
+	$contents = $wp_filesystem && method_exists( $wp_filesystem, 'get_contents' )
+		? $wp_filesystem->get_contents( $path )
+		: file_get_contents( $path );
 	$assert( is_string( $contents ) && '' !== $contents, basename( $path ) . '-readable', 'Unable to read ' . $path );
 
 	return is_string( $contents ) ? $contents : '';
@@ -44,7 +48,8 @@ $assert( is_string( $blocks_dir ) && is_dir( $blocks_dir ), 'core-blocks-dir-con
 
 $inventory      = is_string( $blocks_dir ) && is_dir( $blocks_dir ) ? html_to_blocks_generate_core_block_inventory( $blocks_dir ) : [];
 $classification = $read_json( $repo_root . '/docs/core-block-classification.json' );
-$registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' );
+$registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' )
+	. "\n" . $read_required_file( $repo_root . '/includes/transform-families/class-site-editor-marker-transforms.php' );
 $raw_source      = $read_required_file( $repo_root . '/raw-handler.php' );
 
 $valid_buckets = [

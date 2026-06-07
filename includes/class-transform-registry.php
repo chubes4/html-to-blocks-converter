@@ -10,6 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! class_exists( 'HTML_To_Blocks_Site_Editor_Marker_Transforms', false ) ) {
+	require_once __DIR__ . '/transform-families/class-site-editor-marker-transforms.php';
+}
+
 class HTML_To_Blocks_Transform_Registry {
 
 	private static ?array $transforms = null;
@@ -32,27 +36,10 @@ class HTML_To_Blocks_Transform_Registry {
 			return self::$transforms;
 		}
 
-		self::$transforms = array_merge(
-			self::get_site_editor_marker_transforms(),
-			self::get_svg_icon_transforms(),
-			self::get_heading_transforms(),
-			self::get_list_transforms(),
-			self::get_button_transforms(),
-			self::get_media_transforms(),
-			self::get_image_transforms(),
-			self::get_details_transforms(),
-			self::get_pullquote_transforms(),
-			self::get_quote_transforms(),
-			self::get_code_transforms(),
-			self::get_code_window_transforms(),
-			self::get_verse_transforms(),
-			self::get_preformatted_transforms(),
-			self::get_separator_transforms(),
-			self::get_table_transforms(),
-			self::get_form_transforms(),
-			self::get_layout_transforms(),
-			self::get_paragraph_transforms()
-		);
+		self::$transforms = array();
+		foreach ( self::get_transform_family_definitions() as $family ) {
+			self::$transforms = array_merge( self::$transforms, call_user_func( $family['callback'] ) );
+		}
 
 		usort(
 			self::$transforms,
@@ -62,6 +49,162 @@ class HTML_To_Blocks_Transform_Registry {
 		);
 
 		return self::$transforms;
+	}
+
+	/**
+	 * Gets stable transform family metadata for public capability inventory.
+	 *
+	 * @return array<int,array<string,mixed>> Transform families.
+	 */
+	public static function get_transform_families(): array {
+		$families = array();
+		foreach ( self::get_transform_family_definitions() as $family ) {
+			$metadata                    = $family['metadata'];
+			$metadata['transform_count'] = count( call_user_func( $family['callback'] ) );
+			$families[]                  = $metadata;
+		}
+
+		return $families;
+	}
+
+	/**
+	 * Gets public transform inventory for downstream capability checks.
+	 *
+	 * @return array<string,mixed> Transform inventory.
+	 */
+	public static function get_transform_inventory(): array {
+		$families              = self::get_transform_families();
+		$supported_core_blocks = array();
+
+		foreach ( $families as $family ) {
+			foreach ( (array) ( $family['blocks'] ?? array() ) as $block_name ) {
+				if ( is_string( $block_name ) && strpos( $block_name, 'core/' ) === 0 ) {
+					$supported_core_blocks[ $block_name ] = true;
+				}
+			}
+		}
+
+		return array(
+			'families'              => $families,
+			'supported_core_blocks' => array_keys( $supported_core_blocks ),
+			'explicit_markers'      => HTML_To_Blocks_Site_Editor_Marker_Transforms::get_marker_attributes(),
+		);
+	}
+
+	/**
+	 * Gets transform family definitions in deterministic registry order.
+	 *
+	 * @return array<int,array{metadata:array<string,mixed>,callback:callable}> Transform family definitions.
+	 */
+	private static function get_transform_family_definitions(): array {
+		return array(
+			array(
+				'metadata' => HTML_To_Blocks_Site_Editor_Marker_Transforms::get_family_metadata(),
+				'callback' => array( HTML_To_Blocks_Site_Editor_Marker_Transforms::class, 'get_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'svg-icon',
+					'label'  => 'Safe inline SVG icons',
+					'blocks' => array( 'html-to-blocks/svg-icon' ),
+				),
+				'callback' => array( __CLASS__, 'get_svg_icon_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'text-heading',
+					'label'  => 'Headings',
+					'blocks' => array( 'core/heading' ),
+				),
+				'callback' => array( __CLASS__, 'get_heading_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'lists',
+					'label'  => 'Lists',
+					'blocks' => array( 'core/list', 'core/list-item' ),
+				),
+				'callback' => array( __CLASS__, 'get_list_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'buttons-actions',
+					'label'  => 'Buttons and action controls',
+					'blocks' => array( 'core/buttons', 'core/button' ),
+				),
+				'callback' => array( __CLASS__, 'get_button_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'media-embeds',
+					'label'  => 'Media, embeds, galleries, and files',
+					'blocks' => array( 'core/gallery', 'core/media-text', 'core/video', 'core/audio', 'core/file', 'core/embed' ),
+				),
+				'callback' => array( __CLASS__, 'get_media_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'images',
+					'label'  => 'Images and figures',
+					'blocks' => array( 'core/image' ),
+				),
+				'callback' => array( __CLASS__, 'get_image_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'details',
+					'label'  => 'Details disclosures',
+					'blocks' => array( 'core/details' ),
+				),
+				'callback' => array( __CLASS__, 'get_details_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'quotes',
+					'label'  => 'Quotes and pullquotes',
+					'blocks' => array( 'core/pullquote', 'core/quote' ),
+				),
+				'callback' => static function () {
+					return array_merge( self::get_pullquote_transforms(), self::get_quote_transforms() );
+				},
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'code',
+					'label'  => 'Code, code-window chrome, verse, and preformatted text',
+					'blocks' => array( 'core/code', 'core/verse', 'core/preformatted' ),
+				),
+				'callback' => static function () {
+					return array_merge( self::get_code_transforms(), self::get_code_window_transforms(), self::get_verse_transforms(), self::get_preformatted_transforms() );
+				},
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'separator-table-form',
+					'label'  => 'Separators, tables, and form fallbacks',
+					'blocks' => array( 'core/separator', 'core/table', 'core/html' ),
+				),
+				'callback' => static function () {
+					return array_merge( self::get_separator_transforms(), self::get_table_transforms(), self::get_form_transforms() );
+				},
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'layout',
+					'label'  => 'Layout, groups, columns, covers, and decorative chrome',
+					'blocks' => array( 'core/group', 'core/columns', 'core/column', 'core/cover', 'core/spacer' ),
+				),
+				'callback' => array( __CLASS__, 'get_layout_transforms' ),
+			),
+			array(
+				'metadata' => array(
+					'slug'   => 'paragraph-text',
+					'label'  => 'Paragraph and inline text fallbacks',
+					'blocks' => array( 'core/paragraph' ),
+				),
+				'callback' => array( __CLASS__, 'get_paragraph_transforms' ),
+			),
+		);
 	}
 
 	/**
@@ -107,76 +250,6 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 		);
-	}
-
-	/**
-	 * Explicit Site Editor primitive marker transforms.
-	 *
-	 * @return array Transform definitions
-	 */
-	private static function get_site_editor_marker_transforms() {
-		return array(
-			array(
-				'blockName' => 'core/pattern',
-				'priority'  => 1,
-				'isMatch'   => function ( $element ) {
-					return self::get_pattern_marker_slug( $element ) !== '';
-				},
-				'transform' => function ( $element ) {
-					return HTML_To_Blocks_Block_Factory::create_block(
-						'core/pattern',
-						array( 'slug' => self::get_pattern_marker_slug( $element ) )
-					);
-				},
-			),
-			array(
-				'blockName' => 'core/template-part',
-				'priority'  => 1,
-				'isMatch'   => function ( $element ) {
-					return self::get_template_part_marker_slug( $element ) !== '';
-				},
-				'transform' => function ( $element ) {
-					$slug       = self::get_template_part_marker_slug( $element );
-					$attributes = array( 'slug' => $slug );
-
-					if ( in_array( $slug, array( 'header', 'footer', 'sidebar' ), true ) ) {
-						$attributes['area'] = $slug;
-					}
-
-					return HTML_To_Blocks_Block_Factory::create_block( 'core/template-part', $attributes );
-				},
-			),
-		);
-	}
-
-	/**
-	 * Gets a valid explicit pattern marker slug.
-	 *
-	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
-	 * @return string Pattern slug or empty string.
-	 */
-	private static function get_pattern_marker_slug( $element ): string {
-		if ( ! $element->has_attribute( 'data-bfb-pattern' ) ) {
-			return '';
-		}
-
-		$slug = trim( (string) $element->get_attribute( 'data-bfb-pattern' ) );
-		return preg_match( '/^[a-z0-9_.-]+\/[a-z0-9_.\/-]+$/i', $slug ) === 1 ? $slug : '';
-	}
-
-	/**
-	 * Gets a valid explicit template-part marker slug.
-	 *
-	 * @param HTML_To_Blocks_HTML_Element $element Element to inspect.
-	 * @return string Template-part slug or empty string.
-	 */
-	private static function get_template_part_marker_slug( $element ): string {
-		if ( ! $element->has_attribute( 'data-bfb-template-part' ) ) {
-			return '';
-		}
-
-		$slug = trim( (string) $element->get_attribute( 'data-bfb-template-part' ) );
-		return preg_match( '/^[a-z0-9_.-]+$/i', $slug ) === 1 ? $slug : '';
 	}
 
 	/**
@@ -792,11 +865,11 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function create_definition_list_paragraph_block( $element ): array {
 		$attributes            = self::get_block_support_attributes( $element, array(
-			'class_name'  => true,
-			'colors'      => true,
-			'typography'  => true,
-			'spacing'     => true,
-			'text_align'  => true,
+			'class_name' => true,
+			'colors'     => true,
+			'typography' => true,
+			'spacing'    => true,
+			'text_align' => true,
 		) );
 		$attributes['content'] = trim( $element->get_inner_html() );
 

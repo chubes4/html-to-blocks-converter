@@ -61,8 +61,8 @@ fragments are preserved as `core/html` rather than guessed.
 | `core/media-text` | `supported` | `.wp-block-media-text` or `media-text` wrapper containing image or video media plus content | `tests/smoke-media-embed-transforms.php` | Inner text content recurses through the raw handler. |
 | `core/file` | `supported` | Anchor whose `href` has a recognized downloadable file extension | `tests/smoke-media-embed-transforms.php` | Ordinary CTA or navigation links do not become file blocks. |
 | `core/embed` | `supported` | `<iframe src>` for a recognized provider URL | `tests/smoke-media-embed-transforms.php` | Recognized providers are normalized into static embed URLs; unknown iframes fall back. |
-| `core/pattern` | `explicit-marker supported` | `data-bfb-pattern="namespace/slug"` | `tests/smoke-site-editor-marker-transforms.php` | Pattern markers require explicit namespaced slugs. h2bc does not infer reusable patterns from repeated or named layout. |
-| `core/template-part` | `explicit-marker supported` | `data-bfb-template-part="area-or-slug"` | `tests/smoke-site-editor-marker-transforms.php` | Template-part markers are explicit declarations. Standard areas set `area`; custom values are treated as slugs. |
+| `core/pattern` | `explicit-marker supported` | `data-h2bc-pattern="namespace/slug"`; shared BFB alias `data-bfb-pattern="namespace/slug"` | `tests/smoke-site-editor-marker-transforms.php` | Pattern markers require explicit namespaced slugs. h2bc does not infer reusable patterns from repeated or named layout. |
+| `core/template-part` | `explicit-marker supported` | `data-h2bc-template-part="area-or-slug"`; shared BFB alias `data-bfb-template-part="area-or-slug"` | `tests/smoke-site-editor-marker-transforms.php` | Template-part markers are explicit declarations. Standard areas set `area`; custom values are treated as slugs. |
 
 ## Mechanical Block Support Mappings
 
@@ -134,8 +134,8 @@ rendered output.
 | Block family | Classification | h2bc boundary |
 |---|---|---|
 | Static rendered navigation markup | `fallback-observed` | Preserved as `core/html` because default raw conversion must not emit editor-invalid native navigation blocks. |
-| `core/pattern` | `explicit-marker supported` | Supported only from `data-bfb-pattern="namespace/slug"`. Repeated or pattern-looking static layout remains ordinary static blocks. |
-| `core/template-part` | `explicit-marker supported` | Supported only from `data-bfb-template-part="area-or-slug"`. Region detection remains compiler-only without the explicit marker. |
+| `core/pattern` | `explicit-marker supported` | Supported only from `data-h2bc-pattern="namespace/slug"` or the documented `data-bfb-pattern` alias. Repeated or pattern-looking static layout remains ordinary static blocks. |
+| `core/template-part` | `explicit-marker supported` | Supported only from `data-h2bc-template-part="area-or-slug"` or the documented `data-bfb-template-part` alias. Region detection remains compiler-only without the explicit marker. |
 | Native `core/navigation` blocks | `compiler-only` | Requires a higher-level integration that owns editor-valid serialization, route knowledge, and optional `wp_navigation` creation/reuse policy. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | `compiler-only` | Requires site identity metadata. Explicit HTML markers should be consumed by a block theme compiler that knows the target site. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | `compiler-only` | Requires current post/template context. Rendered headings, images, and excerpts remain static blocks in h2bc. |

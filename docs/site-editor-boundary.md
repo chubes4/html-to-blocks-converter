@@ -39,8 +39,8 @@ candidates, and context-required block families lives in the
 | `core/table` | Raw-transformable | `<table>` maps to a static table block. |
 | `core/html` | Safe fallback | Unknown or intentionally unsupported fragments are preserved as custom HTML instead of guessed. |
 | Layout-only static containers | Raw-transformable with conservative heuristics | Groups, columns, covers, buttons, and similar layout blocks may be added only when the HTML pattern is unambiguous and the fallback remains lossless. |
-| `core/pattern` | Explicit-marker raw-transformable | Requires `data-bfb-pattern="namespace/slug"`. Similar-looking layout is not enough. |
-| `core/template-part` | Explicit-marker raw-transformable | Requires `data-bfb-template-part="area-or-slug"`. Header/footer-looking layout is not enough. |
+| `core/pattern` | Explicit-marker raw-transformable | Requires `data-h2bc-pattern="namespace/slug"` or the shared BFB alias `data-bfb-pattern="namespace/slug"`. Similar-looking layout is not enough. |
+| `core/template-part` | Explicit-marker raw-transformable | Requires `data-h2bc-template-part="area-or-slug"` or the shared BFB alias `data-bfb-template-part="area-or-slug"`. Header/footer-looking layout is not enough. |
 | Rendered navigation markup | Safe fallback | `<nav>` fragments are preserved as `core/html` in default raw conversion because native navigation blocks do not have a valid static serialization shape here. |
 | Native `core/navigation*` | Context-required | Requires editor-valid serialization, menu intent, site route knowledge, menu-location policy, and optional `wp_navigation` post lifecycle ownership. |
 | `core/navigation-link`, `core/navigation-submenu` | Context-required | These are native navigation children. Standalone links and nested lists are static content unless a compiler owns the parent navigation block contract. |
@@ -55,6 +55,38 @@ candidates, and context-required block families lives in the
 The important rule is that rendered HTML is not identity. The same `<h1>` could
 be a static heading, site title, post title, or query title. This package should
 choose `core/heading` because that is the only answer proven by the fragment.
+
+## Public Capability Inventory
+
+Consumers should call `html_to_blocks_get_capabilities()` instead of scraping
+registry source files. The returned inventory includes the package version, raw
+handler function name and availability, transform families, supported core block
+names, explicit Site Editor marker attributes, and fallback/metrics hook names.
+
+The transform family inventory is stable enough for downstream capability checks,
+but individual callback names and registry internals remain private.
+
+## Heuristic Review Standard
+
+Heuristic transforms are allowed when they identify generic static HTML patterns
+using class-token families paired with structure or content checks. Examples are
+button-like anchors with visible text, code-window chrome around real code, cards
+with repeated child structure, or decorative wrappers that preserve meaningful
+descendant content.
+
+Navigation, WooCommerce identity, query/post/site-title/template intent stay
+compiler-only. The raw transform layer may preserve visible text, links, images,
+classes, and safe static layout; it must not emit native context-required blocks
+from visual similarity alone.
+
+Exact brand, site, product, or fixture names belong in tests and docs, not
+production transform rules. Production rules should be phrased as reusable
+tokens, attributes, structure checks, or explicit context gates. If a new rule
+needs a named brand or product in production code, document why that identifier is
+part of a shared public contract rather than a fixture shortcut.
+
+Destructive simplifications must preserve visible text and safe source classes,
+or fall back to `core/html`.
 
 ## Static Navigation Boundary
 
@@ -126,8 +158,8 @@ owned by upstream Static Site Importer and Block Format Bridge work.
 | Block family | Classification | Why |
 |---|---|---|
 | Rendered navigation markup | Fallback observed | The fragment carries visible links but not a valid native navigation serialization contract. |
-| `core/pattern` | Explicit-marker supported | Requires `data-bfb-pattern="namespace/slug"`; h2bc does not choose patterns by visual similarity. |
-| `core/template-part` | Explicit-marker supported | Requires `data-bfb-template-part="area-or-slug"`; h2bc does not split regions by visual similarity. |
+| `core/pattern` | Explicit-marker supported | Requires `data-h2bc-pattern="namespace/slug"`; `data-bfb-pattern` is a documented shared alias for BFB. h2bc does not choose patterns by visual similarity. |
+| `core/template-part` | Explicit-marker supported | Requires `data-h2bc-template-part="area-or-slug"`; `data-bfb-template-part` is a documented shared alias for BFB. h2bc does not split regions by visual similarity. |
 | Native `core/navigation` blocks | Compiler-only | Requires editor-valid serialization, route knowledge, menu policy, and optional `wp_navigation` post lifecycle. |
 | `core/site-title`, `core/site-logo`, `core/site-tagline` | Compiler-only | Requires site identity metadata; rendered HTML is only static output. |
 | `core/post-title`, `core/post-content`, `core/post-excerpt`, `core/post-featured-image` | Compiler-only | Requires current post/template context. |

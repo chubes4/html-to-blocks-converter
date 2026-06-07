@@ -63,6 +63,11 @@ When that fallback is used, h2bc fires `html_to_blocks_unsupported_html_fallback
 with the unsupported HTML fragment, fallback context, and generated block so
 production pipelines can log, warn, or fail on unexpected fallback usage.
 
+Downstream tools can call `html_to_blocks_get_capabilities()` for a stable
+capability inventory instead of parsing transform source. The inventory reports
+the package version, raw handler availability, transform families, supported core
+blocks, explicit Site Editor marker attributes, and fallback/metrics hook names.
+
 ## Installation
 
 1. Download the plugin zip file

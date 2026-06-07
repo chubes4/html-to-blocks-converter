@@ -21,6 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 $html_to_blocks_library_path    = __DIR__;
 $html_to_blocks_library_version = '0.7.2';
 
+if ( ! defined( 'HTML_TO_BLOCKS_CONVERTER_VERSION' ) ) {
+	define( 'HTML_TO_BLOCKS_CONVERTER_VERSION', $html_to_blocks_library_version );
+}
+
 if ( ! class_exists( 'HTML_To_Blocks_Versions', false ) ) {
 	require_once $html_to_blocks_library_path . '/includes/class-html-to-blocks-versions.php';
 }
@@ -41,8 +45,14 @@ $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_p
 	if ( ! function_exists( 'html_to_blocks_classify_inline_svg_icon' ) ) {
 		require_once $html_to_blocks_library_path . '/includes/svg-icon-functions.php';
 	}
+	if ( ! class_exists( 'HTML_To_Blocks_Site_Editor_Marker_Transforms', false ) ) {
+		require_once $html_to_blocks_library_path . '/includes/transform-families/class-site-editor-marker-transforms.php';
+	}
 	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-transform-registry.php';
+	}
+	if ( ! function_exists( 'html_to_blocks_get_capabilities' ) ) {
+		require_once $html_to_blocks_library_path . '/includes/capabilities.php';
 	}
 	$html_to_blocks_raw_handler_callback = 'html_to_blocks_raw_handler';
 	if ( ! function_exists( $html_to_blocks_raw_handler_callback ) ) {
