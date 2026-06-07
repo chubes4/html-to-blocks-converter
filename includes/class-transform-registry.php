@@ -3458,8 +3458,13 @@ class HTML_To_Blocks_Transform_Registry {
 	 */
 	private static function create_static_placeholder_form_child_blocks( array $children ): array {
 		$inner_blocks = array();
+		$skip_indexes = array();
 
-		foreach ( $children as $child ) {
+		foreach ( $children as $index => $child ) {
+			if ( isset( $skip_indexes[ $index ] ) ) {
+				continue;
+			}
+
 			$tag = $child->get_tag_name();
 
 			if ( preg_match( '/^H([1-6])$/', $tag, $matches ) ) {
@@ -3474,15 +3479,20 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 
 			if ( 'LABEL' === $tag ) {
-				$content = self::get_static_form_label_text( $child );
-				if ( '' !== $content ) {
-					$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
-						'core/paragraph',
-						array( 'content' => esc_html( $content ) )
-					);
+				$next_index  = $index + 1;
+				$next_child  = $children[ $next_index ] ?? null;
+				$field_block = $next_child && in_array( $next_child->get_tag_name(), array( 'INPUT', 'TEXTAREA', 'SELECT' ), true )
+					? self::create_static_form_field_block( $child, $next_child )
+					: self::create_static_form_field_block( $child );
+
+				if ( ! empty( $field_block ) ) {
+					$inner_blocks[] = $field_block;
 				}
 
-				$inner_blocks = array_merge( $inner_blocks, self::create_static_placeholder_form_child_blocks( $child->get_child_elements() ) );
+				if ( $next_child && in_array( $next_child->get_tag_name(), array( 'INPUT', 'TEXTAREA', 'SELECT' ), true ) ) {
+					$skip_indexes[ $next_index ] = true;
+				}
+
 				continue;
 			}
 
@@ -3525,13 +3535,7 @@ class HTML_To_Blocks_Transform_Registry {
 			}
 
 			if ( in_array( $tag, array( 'INPUT', 'TEXTAREA', 'SELECT' ), true ) ) {
-				$content = self::get_static_form_control_label( $child );
-				if ( '' !== $content ) {
-					$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
-						'core/paragraph',
-						array( 'content' => esc_html( $content ) )
-					);
-				}
+				$inner_blocks[] = self::create_static_form_control_block( $child );
 				continue;
 			}
 
@@ -3548,6 +3552,76 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return $inner_blocks;
+	}
+
+	/**
+	 * Creates a native visual field surrogate for a static placeholder form label.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $label Label element.
+	 * @return array<string,mixed> Block array, or empty array when no content survives.
+	 */
+	private static function create_static_form_field_block( $label, $control = null ): array {
+		$inner_blocks = array();
+		$label_text   = self::get_static_form_label_text( $label );
+
+		if ( '' !== $label_text ) {
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/paragraph',
+				array(
+					'className' => 'static-form-label',
+					'content'   => esc_html( $label_text ),
+				)
+			);
+		}
+
+		if ( $control && in_array( $control->get_tag_name(), array( 'INPUT', 'TEXTAREA', 'SELECT' ), true ) ) {
+			$inner_blocks[] = self::create_static_form_control_block( $control );
+		}
+
+		foreach ( $label->get_child_elements() as $child ) {
+			if ( in_array( $child->get_tag_name(), array( 'INPUT', 'TEXTAREA', 'SELECT' ), true ) ) {
+				$inner_blocks[] = self::create_static_form_control_block( $child );
+				continue;
+			}
+
+			$inner_blocks = array_merge( $inner_blocks, self::create_static_placeholder_form_child_blocks( array( $child ) ) );
+		}
+
+		if ( empty( $inner_blocks ) ) {
+			return array();
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			array( 'className' => 'static-form-field' ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Creates a paragraph that visually stands in for an inert static form control.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $control Form control element.
+	 * @return array<string,mixed> Block array.
+	 */
+	private static function create_static_form_control_block( $control ): array {
+		$tag     = strtolower( $control->get_tag_name() );
+		$content = self::get_static_form_control_preview_text( $control );
+		$class   = 'static-form-control static-form-' . $tag;
+		$attrs   = array(
+			'className' => $class,
+			'content'   => '' !== $content ? esc_html( $content ) : '&nbsp;',
+		);
+
+		if ( 'textarea' === $tag && $control->has_attribute( 'rows' ) ) {
+			$rows = max( 1, (int) $control->get_attribute( 'rows' ) );
+			$attrs['style']['dimensions']['minHeight'] = 'calc(' . $rows . ' * 1.6em + 28px)';
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/paragraph',
+			$attrs
+		);
 	}
 
 	/**
@@ -3585,7 +3659,7 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return string Label text.
 	 */
 	private static function get_static_form_label_text( $label ): string {
-		$text = trim( wp_strip_all_tags( $label->get_inner_html() ) );
+		$text = self::get_static_form_direct_text( $label );
 		if ( '' !== $text ) {
 			return preg_replace( '/\s+/', ' ', $text );
 		}
@@ -3598,6 +3672,46 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Gets label text without including nested control option/placeholder text.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source element.
+	 * @return string Direct visible text.
+	 */
+	private static function get_static_form_direct_text( $element ): string {
+		$html = $element->get_inner_html();
+		foreach ( $element->get_child_elements() as $child ) {
+			$html = str_replace( $child->get_outer_html(), '', $html );
+		}
+
+		return trim( wp_strip_all_tags( $html ) );
+	}
+
+	/**
+	 * Gets visible static control text without duplicating select options as lists.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $control Form control element.
+	 * @return string Control preview text.
+	 */
+	private static function get_static_form_control_preview_text( $control ): string {
+		if ( 'SELECT' === $control->get_tag_name() ) {
+			foreach ( $control->get_child_elements() as $child ) {
+				if ( 'OPTION' !== $child->get_tag_name() ) {
+					continue;
+				}
+
+				$content = trim( wp_strip_all_tags( $child->get_inner_html() ) );
+				if ( '' !== $content ) {
+					return preg_replace( '/\s+/', ' ', $content );
+				}
+			}
+
+			return '';
+		}
+
+		return self::get_static_form_control_label( $control );
 	}
 
 	/**
