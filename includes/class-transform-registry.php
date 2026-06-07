@@ -3640,6 +3640,7 @@ class HTML_To_Blocks_Transform_Registry {
 				'dimensions' => true,
 				'spacing'    => true,
 				'border'     => true,
+				'aria_label' => true,
 			)
 		);
 	}
