@@ -724,12 +724,17 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
-	 * Creates an unordered list block from a simple definition list.
+	 * Creates blocks from a simple definition list.
 	 *
 	 * @param HTML_To_Blocks_HTML_Element $definition_list The dl element.
 	 * @return array Block array.
 	 */
 	private static function create_definition_list_block_from_element( $definition_list ): array {
+		$wrapper_pairs = self::get_definition_list_wrapper_pairs( $definition_list );
+		if ( ! empty( $wrapper_pairs ) ) {
+			return self::create_visual_definition_list_group_from_pairs( $definition_list, $wrapper_pairs );
+		}
+
 		$list_attributes = self::get_block_support_attributes( $definition_list, array(
 			'anchor'     => true,
 			'class_name' => true,
@@ -751,6 +756,74 @@ class HTML_To_Blocks_Transform_Registry {
 	}
 
 	/**
+	 * Creates grouped native blocks for generated visual metadata definition lists.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $definition_list The dl element.
+	 * @param array<int,array{wrapper:HTML_To_Blocks_HTML_Element,term:HTML_To_Blocks_HTML_Element,description:HTML_To_Blocks_HTML_Element}> $wrapper_pairs
+	 *        Definition wrapper pairs.
+	 * @return array Block array.
+	 */
+	private static function create_visual_definition_list_group_from_pairs( $definition_list, array $wrapper_pairs ): array {
+		$inner_blocks = array();
+
+		foreach ( $wrapper_pairs as $pair ) {
+			$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/group',
+				self::get_visual_definition_list_group_attributes( $pair['wrapper'] ),
+				array(
+					self::create_definition_list_paragraph_block( $pair['term'] ),
+					self::create_definition_list_paragraph_block( $pair['description'] ),
+				)
+			);
+		}
+
+		return HTML_To_Blocks_Block_Factory::create_block(
+			'core/group',
+			self::get_visual_definition_list_group_attributes( $definition_list ),
+			$inner_blocks
+		);
+	}
+
+	/**
+	 * Creates a paragraph block for a definition term or description.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source dt or dd element.
+	 * @return array Block array.
+	 */
+	private static function create_definition_list_paragraph_block( $element ): array {
+		$attributes            = self::get_block_support_attributes( $element, array(
+			'class_name'  => true,
+			'colors'      => true,
+			'typography'  => true,
+			'spacing'     => true,
+			'text_align'  => true,
+		) );
+		$attributes['content'] = trim( $element->get_inner_html() );
+
+		return HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+	}
+
+	/**
+	 * Gets wrapper-safe attributes for visual definition-list groups.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source dl or wrapper element.
+	 * @return array Block attributes.
+	 */
+	private static function get_visual_definition_list_group_attributes( $element ): array {
+		return self::get_block_support_attributes( $element, array(
+			'anchor'     => true,
+			'class_name' => true,
+			'align'      => true,
+			'colors'     => true,
+			'spacing'    => true,
+			'border'     => true,
+			'dimensions' => true,
+			'layout'     => true,
+			'aria_label' => true,
+		) );
+	}
+
+	/**
 	 * Gets simple term/description pairs from a dl element.
 	 *
 	 * Supports generated fragments shaped as dl > div > dt + dd and plain
@@ -766,7 +839,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return array();
 		}
 
-		if ( self::definition_list_has_only_wrapper_pairs( $children ) ) {
+		if ( ! empty( self::get_definition_list_wrapper_pairs( $definition_list ) ) ) {
 			$pairs = array();
 			foreach ( $children as $child ) {
 				$pairs[] = self::get_definition_pair_from_wrapper( $child );
@@ -776,6 +849,32 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return self::get_direct_definition_list_pairs( $children );
+	}
+
+	/**
+	 * Gets simple wrapper pairs from generated dl > div > dt + dd markup.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $definition_list The dl element.
+	 * @return array<int,array{wrapper:HTML_To_Blocks_HTML_Element,term:HTML_To_Blocks_HTML_Element,description:HTML_To_Blocks_HTML_Element}> Wrapper
+	 *         pair data.
+	 */
+	private static function get_definition_list_wrapper_pairs( $definition_list ): array {
+		$children = $definition_list->get_child_elements();
+		if ( empty( $children ) || ! self::definition_list_has_only_wrapper_pairs( $children ) ) {
+			return array();
+		}
+
+		$pairs = array();
+		foreach ( $children as $child ) {
+			$wrapper_children = $child->get_child_elements();
+			$pairs[]          = array(
+				'wrapper'     => $child,
+				'term'        => $wrapper_children[0],
+				'description' => $wrapper_children[1],
+			);
+		}
+
+		return $pairs;
 	}
 
 	/**
