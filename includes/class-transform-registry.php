@@ -3179,15 +3179,27 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		if ( ! $element->has_attribute( 'action' ) ) {
+		if ( ! self::has_direct_form_controls( $element ) ) {
 			return false;
 		}
 
-		$action = trim( (string) $element->get_attribute( 'action' ) );
-		if ( '#' !== $action ) {
-			return false;
+		$action = $element->has_attribute( 'action' ) ? trim( (string) $element->get_attribute( 'action' ) ) : '';
+		$method = $element->has_attribute( 'method' ) ? trim( (string) $element->get_attribute( 'method' ) ) : '';
+
+		if ( '#' === $action ) {
+			return true;
 		}
 
+		return '' === $action && '' === $method && self::has_static_placeholder_form_marker( $element );
+	}
+
+	/**
+	 * Checks whether a form has direct controls worth preserving.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source form element.
+	 * @return bool True when direct form controls are present.
+	 */
+	private static function has_direct_form_controls( $element ): bool {
 		foreach ( $element->get_child_elements() as $child ) {
 			if ( in_array( $child->get_tag_name(), array( 'LABEL', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON' ), true ) ) {
 				return true;
@@ -3195,6 +3207,25 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Checks whether a no-target form is explicitly presented as static preview copy.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element Source form element.
+	 * @return bool True when the source marks the form as inert preview/checklist UI.
+	 */
+	private static function has_static_placeholder_form_marker( $element ): bool {
+		$class      = $element->has_attribute( 'class' ) ? (string) $element->get_attribute( 'class' ) : '';
+		$aria_label = $element->has_attribute( 'aria-label' ) ? (string) $element->get_attribute( 'aria-label' ) : '';
+		$text       = wp_strip_all_tags( $element->get_inner_html() );
+		$haystack   = strtolower( $class . ' ' . $aria_label . ' ' . $text );
+
+		return false !== strpos( $haystack, 'static-form' )
+			|| false !== strpos( $haystack, 'static preview' )
+			|| false !== strpos( $haystack, 'preview form' )
+			|| false !== strpos( $haystack, 'preview only' )
+			|| false !== strpos( $haystack, 'checklist' );
 	}
 
 	/**
@@ -3240,6 +3271,24 @@ class HTML_To_Blocks_Transform_Registry {
 				continue;
 			}
 
+			if ( 'P' === $tag ) {
+				$content = trim( wp_strip_all_tags( $child->get_inner_html() ) );
+				if ( '' !== $content ) {
+					$attributes            = self::get_block_support_attributes( $child, array( 'class_name' => true ) );
+					$attributes['content'] = esc_html( preg_replace( '/\s+/', ' ', $content ) );
+					$inner_blocks[]        = HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', $attributes );
+				}
+				continue;
+			}
+
+			if ( 'SELECT' === $tag ) {
+				$option_blocks = self::create_static_form_option_blocks( $child );
+				if ( ! empty( $option_blocks ) ) {
+					$inner_blocks[] = HTML_To_Blocks_Block_Factory::create_block( 'core/list', array(), $option_blocks );
+					continue;
+				}
+			}
+
 			if ( in_array( $tag, array( 'INPUT', 'TEXTAREA', 'SELECT' ), true ) ) {
 				$content = self::get_static_form_control_label( $child );
 				if ( '' !== $content ) {
@@ -3256,6 +3305,34 @@ class HTML_To_Blocks_Transform_Registry {
 			self::get_common_layout_attributes( $element ),
 			$inner_blocks
 		);
+	}
+
+	/**
+	 * Creates editable list item blocks from visible static select options.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $select Select element.
+	 * @return array<int,array<string,mixed>> Option list-item blocks.
+	 */
+	private static function create_static_form_option_blocks( $select ): array {
+		$option_blocks = array();
+
+		foreach ( $select->get_child_elements() as $child ) {
+			if ( 'OPTION' !== $child->get_tag_name() ) {
+				continue;
+			}
+
+			$content = trim( wp_strip_all_tags( $child->get_inner_html() ) );
+			if ( '' === $content ) {
+				continue;
+			}
+
+			$option_blocks[] = HTML_To_Blocks_Block_Factory::create_block(
+				'core/list-item',
+				array( 'content' => esc_html( preg_replace( '/\s+/', ' ', $content ) ) )
+			);
+		}
+
+		return $option_blocks;
 	}
 
 	/**
