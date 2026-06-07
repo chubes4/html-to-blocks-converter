@@ -45,6 +45,7 @@ class WP_Block_Type_Registry {
 }
 
 require_once dirname( __DIR__ ) . '/includes/class-block-factory.php';
+require_once dirname( __DIR__ ) . '/includes/transform-families/class-site-editor-marker-transforms.php';
 require_once dirname( __DIR__ ) . '/includes/class-transform-registry.php';
 
 class Site_Editor_Marker_Smoke_Element {
@@ -106,7 +107,7 @@ $find_transform = static function ( $element, string $block_name ) {
 	return null;
 };
 
-$pattern_element   = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => 'theme/pricing-table' ], '<h2>Pricing</h2>' );
+$pattern_element   = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-h2bc-pattern' => 'theme/pricing-table' ], '<h2>Pricing</h2>' );
 $pattern_transform = $find_transform( $pattern_element, 'core/pattern' );
 $pattern_block     = $pattern_transform ? call_user_func( $pattern_transform['transform'], $pattern_element ) : null;
 
@@ -114,13 +115,17 @@ $assert( null !== $pattern_transform, 'pattern-marker-transform-selected' );
 $assert( 'core/pattern' === $pattern_block['blockName'], 'pattern-marker-block-name' );
 $assert( 'theme/pricing-table' === $pattern_block['attrs']['slug'], 'pattern-marker-slug' );
 
-$invalid_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => 'pricing-table' ], '<h2>Pricing</h2>' );
+$bfb_pattern_alias = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => 'theme/pricing-table' ], '<h2>Pricing</h2>' );
+$bfb_pattern_block = call_user_func( $find_transform( $bfb_pattern_alias, 'core/pattern' )['transform'], $bfb_pattern_alias );
+$assert( 'theme/pricing-table' === $bfb_pattern_block['attrs']['slug'], 'bfb-pattern-marker-shared-alias' );
+
+$invalid_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-h2bc-pattern' => 'pricing-table' ], '<h2>Pricing</h2>' );
 $assert( $find_transform( $invalid_pattern, 'core/pattern' ) === null, 'pattern-marker-requires-namespace' );
 
-$blank_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-pattern' => '   ' ], '<h2>Pricing</h2>' );
+$blank_pattern = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-h2bc-pattern' => '   ' ], '<h2>Pricing</h2>' );
 $assert( $find_transform( $blank_pattern, 'core/pattern' ) === null, 'blank-pattern-marker-falls-through' );
 
-$header_element   = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-bfb-template-part' => 'header' ], '<h1>Site</h1>' );
+$header_element   = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-h2bc-template-part' => 'header' ], '<h1>Site</h1>' );
 $header_transform = $find_transform( $header_element, 'core/template-part' );
 $header_block     = $header_transform ? call_user_func( $header_transform['transform'], $header_element ) : null;
 
@@ -130,7 +135,7 @@ $assert( 'header' === $header_block['attrs']['slug'], 'template-part-marker-slug
 $assert( 'header' === $header_block['attrs']['area'], 'template-part-marker-area' );
 
 foreach ( [ 'footer', 'sidebar' ] as $area ) {
-	$area_element   = new Site_Editor_Marker_Smoke_Element( 'sidebar' === $area ? 'aside' : $area, [ 'data-bfb-template-part' => $area ], '<p>' . $area . '</p>' );
+	$area_element   = new Site_Editor_Marker_Smoke_Element( 'sidebar' === $area ? 'aside' : $area, [ 'data-h2bc-template-part' => $area ], '<p>' . $area . '</p>' );
 	$area_transform = $find_transform( $area_element, 'core/template-part' );
 	$area_block     = $area_transform ? call_user_func( $area_transform['transform'], $area_element ) : null;
 
@@ -139,7 +144,7 @@ foreach ( [ 'footer', 'sidebar' ] as $area ) {
 	$assert( $area_block['attrs']['area'] === $area, $area . '-template-part-marker-area' );
 }
 
-$custom_template = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-template-part' => 'landing-hero' ], '<h1>Hero</h1>' );
+$custom_template = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-h2bc-template-part' => 'landing-hero' ], '<h1>Hero</h1>' );
 $custom_block    = call_user_func( $find_transform( $custom_template, 'core/template-part' )['transform'], $custom_template );
 $assert( 'landing-hero' === $custom_block['attrs']['slug'], 'custom-template-part-slug' );
 $assert( ! isset( $custom_block['attrs']['area'] ), 'custom-template-part-has-no-area' );
@@ -161,7 +166,11 @@ $assert( $find_transform( $wp_pattern_alias, 'core/pattern' ) === null, 'wp-patt
 $wp_template_part_alias = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-wp-template-part' => 'header' ], '<h1>Site</h1>' );
 $assert( $find_transform( $wp_template_part_alias, 'core/template-part' ) === null, 'wp-template-part-alias-not-accepted' );
 
-$malformed_template_part = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-bfb-template-part' => 'template/part' ], '<h1>Hero</h1>' );
+$bfb_template_part_alias = new Site_Editor_Marker_Smoke_Element( 'header', [ 'data-bfb-template-part' => 'header' ], '<h1>Site</h1>' );
+$bfb_template_part_block = call_user_func( $find_transform( $bfb_template_part_alias, 'core/template-part' )['transform'], $bfb_template_part_alias );
+$assert( 'header' === $bfb_template_part_block['attrs']['slug'], 'bfb-template-part-marker-shared-alias' );
+
+$malformed_template_part = new Site_Editor_Marker_Smoke_Element( 'section', [ 'data-h2bc-template-part' => 'template/part' ], '<h1>Hero</h1>' );
 $assert( $find_transform( $malformed_template_part, 'core/template-part' ) === null, 'malformed-template-part-falls-through' );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;

@@ -30,13 +30,16 @@ $assert_contains = static function ( string $haystack, string $needle, string $l
 
 $read_required_file = static function ( string $path ) use ( $assert ): string {
 	global $wp_filesystem;
-	$contents = $wp_filesystem->get_contents( $path );
+	$contents = $wp_filesystem && method_exists( $wp_filesystem, 'get_contents' )
+		? $wp_filesystem->get_contents( $path )
+		: file_get_contents( $path );
 	$assert( is_string( $contents ) && '' !== $contents, basename( $path ) . '-readable', 'Unable to read ' . $path );
 
 	return is_string( $contents ) ? $contents : '';
 };
 
-$registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' );
+$registry_source = $read_required_file( $repo_root . '/includes/class-transform-registry.php' )
+	. "\n" . $read_required_file( $repo_root . '/includes/transform-families/class-site-editor-marker-transforms.php' );
 $raw_source      = $read_required_file( $repo_root . '/raw-handler.php' );
 $coverage_doc    = $read_required_file( $repo_root . '/docs/core-block-coverage.md' );
 $site_editor_doc = $read_required_file( $repo_root . '/docs/site-editor-boundary.md' );

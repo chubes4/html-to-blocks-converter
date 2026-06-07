@@ -261,7 +261,7 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	private static function collect_local_reference_ids( DOMElement $root ): array {
 		$ids = array();
 		foreach ( $root->getElementsByTagName( 'pattern' ) as $pattern ) {
-			if ( $pattern instanceof DOMElement && $pattern->hasAttribute( 'id' ) ) {
+			if ( $pattern->hasAttribute( 'id' ) ) {
 				$id = trim( $pattern->getAttribute( 'id' ) );
 				if ( preg_match( '/^[A-Za-z][A-Za-z0-9_-]*$/', $id ) === 1 ) {
 					$ids[] = $id;
@@ -338,6 +338,6 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 			}
 		}
 
-		return '' !== $view_box || '' !== $width || '' !== $height;
+		return '' !== $width || '' !== $height;
 	}
 }
