@@ -3608,13 +3608,19 @@ class HTML_To_Blocks_Transform_Registry {
 		$tag     = strtolower( $control->get_tag_name() );
 		$content = self::get_static_form_control_preview_text( $control );
 		$class   = 'static-form-control static-form-' . $tag;
+		$attrs   = array(
+			'className' => $class,
+			'content'   => '' !== $content ? esc_html( $content ) : '&nbsp;',
+		);
+
+		if ( 'textarea' === $tag && $control->has_attribute( 'rows' ) ) {
+			$rows = max( 1, (int) $control->get_attribute( 'rows' ) );
+			$attrs['style']['dimensions']['minHeight'] = 'calc(' . $rows . ' * 1.6em + 28px)';
+		}
 
 		return HTML_To_Blocks_Block_Factory::create_block(
 			'core/paragraph',
-			array(
-				'className' => $class,
-				'content'   => '' !== $content ? esc_html( $content ) : '&nbsp;',
-			)
+			$attrs
 		);
 	}
 

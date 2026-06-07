@@ -267,7 +267,8 @@ $assert( str_contains( $eastbank_form_serialized, '<div class="wp-block-group st
 $assert( str_contains( $eastbank_form_serialized, '<div class="wp-block-group static-form-field">' ), 'eastbank-static-preview-label-becomes-field-group', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, '<p class="static-form-label">Item</p>' ), 'eastbank-static-preview-label-has-class', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-input">Example: desk lamp, toaster, backpack zipper</p>' ), 'eastbank-static-preview-input-has-control-class', $eastbank_form_serialized );
-$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-textarea">Tell us what stopped working, what you tried, and whether parts are loose.</p>' ), 'eastbank-static-preview-textarea-has-control-class', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-textarea" style="min-height:calc(4 * 1.6em + 28px)">Tell us what stopped working, what you tried, and whether parts are loose.</p>' ), 'eastbank-static-preview-textarea-has-control-class', $eastbank_form_serialized );
+$assert( str_contains( $eastbank_form_serialized, 'min-height:calc(4 * 1.6em + 28px)' ), 'eastbank-static-preview-textarea-preserves-row-height', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, '<p class="static-form-control static-form-select">Thursday afternoon</p>' ), 'eastbank-static-preview-select-has-control-class', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Item' ), 'eastbank-static-preview-label-survives', $eastbank_form_serialized );
 $assert( str_contains( $eastbank_form_serialized, 'Example: desk lamp, toaster, backpack zipper' ), 'eastbank-static-preview-placeholder-survives', $eastbank_form_serialized );
