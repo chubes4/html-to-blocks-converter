@@ -74,6 +74,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 					'core/buttons',
 					'core/heading',
 					'core/group',
+					'core/heading',
 					'core/html',
 					'core/image',
 					'core/list',
@@ -125,14 +126,39 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 			}
 
 			$output .= '<!-- wp:' . substr( $name, 5 ) . ' -->';
-			$output .= $block['innerContent'][0] ?? $block['innerHTML'] ?? '';
-			$output .= serialize_blocks( $block['innerBlocks'] ?? [] );
+			$inner_blocks  = $block['innerBlocks'] ?? [];
 			$inner_content = $block['innerContent'] ?? [];
-			$output       .= end( $inner_content ) ? end( $inner_content ) : '';
+			$inner_index   = 0;
+
+			if ( [] === $inner_content ) {
+				$output .= $block['innerHTML'] ?? '';
+			} else {
+				foreach ( $inner_content as $content ) {
+					if ( null === $content ) {
+						$output .= serialize_blocks( [ $inner_blocks[ $inner_index ] ?? [] ] );
+						$inner_index++;
+						continue;
+					}
+
+					$output .= $content;
+				}
+			}
 			$output .= '<!-- /wp:' . substr( $name, 5 ) . ' -->';
 		}
 
 		return $output;
+	}
+}
+
+if ( ! function_exists( 'html_to_blocks_smoke_block_names' ) ) {
+	function html_to_blocks_smoke_block_names( array $blocks ): array {
+		$names = [];
+		foreach ( $blocks as $block ) {
+			$names[] = $block['blockName'] ?? '';
+			$names   = array_merge( $names, html_to_blocks_smoke_block_names( $block['innerBlocks'] ?? [] ) );
+		}
+
+		return $names;
 	}
 }
 
@@ -347,6 +373,33 @@ $ember_hero_copy_serialized = serialize_blocks(
 $assert( ! str_contains( $ember_hero_copy_serialized, '<!-- wp:html -->' ), 'ember-hero-copy-avoids-core-html-fallback', $ember_hero_copy_serialized );
 $assert( str_contains( $ember_hero_copy_serialized, 'Wood-fired pizza with a warm seat at the table.' ), 'ember-hero-heading-survives', $ember_hero_copy_serialized );
 $assert( str_contains( $ember_hero_copy_serialized, 'Book a Table' ), 'ember-hero-cta-survives', $ember_hero_copy_serialized );
+
+$ember_rye_footer_html = <<<HTML
+<footer class="site-footer">
+  <div><a class="brand footer-brand" href="index.html"><img src="assets/img/ember-rye-mark.svg" alt="" width="42" height="42"><span><strong>Ember &amp; Rye</strong><small>Wood-Fired Pizza</small></span></a><p>Warm hospitality, blistered crust, and neighborhood energy nightly.</p></div>
+  <div><h2>Visit</h2><p>1247 Hearthside Ave<br>Maplewood, OR 97205</p><a href="contact.html">Directions</a></div>
+  <div><h2>Hours</h2><p>Tue–Thu 4–10pm<br>Fri–Sat 4–11pm<br>Sun 3–9pm</p></div>
+  <div><h2>Connect</h2><p><a href="tel:+15035550184">(503) 555-0184</a><br><a href="mailto:hello@emberandrye.example">hello@emberandrye.example</a></p></div>
+</footer>
+HTML;
+
+$ember_rye_footer_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $ember_rye_footer_html ] );
+$ember_rye_footer_names      = html_to_blocks_smoke_block_names( $ember_rye_footer_blocks );
+$ember_rye_footer_serialized = serialize_blocks( $ember_rye_footer_blocks );
+
+$assert( ! in_array( 'core/html', $ember_rye_footer_names, true ), 'ember-rye-footer-avoids-core-html-blocks', implode( ', ', $ember_rye_footer_names ) );
+$assert( ! str_contains( $ember_rye_footer_serialized, '<!-- wp:html -->' ), 'ember-rye-footer-serialized-has-no-wp-html', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'class="brand footer-brand"' ), 'ember-rye-brand-class-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'href="index.html"' ), 'ember-rye-brand-link-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'assets/img/ember-rye-mark.svg' ), 'ember-rye-logo-url-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, '<strong>Ember &amp; Rye</strong><small>Wood-Fired Pizza</small>' ), 'ember-rye-brand-text-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, '1247 Hearthside Ave<br>Maplewood, OR 97205' ), 'ember-rye-visit-text-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'Tue–Thu 4–10pm<br>Fri–Sat 4–11pm<br>Sun 3–9pm' ), 'ember-rye-hours-text-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'href="contact.html"' ), 'ember-rye-directions-link-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'href="tel:+15035550184"' ), 'ember-rye-tel-link-survives', $ember_rye_footer_serialized );
+$assert( str_contains( $ember_rye_footer_serialized, 'href="mailto:hello@emberandrye.example"' ), 'ember-rye-mailto-link-survives', $ember_rye_footer_serialized );
+$assert( substr_count( $ember_rye_footer_serialized, 'Ember &amp; Rye' ) === 1, 'ember-rye-brand-text-serializes-once', $ember_rye_footer_serialized );
+$assert( substr_count( $ember_rye_footer_serialized, 'Warm hospitality, blistered crust, and neighborhood energy nightly.' ) === 1, 'ember-rye-footer-copy-serializes-once', $ember_rye_footer_serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
