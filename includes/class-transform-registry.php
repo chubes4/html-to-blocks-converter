@@ -3908,6 +3908,7 @@ class HTML_To_Blocks_Transform_Registry {
 			array(
 				'blockName' => 'core/group',
 				'priority'  => 15,
+				'selector'  => 'section,div,article,main,aside,header,footer,nav',
 				'isMatch'   => function ( $element ) {
 					return self::is_group_element( $element );
 				},
