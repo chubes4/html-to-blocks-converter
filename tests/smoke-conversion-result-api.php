@@ -59,7 +59,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 		}
 
 		public function is_registered( $name ) {
-			return in_array( $name, [ 'core/group', 'core/html', 'core/image', 'core/list', 'core/list-item', 'core/paragraph' ], true );
+			return in_array( $name, [ 'core/group', 'core/html', 'core/image', 'core/list', 'core/list-item', 'core/paragraph', 'html-to-blocks/svg-icon' ], true );
 		}
 
 		public function get_registered( $name ) {
@@ -160,6 +160,8 @@ $repo_root = dirname( __DIR__ );
 require_once $repo_root . '/includes/class-block-factory.php';
 require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
+require_once $repo_root . '/includes/class-svg-icon-classifier.php';
+require_once $repo_root . '/includes/svg-icon-functions.php';
 require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
@@ -203,10 +205,47 @@ $asset_urls = array_map(
 );
 $assert( in_array( 'assets/hero.webp', $asset_urls, true ), 'result-captures-img-src-asset-reference', json_encode( $result['asset_references'] ) );
 $assert( in_array( 'assets/hero@2x.webp', $asset_urls, true ), 'result-captures-srcset-asset-reference', json_encode( $result['asset_references'] ) );
+$assert( is_array( $result['svg_icon_artifacts'] ?? null ), 'result-exposes-svg-icon-artifacts' );
 
 $assert( 1 === count( $result['navigation_candidates'] ), 'result-captures-navigation-candidate', json_encode( $result['navigation_candidates'] ) );
 $assert( 'Primary' === ( $result['navigation_candidates'][0]['label'] ?? '' ), 'navigation-candidate-preserves-label' );
 $assert( 2 === count( $result['navigation_candidates'][0]['links'] ?? [] ), 'navigation-candidate-preserves-links' );
+
+$inline_icon_result = html_to_blocks_convert_fragment( '<svg class="icon icon-arrow" viewBox="0 0 24 24" role="img" aria-label="Arrow"><title>Arrow</title><path d="M4 12h14" fill="currentColor"/></svg>' );
+$inline_icons       = $inline_icon_result['svg_icon_artifacts'] ?? [];
+$assert( count( $inline_icons ) === 1, 'inline-icon-emits-one-svg-artifact', json_encode( $inline_icons ) );
+$assert( ( $inline_icons[0]['type'] ?? '' ) === 'svg-icon', 'inline-icon-artifact-type', json_encode( $inline_icons[0] ?? [] ) );
+$assert( str_starts_with( $inline_icons[0]['id'] ?? '', 'svg-icon-' ), 'inline-icon-artifact-has-stable-id', json_encode( $inline_icons[0] ?? [] ) );
+$assert( str_contains( $inline_icons[0]['content'] ?? '', '<path' ), 'inline-icon-artifact-exposes-sanitized-content', $inline_icons[0]['content'] ?? '' );
+$assert( ( $inline_icons[0]['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'inline-icon-artifact-exposes-kind', json_encode( $inline_icons[0]['metadata'] ?? [] ) );
+$assert( ( $inline_icons[0]['block_path'] ?? [] ) === [ 0 ], 'inline-icon-artifact-exposes-block-path', json_encode( $inline_icons[0]['block_path'] ?? [] ) );
+
+$unsafe_svg_result = html_to_blocks_convert_fragment( '<svg viewBox="0 0 24 24"><script>alert(1)</script><path d="M0 0h1"/></svg>' );
+$unsafe_codes      = array_map(
+	static function ( $diagnostic ) {
+		return $diagnostic['code'] ?? '';
+	},
+	$unsafe_svg_result['diagnostics'] ?? []
+);
+$assert( in_array( 'unsafe_inline_svg', $unsafe_codes, true ), 'unsafe-svg-emits-specific-diagnostic', json_encode( $unsafe_svg_result['diagnostics'] ?? [] ) );
+$assert( empty( $unsafe_svg_result['svg_icon_artifacts'] ?? [] ), 'unsafe-svg-emits-no-artifact', json_encode( $unsafe_svg_result['svg_icon_artifacts'] ?? [] ) );
+
+$symbol_sprite = '<svg viewBox="0 0 24 24"><defs><symbol id="shape" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></symbol></defs><use href="#shape"/></svg>';
+$symbol_result = html_to_blocks_convert_fragment( $symbol_sprite );
+$symbol_icons  = $symbol_result['svg_icon_artifacts'] ?? [];
+$assert( count( $symbol_icons ) === 1, 'symbol-sprite-emits-svg-artifact', json_encode( $symbol_icons ) );
+$assert( str_contains( $symbol_icons[0]['content'] ?? '', '<symbol id="shape"' ), 'symbol-sprite-preserves-local-symbol', $symbol_icons[0]['content'] ?? '' );
+$assert( str_contains( $symbol_icons[0]['content'] ?? '', '<use href="#shape"' ), 'symbol-sprite-preserves-local-use-reference', $symbol_icons[0]['content'] ?? '' );
+
+$external_use_result = html_to_blocks_convert_fragment( '<svg viewBox="0 0 24 24"><use href="https://example.com/icons.svg#shape"/></svg>' );
+$external_use_codes  = array_map(
+	static function ( $diagnostic ) {
+		return $diagnostic['code'] ?? '';
+	},
+	$external_use_result['diagnostics'] ?? []
+);
+$assert( in_array( 'unsafe_inline_svg', $external_use_codes, true ), 'external-use-reference-emits-unsafe-diagnostic', json_encode( $external_use_result['diagnostics'] ?? [] ) );
+$assert( empty( $external_use_result['svg_icon_artifacts'] ?? [] ), 'external-use-reference-emits-no-artifact', json_encode( $external_use_result['svg_icon_artifacts'] ?? [] ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {

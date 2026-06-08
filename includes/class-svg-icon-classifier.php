@@ -18,6 +18,8 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 
 	private const ALLOWED_TAGS = array(
 		'svg',
+		'symbol',
+		'use',
 		'path',
 		'circle',
 		'rect',
@@ -43,6 +45,7 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		'fill',
 		'fill-opacity',
 		'height',
+		'href',
 		'id',
 		'patternunits',
 		'points',
@@ -57,6 +60,7 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		'stroke-width',
 		'viewbox',
 		'width',
+		'xlink:href',
 		'x',
 		'x1',
 		'x2',
@@ -225,8 +229,16 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	 * @return bool True when safe.
 	 */
 	private static function is_allowed_attribute( string $name, string $value, array $state ): bool {
-		if ( strpos( $name, 'on' ) === 0 || in_array( $name, array( 'href', 'xlink:href', 'src', 'style' ), true ) ) {
+		if ( strpos( $name, 'on' ) === 0 || in_array( $name, array( 'src', 'style' ), true ) ) {
 			return false;
+		}
+
+		if ( in_array( $name, array( 'href', 'xlink:href' ), true ) ) {
+			if ( preg_match( '/^#([A-Za-z][A-Za-z0-9_-]*)$/', $value, $matches ) !== 1 ) {
+				return false;
+			}
+
+			return in_array( $matches[1], $state['local_refs'] ?? array(), true );
 		}
 
 		if ( 'id' === $name ) {
@@ -260,9 +272,13 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	 */
 	private static function collect_local_reference_ids( DOMElement $root ): array {
 		$ids = array();
-		foreach ( $root->getElementsByTagName( 'pattern' ) as $pattern ) {
-			if ( $pattern->hasAttribute( 'id' ) ) {
-				$id = trim( $pattern->getAttribute( 'id' ) );
+		foreach ( array( 'pattern', 'symbol' ) as $tag_name ) {
+			foreach ( $root->getElementsByTagName( $tag_name ) as $element ) {
+				if ( ! $element->hasAttribute( 'id' ) ) {
+					continue;
+				}
+
+				$id = trim( $element->getAttribute( 'id' ) );
 				if ( preg_match( '/^[A-Za-z][A-Za-z0-9_-]*$/', $id ) === 1 ) {
 					$ids[] = $id;
 				}
