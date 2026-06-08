@@ -5054,12 +5054,44 @@ class HTML_To_Blocks_Transform_Registry {
 	 * @return bool True when the element is empty decorative layout chrome.
 	 */
 	private static function is_empty_decorative_element( $element ): bool {
-		return self::is_empty_element( $element )
+		return self::is_safe_empty_decorative_element( $element )
 			&& (
 				self::is_project_card_status_element( $element )
 				|| self::class_matches( $element, '/(?:^|[-_\s])(background|bg|pattern|texture|divider|separator|connector|rule|ruler|line|blank|overlay|grain|noise|glow|gradient|scan|dot|mark|bullet|icon|orb|blob|fill|img|image|media|photo|picture|thumb|patch|progress|meter|gauge|today|traffic[-_]?light|tl[-_]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i' )
 				|| self::has_visual_placeholder_background( $element )
 			);
+	}
+
+	/**
+	 * Checks whether an empty decorative candidate has only inert attributes.
+	 *
+	 * @param HTML_To_Blocks_HTML_Element $element The source element.
+	 * @return bool True when the empty element is safe visual chrome.
+	 */
+	private static function is_safe_empty_decorative_element( $element ): bool {
+		if ( ! self::is_empty_element( $element ) ) {
+			return false;
+		}
+
+		$attributes = $element->get_attributes();
+		$role       = isset( $attributes['role'] ) ? strtolower( trim( (string) $attributes['role'] ) ) : '';
+		if ( '' !== $role && ! in_array( $role, array( 'none', 'presentation' ), true ) ) {
+			return false;
+		}
+
+		foreach ( $attributes as $name => $value ) {
+			$name = strtolower( (string) $name );
+			if ( preg_match( '/^on/i', $name ) ) {
+				return false;
+			}
+
+			if ( ! in_array( $name, array( 'class', 'style', 'id', 'aria-hidden', 'role' ), true ) ) {
+				return false;
+			}
+		}
+
+		$style = isset( $attributes['style'] ) ? (string) $attributes['style'] : '';
+		return preg_match( '/(?:url\s*\(|expression\s*\(|javascript\s*:|behavior\s*:)/i', $style ) !== 1;
 	}
 
 	/**
