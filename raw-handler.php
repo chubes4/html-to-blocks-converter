@@ -440,6 +440,271 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	return $blocks;
 }
+
+/**
+ * Convert one HTML fragment and return a stable result envelope for compilers.
+ *
+ * `html_to_blocks_raw_handler()` remains the low-level Gutenberg-compatible
+ * block-array API. This wrapper gives artifact compilers one place to collect
+ * serialized markup, fallback diagnostics, metrics, and source references
+ * without wiring global listeners around every conversion call.
+ *
+ * @param string $html Source HTML fragment.
+ * @param array  $args Conversion context passed through to the raw handler.
+ * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
+ */
+function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
+	$args = array_merge(
+		$args,
+		array(
+			'HTML' => $html,
+		)
+	);
+
+	$fallbacks = array();
+	$metrics   = array();
+
+	$fallback_listener = static function ( string $element_html, array $context, array $block ) use ( &$fallbacks ): void {
+		$fallbacks[] = array(
+			'type'         => 'unsupported_html_fallback',
+			'element_html' => $element_html,
+			'context'      => $context,
+			'block_name'   => (string) ( $block['blockName'] ?? '' ),
+		);
+	};
+
+	$metrics_listener = static function ( array $event_metrics ) use ( &$metrics ): void {
+		$metrics = $event_metrics;
+	};
+
+	$can_listen = function_exists( 'add_action' ) && function_exists( 'remove_action' );
+	if ( $can_listen ) {
+		add_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10, 3 );
+		add_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10, 1 );
+	}
+
+	try {
+		$blocks = html_to_blocks_raw_handler( $args );
+	} finally {
+		if ( $can_listen ) {
+			remove_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10 );
+			remove_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10 );
+		}
+	}
+
+	return array(
+		'block_markup'          => html_to_blocks_serialize_block_markup( $blocks ),
+		'blocks'                => $blocks,
+		'diagnostics'           => html_to_blocks_fallbacks_to_diagnostics( $fallbacks ),
+		'fallbacks'             => $fallbacks,
+		'asset_references'      => html_to_blocks_collect_asset_references( $html ),
+		'navigation_candidates' => html_to_blocks_collect_navigation_candidates( $html ),
+		'metrics'               => $metrics,
+		'source'                => array(
+			'bytes'       => strlen( $html ),
+			'text_length' => strlen( trim( wp_strip_all_tags( $html ) ) ),
+			'context'     => isset( $args['context'] ) && is_scalar( $args['context'] ) ? (string) $args['context'] : '',
+		),
+	);
+}
+
+/**
+ * Serialize block arrays for the result API.
+ *
+ * @param array<int|string,array<string,mixed>> $blocks Block arrays.
+ * @return string Serialized block markup.
+ */
+function html_to_blocks_serialize_block_markup( array $blocks ): string {
+	if ( function_exists( 'serialize_blocks' ) ) {
+		return serialize_blocks( $blocks );
+	}
+
+	return '';
+}
+
+/**
+ * Normalize fallback observations into compiler-friendly diagnostics.
+ *
+ * @param array<int,array<string,mixed>> $fallbacks Fallback events.
+ * @return array<int,array<string,mixed>> Diagnostics.
+ */
+function html_to_blocks_fallbacks_to_diagnostics( array $fallbacks ): array {
+	$diagnostics = array();
+	foreach ( $fallbacks as $fallback ) {
+		$context       = isset( $fallback['context'] ) && is_array( $fallback['context'] ) ? $fallback['context'] : array();
+		$diagnostics[] = array(
+			'code'     => 'unsupported_html_fallback',
+			'severity' => 'warning',
+			'message'  => 'Source HTML fragment was preserved as core/html because no safe native block transform matched.',
+			'context'  => $context,
+		);
+	}
+
+	return $diagnostics;
+}
+
+/**
+ * Collect obvious source asset references for downstream materializers.
+ *
+ * @param string $html Source HTML.
+ * @return array<int,array<string,mixed>> Asset references.
+ */
+function html_to_blocks_collect_asset_references( string $html ): array {
+	$references = array();
+	$seen       = array();
+
+	foreach ( array( 'src', 'href', 'poster' ) as $attribute ) {
+		if ( ! preg_match_all( '/\b' . preg_quote( $attribute, '/' ) . '\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))/i', $html, $matches, PREG_SET_ORDER ) ) {
+			continue;
+		}
+
+		foreach ( $matches as $match ) {
+			$url = html_entity_decode( (string) ( $match[2] ?? $match[3] ?? $match[4] ?? '' ), ENT_QUOTES, 'UTF-8' );
+			if ( ! html_to_blocks_is_asset_reference_url( $url ) ) {
+				continue;
+			}
+
+			$key = $attribute . ':' . $url;
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+
+			$seen[ $key ]  = true;
+			$references[] = array(
+				'attribute' => $attribute,
+				'url'       => $url,
+			);
+		}
+	}
+
+	if ( preg_match_all( '/\bsrcset\s*=\s*("([^"]*)"|\'([^\']*)\')/i', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $match ) {
+			$srcset = html_entity_decode( (string) ( $match[2] ?? $match[3] ?? '' ), ENT_QUOTES, 'UTF-8' );
+			foreach ( explode( ',', $srcset ) as $candidate ) {
+				$parts = preg_split( '/\s+/', trim( $candidate ) );
+				$url   = (string) ( $parts[0] ?? '' );
+				if ( ! html_to_blocks_is_asset_reference_url( $url ) ) {
+					continue;
+				}
+
+				$key = 'srcset:' . $url;
+				if ( isset( $seen[ $key ] ) ) {
+					continue;
+				}
+
+				$seen[ $key ]  = true;
+				$references[] = array(
+					'attribute' => 'srcset',
+					'url'       => $url,
+				);
+			}
+		}
+	}
+
+	return $references;
+}
+
+/**
+ * Check whether a URL-like value should be reported as an asset reference.
+ *
+ * @param string $url URL or path.
+ * @return bool True when this value points at a materializable asset.
+ */
+function html_to_blocks_is_asset_reference_url( string $url ): bool {
+	$url = trim( $url );
+	if ( '' === $url || '#' === $url[0] || preg_match( '/^(?:mailto|tel|javascript):/i', $url ) ) {
+		return false;
+	}
+
+	$path = (string) ( wp_parse_url( $url, PHP_URL_PATH ) ?? $url );
+	return preg_match( '/\.(?:avif|gif|jpe?g|png|svg|webp|css|js|json|mp4|webm|mp3|wav|woff2?|ttf|otf|eot|pdf)(?:$|[?#])/i', $path ) === 1;
+}
+
+/**
+ * Collect simple navigation candidates for downstream entity materializers.
+ *
+ * @param string $html Source HTML.
+ * @return array<int,array<string,mixed>> Navigation candidates.
+ */
+function html_to_blocks_collect_navigation_candidates( string $html ): array {
+	$candidates = array();
+	if ( ! preg_match_all( '/<nav\b([^>]*)>(.*?)<\/nav>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		return $candidates;
+	}
+
+	foreach ( $matches as $index => $match ) {
+		$attrs = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+		$links = html_to_blocks_collect_anchor_links( (string) $match[2] );
+		if ( empty( $links ) ) {
+			continue;
+		}
+
+		$candidates[] = array(
+			'source'     => 'nav[' . $index . ']',
+			'class_name' => isset( $attrs['class'] ) ? (string) $attrs['class'] : '',
+			'label'      => isset( $attrs['aria-label'] ) ? (string) $attrs['aria-label'] : '',
+			'links'      => $links,
+		);
+	}
+
+	return $candidates;
+}
+
+/**
+ * Collect anchors from an HTML fragment.
+ *
+ * @param string $html Source HTML.
+ * @return array<int,array{url:string,label:string,class_name:string}>
+ */
+function html_to_blocks_collect_anchor_links( string $html ): array {
+	$links = array();
+	if ( ! preg_match_all( '/<a\b([^>]*)>(.*?)<\/a>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		return $links;
+	}
+
+	foreach ( $matches as $match ) {
+		$attrs = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+		$url   = trim( (string) ( $attrs['href'] ?? '' ) );
+		if ( '' === $url ) {
+			continue;
+		}
+
+		$links[] = array(
+			'url'        => html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
+			'label'      => trim( wp_strip_all_tags( (string) $match[2] ) ),
+			'class_name' => isset( $attrs['class'] ) ? (string) $attrs['class'] : '',
+		);
+	}
+
+	return $links;
+}
+
+/**
+ * Parse a small HTML attribute string into a lowercase map.
+ *
+ * @param string $attribute_string Raw attributes.
+ * @return array<string,string>
+ */
+function html_to_blocks_parse_html_attribute_string( string $attribute_string ): array {
+	$attributes = array();
+	if ( preg_match_all( '/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))/', $attribute_string, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $match ) {
+			$value = '';
+			if ( isset( $match[3] ) && '' !== $match[3] ) {
+				$value = $match[3];
+			} elseif ( isset( $match[4] ) && '' !== $match[4] ) {
+				$value = $match[4];
+			} elseif ( isset( $match[5] ) ) {
+				$value = $match[5];
+			}
+
+			$attributes[ strtolower( $match[1] ) ] = html_entity_decode( $value, ENT_QUOTES, 'UTF-8' );
+		}
+	}
+
+	return $attributes;
+}
+
 /**
  * Checks whether an empty div/span is a safe visual-only icon placeholder.
  *

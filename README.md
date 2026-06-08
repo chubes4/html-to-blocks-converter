@@ -134,6 +134,25 @@ $blocks = html_to_blocks_raw_handler(['HTML' => $html]);
 $block_content = serialize_blocks($blocks);
 ```
 
+Compilers and importers that need diagnostics and source references can call the
+result API instead:
+
+```php
+$result = html_to_blocks_convert_fragment($html, [
+    'context' => 'theme_part',
+]);
+
+$block_content = $result['block_markup'];
+$diagnostics = $result['diagnostics'];
+$asset_references = $result['asset_references'];
+$navigation_candidates = $result['navigation_candidates'];
+```
+
+The result envelope includes serialized block markup, raw block arrays,
+normalized fallback diagnostics, conversion metrics when hooks are available,
+source asset references, and simple navigation candidates for downstream
+materializers.
+
 ## REST API Read Path (v0.4.0+)
 
 The plugin also converts HTML to blocks when the block editor loads a post via the REST API. When `context=edit` is requested, any post with HTML in `content.raw` (no `<!-- wp:` block markup) is automatically converted to proper block markup before the editor sees it.

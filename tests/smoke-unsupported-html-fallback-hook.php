@@ -70,8 +70,7 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 };
 
 $read_required_file = static function ( string $path ) use ( $assert ): string {
-	global $wp_filesystem;
-	$contents = $wp_filesystem->get_contents( $path );
+	$contents = file_get_contents( $path );
 	$assert( is_string( $contents ) && '' !== $contents, basename( $path ) . '-readable', 'Unable to read ' . $path );
 
 	return is_string( $contents ) ? $contents : '';
