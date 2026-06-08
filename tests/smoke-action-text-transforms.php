@@ -289,6 +289,32 @@ $standalone_brand_anchor_block     = call_user_func( $standalone_brand_anchor_tr
 $smoke_assert( 'core/paragraph' === $standalone_brand_anchor_transform['blockName'], 'standalone-brand-anchor-becomes-paragraph' );
 $smoke_assert( strpos( $standalone_brand_anchor_block['attrs']['content'], '<a class="brand" href="#top" aria-label="Studio home">' ) !== false, 'standalone-brand-anchor-preserves-link-attributes' );
 $smoke_assert( ! isset( $standalone_brand_anchor_block['attrs']['className'] ), 'standalone-brand-anchor-keeps-class-on-link-only' );
+
+$decorative_brand_anchor = new HTML_To_Blocks_HTML_Element(
+	'a',
+	[ 'class' => 'brand', 'href' => '#top', 'aria-label' => 'Studio home' ],
+	'<a class="brand" href="#top" aria-label="Studio home"><span class="brand-mark" aria-hidden="true"><img src="/assets/icons/mark.svg" alt="" role="img"></span><span><strong>Studio</strong> Textile repair goods</span></a>',
+	'<span class="brand-mark" aria-hidden="true"><img src="/assets/icons/mark.svg" alt="" role="img"></span><span><strong>Studio</strong> Textile repair goods</span>'
+);
+$decorative_brand_anchor_transform = $find_transform( $decorative_brand_anchor );
+$decorative_brand_anchor_block     = call_user_func( $decorative_brand_anchor_transform['transform'], $decorative_brand_anchor, $handler );
+$smoke_assert( 'core/paragraph' === $decorative_brand_anchor_transform['blockName'], 'decorative-brand-anchor-with-image-becomes-paragraph' );
+$smoke_assert( strpos( $decorative_brand_anchor_block['attrs']['content'], '<a class="brand" href="#top" aria-label="Studio home">' ) !== false, 'decorative-brand-anchor-preserves-link-attributes' );
+$smoke_assert( strpos( $decorative_brand_anchor_block['attrs']['content'], '<img src="/assets/icons/mark.svg" alt="" role="img">' ) !== false, 'decorative-brand-anchor-preserves-image-mark' );
+
+$hero_section = new HTML_To_Blocks_HTML_Element(
+	'section',
+	[ 'class' => 'hero', 'aria-labelledby' => 'hero-title' ],
+	'<section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="eyebrow">Visible mending for the home</p><h1 id="hero-title">Keep the linens that already know your rooms.</h1><p class="hero-text">Repair goods for everyday textiles.</p></div><div class="hero-actions"><a href="#basket" class="btn btn-primary">Build a repair basket</a><a href="#fixtures" class="btn btn-ghost">Find fixtures</a></div></section>',
+	'<div class="hero-copy"><p class="eyebrow">Visible mending for the home</p><h1 id="hero-title">Keep the linens that already know your rooms.</h1><p class="hero-text">Repair goods for everyday textiles.</p></div><div class="hero-actions"><a href="#basket" class="btn btn-primary">Build a repair basket</a><a href="#fixtures" class="btn btn-ghost">Find fixtures</a></div>'
+);
+$hero_section_transform = $find_transform( $hero_section );
+$hero_section_block     = call_user_func( $hero_section_transform['transform'], $hero_section, $handler );
+$smoke_assert( 'core/group' === $hero_section_transform['blockName'], 'hero-section-becomes-group' );
+$smoke_assert( 'section' === $hero_section_block['attrs']['tagName'], 'hero-section-tag-name-preserved' );
+$smoke_assert( 'hero' === $hero_section_block['attrs']['className'], 'hero-section-class-preserved' );
+$smoke_assert( count( $hero_section_block['innerBlocks'] ) > 0, 'hero-section-has-native-inner-blocks' );
+$smoke_assert( 'core/freeform' !== $hero_section_block['blockName'], 'hero-section-avoids-freeform' );
 $smoke_assert( strpos( $standalone_brand_anchor_block['innerHTML'], '<!-- wp:html -->' ) === false, 'standalone-brand-anchor-avoids-freeform' );
 
 $static_button_tabs = new HTML_To_Blocks_HTML_Element(
