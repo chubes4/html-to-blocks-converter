@@ -185,6 +185,17 @@ $brand_cases = [
 			'<em>Refill Works</em>',
 		],
 	],
+	'image-mark-brand-with-source-spacing' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Studio home"> <span class="brand-mark" aria-hidden="true"> <img src="/mark.svg" alt="" role="img"> </span> <span> <strong>Studio</strong> Textile goods</span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Studio home"',
+			'class="brand"',
+			'<span class="brand-mark" aria-hidden="true"> <img src="/mark.svg" alt="" role="img"> </span>',
+			'<strong>Studio</strong>',
+			'Textile goods',
+		],
+	],
 	'brand-with-small-tagline' => [
 		'html'     => '<a class="brand" href="#top" aria-label="Studio home"><span>Studio</span> <small>Tattoo Studio</small></a>',
 		'snippets' => [
