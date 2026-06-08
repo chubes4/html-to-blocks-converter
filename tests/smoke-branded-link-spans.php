@@ -195,6 +195,17 @@ $brand_cases = [
 			'<small>Tattoo Studio</small>',
 		],
 	],
+	'formatted-brand-with-small-tagline' => [
+		'html'     => '<a class="brand" href="#top" aria-label="Cafe home"> <span class="brand-mark" aria-hidden="true">C</span> <span> <strong>Cafe Table</strong> <small>Coffee · Lunch · Workshops</small> </span> </a>',
+		'snippets' => [
+			'href="#top"',
+			'aria-label="Cafe home"',
+			'class="brand"',
+			'<span class="brand-mark" aria-hidden="true">C</span>',
+			'<strong>Cafe Table</strong>',
+			'<small>Coffee · Lunch · Workshops</small>',
+		],
+	],
 	'footer-brand-without-aria-label' => [
 		'html'     => '<a class="brand footer-brand" href="#top"> <span class="brand-mark" aria-hidden="true">W</span> <span><strong>Wickstead</strong><em>Refill Works</em></span> </a>',
 		'snippets' => [
