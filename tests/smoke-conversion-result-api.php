@@ -160,6 +160,7 @@ $repo_root = dirname( __DIR__ );
 require_once $repo_root . '/includes/class-block-factory.php';
 require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
+require_once $repo_root . '/includes/class-svg-icon-classifier.php';
 require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
@@ -174,9 +175,11 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 };
 
 $html = <<<'HTML'
+<svg class="icon icon-star" viewBox="0 0 24 24" width="24" height="24" aria-label="Star"><path d="M12 2l3 7h7l-5 5 2 8-7-4-7 4 2-8-5-5h7z"/></svg>
 <nav class="primary site-nav" aria-label="Primary"><a href="/">Home</a><a href="/menu/">Menu</a></nav>
 <main class="content-shell"><p>Hello <strong>world</strong>.</p><img class="hero-image" src="assets/hero.webp" srcset="assets/hero.webp 1x, assets/hero@2x.webp 2x" alt="Hero"><a class="btn hero-cta" href="/book/">Book</a><form class="newsletter-form" action="/subscribe"><input type="email" name="email"><button type="submit">Join</button></form><div class="glow-orb decorative-layer"></div></main>
 <custom-card data-state="unknown"><span>Opaque</span></custom-card>
+<svg viewBox="0 0 24 24"><script>alert(1)</script><path d="M0 0h24v24H0z"/></svg>
 HTML;
 
 $result = html_to_blocks_convert_fragment(
@@ -191,9 +194,25 @@ $assert( is_string( $result['block_markup'] ?? null ) && str_contains( $result['
 $assert( is_array( $result['diagnostics'] ?? null ), 'result-exposes-diagnostics' );
 $assert( is_array( $result['fallbacks'] ?? null ) && count( $result['fallbacks'] ) >= 1, 'result-captures-fallback-events' );
 $assert( count( $result['diagnostics'] ) === count( $result['fallbacks'] ), 'fallbacks-normalize-to-diagnostics' );
+$assert( is_array( $result['svg_artifacts'] ?? null ), 'result-exposes-svg-artifacts' );
 $assert( is_array( $result['metrics'] ?? null ) && isset( $result['metrics']['total_ms'] ), 'result-captures-metrics' );
 $assert( is_array( $result['source'] ?? null ) && ( $result['source']['bytes'] ?? 0 ) === strlen( $html ), 'result-exposes-source-summary' );
 $assert( 'theme_part' === ( $result['source']['context'] ?? '' ), 'result-preserves-context' );
+
+$diagnostic_codes = array_map(
+	static function ( $diagnostic ) {
+		return $diagnostic['code'] ?? '';
+	},
+	$result['diagnostics']
+);
+$assert( in_array( 'unsafe_inline_svg', $diagnostic_codes, true ), 'result-diagnoses-unsafe-inline-svg', json_encode( $result['diagnostics'] ) );
+$assert( 1 === count( $result['svg_artifacts'] ), 'result-captures-safe-svg-artifact', json_encode( $result['svg_artifacts'] ) );
+$assert( ( $result['svg_artifacts'][0]['type'] ?? '' ) === 'safe_inline_svg', 'svg-artifact-has-materializer-neutral-type' );
+$assert( ( $result['svg_artifacts'][0]['kind'] ?? '' ) === 'inline-svg-icon', 'svg-artifact-preserves-kind' );
+$assert( str_contains( $result['svg_artifacts'][0]['svg'] ?? '', '<path' ), 'svg-artifact-exposes-sanitized-svg' );
+$assert( ! str_contains( $result['svg_artifacts'][0]['svg'] ?? '', '<script' ), 'svg-artifact-excludes-unsafe-svg' );
+$assert( ! str_contains( $result['svg_artifacts'][0]['svg'] ?? '', 'wp-content' ), 'svg-artifact-does-not-include-wordpress-paths' );
+$assert( is_string( $result['svg_artifacts'][0]['content_hash'] ?? null ) && strlen( $result['svg_artifacts'][0]['content_hash'] ) === 40, 'svg-artifact-has-stable-content-hash' );
 
 $asset_urls = array_map(
 	static function ( $reference ) {

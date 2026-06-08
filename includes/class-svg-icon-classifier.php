@@ -28,6 +28,8 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		'g',
 		'defs',
 		'pattern',
+		'symbol',
+		'use',
 		'title',
 		'desc',
 	);
@@ -43,6 +45,7 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		'fill',
 		'fill-opacity',
 		'height',
+		'href',
 		'id',
 		'patternunits',
 		'points',
@@ -58,6 +61,7 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		'viewbox',
 		'width',
 		'x',
+		'xlink:href',
 		'x1',
 		'x2',
 		'y',
@@ -136,15 +140,18 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		$result['svg']      = $sanitized_svg;
 		$result['reason']   = $is_icon_sized ? 'safe_svg_icon' : 'safe_inline_svg_illustration';
 		$result['metadata'] = array(
-			'kind'      => $is_icon_sized ? 'inline-svg-icon' : 'inline-svg-illustration',
-			'viewBox'   => $view_box,
-			'width'     => $width,
-			'height'    => $height,
-			'className' => $sanitized->getAttribute( 'class' ),
-			'ariaLabel' => $sanitized->getAttribute( 'aria-label' ),
-			'nodeCount' => $state['nodes'],
-			'maxDepth'  => $state['max_depth'],
-			'tags'      => array_values( array_unique( $state['tags'] ) ),
+			'kind'          => $is_icon_sized ? 'inline-svg-icon' : 'inline-svg-illustration',
+			'viewBox'       => $view_box,
+			'width'         => $width,
+			'height'        => $height,
+			'className'     => $sanitized->getAttribute( 'class' ),
+			'ariaLabel'     => $sanitized->getAttribute( 'aria-label' ),
+			'nodeCount'     => $state['nodes'],
+			'maxDepth'      => $state['max_depth'],
+			'tags'          => array_values( array_unique( $state['tags'] ) ),
+			'symbolIds'     => self::collect_element_ids( $sanitized, 'symbol' ),
+			'useReferences' => self::collect_use_references( $sanitized ),
+			'localRefs'     => $state['local_refs'],
 		);
 
 		return $result;
@@ -225,8 +232,13 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	 * @return bool True when safe.
 	 */
 	private static function is_allowed_attribute( string $name, string $value, array $state ): bool {
-		if ( strpos( $name, 'on' ) === 0 || in_array( $name, array( 'href', 'xlink:href', 'src', 'style' ), true ) ) {
+		if ( strpos( $name, 'on' ) === 0 || in_array( $name, array( 'src', 'style' ), true ) ) {
 			return false;
+		}
+
+		if ( in_array( $name, array( 'href', 'xlink:href' ), true ) ) {
+			return preg_match( '/^#([A-Za-z][A-Za-z0-9_-]*)$/', $value, $matches ) === 1
+				&& in_array( $matches[1], $state['local_refs'] ?? array(), true );
 		}
 
 		if ( 'id' === $name ) {
@@ -260,9 +272,13 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 	 */
 	private static function collect_local_reference_ids( DOMElement $root ): array {
 		$ids = array();
-		foreach ( $root->getElementsByTagName( 'pattern' ) as $pattern ) {
-			if ( $pattern->hasAttribute( 'id' ) ) {
-				$id = trim( $pattern->getAttribute( 'id' ) );
+		foreach ( array( 'pattern', 'symbol' ) as $tag_name ) {
+			foreach ( $root->getElementsByTagName( $tag_name ) as $element ) {
+				if ( ! $element->hasAttribute( 'id' ) ) {
+					continue;
+				}
+
+				$id = trim( $element->getAttribute( 'id' ) );
 				if ( preg_match( '/^[A-Za-z][A-Za-z0-9_-]*$/', $id ) === 1 ) {
 					$ids[] = $id;
 				}
@@ -270,6 +286,49 @@ class HTML_To_Blocks_SVG_Icon_Classifier {
 		}
 
 		return array_values( array_unique( $ids ) );
+	}
+
+	/**
+	 * Collects IDs from sanitized elements by tag name.
+	 *
+	 * @param DOMElement $root Root SVG element.
+	 * @param string     $tag_name Tag name to inspect.
+	 * @return string[] Element IDs.
+	 */
+	private static function collect_element_ids( DOMElement $root, string $tag_name ): array {
+		$ids = array();
+		foreach ( $root->getElementsByTagName( $tag_name ) as $element ) {
+			if ( $element->hasAttribute( 'id' ) ) {
+				$ids[] = $element->getAttribute( 'id' );
+			}
+		}
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	/**
+	 * Collects sanitized local use references.
+	 *
+	 * @param DOMElement $root Root SVG element.
+	 * @return array<int,array{href:string,target:string}> Use references.
+	 */
+	private static function collect_use_references( DOMElement $root ): array {
+		$references = array();
+		foreach ( $root->getElementsByTagName( 'use' ) as $use ) {
+			$href = $use->getAttribute( 'href' );
+			if ( '' === $href ) {
+				$href = $use->getAttribute( 'xlink:href' );
+			}
+
+			if ( preg_match( '/^#([A-Za-z][A-Za-z0-9_-]*)$/', $href, $matches ) === 1 ) {
+				$references[] = array(
+					'href'   => $href,
+					'target' => $matches[1],
+				);
+			}
+		}
+
+		return $references;
 	}
 
 	/**
