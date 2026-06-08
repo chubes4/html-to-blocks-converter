@@ -316,7 +316,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			continue;
 		}
 
-		if ( html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+		if ( html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) || html_to_blocks_should_ignore_decorative_wrapper( $element ) ) {
 			$ignored_decorative_html_length += strlen( $element_html );
 			continue;
 		}
@@ -451,7 +451,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
  *
  * @param string $html Source HTML fragment.
  * @param array  $args Conversion context passed through to the raw handler.
- * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
+ * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,visual_repair_metadata:array<string,mixed>,metrics:array<string,mixed>,source:array<string,mixed>}
  */
 function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
 	$args = array_merge(
@@ -492,6 +492,8 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		}
 	}
 
+	$visual_repair_metadata = html_to_blocks_collect_visual_repair_metadata( $html, $blocks, $fallbacks );
+
 	return array(
 		'block_markup'          => html_to_blocks_serialize_block_markup( $blocks ),
 		'blocks'                => $blocks,
@@ -499,6 +501,7 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		'fallbacks'             => $fallbacks,
 		'asset_references'      => html_to_blocks_collect_asset_references( $html ),
 		'navigation_candidates' => html_to_blocks_collect_navigation_candidates( $html ),
+		'visual_repair_metadata' => $visual_repair_metadata,
 		'metrics'               => $metrics,
 		'source'                => array(
 			'bytes'       => strlen( $html ),
@@ -506,6 +509,537 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 			'context'     => isset( $args['context'] ) && is_scalar( $args['context'] ) ? (string) $args['context'] : '',
 		),
 	);
+}
+
+/**
+ * Collect fragment-local visual repair metadata from converted block output.
+ *
+ * This metadata is intentionally materializer-neutral: it reports converted
+ * block wrappers and classes that compiler layers can use when assembling
+ * source CSS repair artifacts without re-inferring fragment conversion facts.
+ *
+ * @param string                                $html      Source HTML fragment.
+ * @param array<int|string,array<string,mixed>> $blocks    Converted block arrays.
+ * @param array<int,array<string,mixed>>        $fallbacks Fallback observations.
+ * @return array<string,mixed> Visual repair metadata.
+ */
+function html_to_blocks_collect_visual_repair_metadata( string $html, array $blocks, array $fallbacks = array() ): array {
+	$metadata = array(
+		'schema'     => 'html-to-blocks-converter/visual-repair-metadata/v1',
+		'version'    => 1,
+		'wrapper_classes' => array(),
+		'mappings'   => array(
+			'images'     => array(),
+			'forms'      => array(),
+			'navigation' => array(),
+			'buttons'    => array(),
+		),
+		'markers'    => array(
+			'fallback_blocks'    => array(),
+			'decorative_sources' => array(),
+		),
+		'diagnostics' => array(),
+		'categories' => array(
+			'groups'      => array(),
+			'images'      => array(),
+			'forms'       => array(),
+			'navigation'  => array(),
+			'buttons'     => array(),
+			'decorative'  => array(),
+			'fallbacks'   => array(),
+		),
+	);
+
+	$seen = array();
+	$walk = static function ( array $items, array $path = array() ) use ( &$walk, &$metadata, &$seen ): void {
+		foreach ( $items as $index => $block ) {
+			if ( ! is_array( $block ) ) {
+				continue;
+			}
+
+			$block_path = array_merge( $path, array( (int) $index ) );
+			$record     = html_to_blocks_visual_repair_record_from_block( $block, $block_path );
+			foreach ( html_to_blocks_visual_repair_categories_for_record( $record ) as $category ) {
+				$key = $category . ':' . (string) $record['path'] . ':' . (string) $record['block_name'] . ':' . (string) $record['class_name'];
+				if ( isset( $seen[ $key ] ) ) {
+					continue;
+				}
+				$seen[ $key ] = true;
+				$metadata['categories'][ $category ][] = $record;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+				$walk( $block['innerBlocks'], $block_path );
+			}
+		}
+	};
+
+	$walk( $blocks );
+	$metadata['wrapper_classes'] = html_to_blocks_visual_repair_wrapper_classes_from_categories( $metadata['categories'] );
+	$metadata['mappings']        = html_to_blocks_visual_repair_source_mappings( $html, $metadata['categories'] );
+	$metadata['markers']         = array(
+		'fallback_blocks'    => html_to_blocks_visual_repair_fallback_markers( $metadata['categories']['fallbacks'], $fallbacks ),
+		'decorative_sources' => html_to_blocks_visual_repair_decorative_source_markers( $html, $metadata['categories']['decorative'] ),
+	);
+	$metadata['diagnostics']     = html_to_blocks_visual_repair_diagnostics( $metadata );
+
+	return $metadata;
+}
+
+/**
+ * Extract wrapper class records from categorized repair records.
+ *
+ * @param array<string,array<int,array<string,mixed>>> $categories Metadata categories.
+ * @return array<int,array<string,mixed>> Wrapper class records.
+ */
+function html_to_blocks_visual_repair_wrapper_classes_from_categories( array $categories ): array {
+	$records = array();
+	$seen    = array();
+
+	foreach ( $categories as $items ) {
+		foreach ( $items as $item ) {
+			$class_name = isset( $item['class_name'] ) ? trim( (string) $item['class_name'] ) : '';
+			if ( '' === $class_name ) {
+				continue;
+			}
+
+			$key = (string) ( $item['path'] ?? '' ) . ':' . (string) ( $item['block_name'] ?? '' ) . ':' . $class_name;
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+
+			$seen[ $key ] = true;
+			$records[]    = array(
+				'path'       => (string) ( $item['path'] ?? '' ),
+				'block_name' => (string) ( $item['block_name'] ?? '' ),
+				'tag_name'   => (string) ( $item['tag_name'] ?? '' ),
+				'class_name' => $class_name,
+				'classes'    => html_to_blocks_split_class_names( $class_name ),
+			);
+		}
+	}
+
+	return $records;
+}
+
+/**
+ * Collect materializer-neutral source mappings for visual repair consumers.
+ *
+ * @param string                                      $html       Source HTML fragment.
+ * @param array<string,array<int,array<string,mixed>>> $categories Metadata categories.
+ * @return array<string,array<int,array<string,mixed>>> Source mappings.
+ */
+function html_to_blocks_visual_repair_source_mappings( string $html, array $categories ): array {
+	return array(
+		'images'     => html_to_blocks_visual_repair_image_mappings( $html, $categories['images'] ?? array() ),
+		'forms'      => html_to_blocks_visual_repair_element_mappings( $html, 'form', $categories['forms'] ?? array() ),
+		'navigation' => html_to_blocks_visual_repair_element_mappings( $html, 'nav', $categories['navigation'] ?? array() ),
+		'buttons'    => html_to_blocks_visual_repair_button_mappings( $html, $categories['buttons'] ?? array() ),
+	);
+}
+
+/**
+ * Collect source-to-block image mappings.
+ *
+ * @param string $html          Source HTML fragment.
+ * @param array  $image_records Converted image records.
+ * @return array<int,array<string,mixed>> Image mappings.
+ */
+function html_to_blocks_visual_repair_image_mappings( string $html, array $image_records ): array {
+	$sources = array();
+	if ( preg_match_all( '/<img\b([^>]*)>/i', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$attrs     = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+			$sources[] = array(
+				'source'     => 'img[' . $index . ']',
+				'url'        => (string) ( $attrs['src'] ?? '' ),
+				'alt'        => (string) ( $attrs['alt'] ?? '' ),
+				'class_name' => (string) ( $attrs['class'] ?? '' ),
+				'attrs'      => $attrs,
+			);
+		}
+	}
+
+	$mappings = array();
+	foreach ( $image_records as $record ) {
+		$source = html_to_blocks_visual_repair_find_source_by_url( $sources, (string) ( $record['url'] ?? '' ) );
+		$mappings[] = array(
+			'path'        => (string) ( $record['path'] ?? '' ),
+			'block_name'  => (string) ( $record['block_name'] ?? '' ),
+			'source'      => (string) ( $source['source'] ?? '' ),
+			'source_url'  => (string) ( $source['url'] ?? $record['url'] ?? '' ),
+			'block_url'   => (string) ( $record['url'] ?? '' ),
+			'alt'         => (string) ( $source['alt'] ?? '' ),
+			'class_name'  => (string) ( $source['class_name'] ?? $record['class_name'] ?? '' ),
+		);
+	}
+
+	return $mappings;
+}
+
+/**
+ * Collect generic element source mappings for forms and nav fragments.
+ *
+ * @param string $html    Source HTML fragment.
+ * @param string $tag     Lowercase element tag.
+ * @param array  $records Converted/fallback records in this category.
+ * @return array<int,array<string,mixed>> Element mappings.
+ */
+function html_to_blocks_visual_repair_element_mappings( string $html, string $tag, array $records ): array {
+	$mappings = array();
+	$pattern  = '/<' . preg_quote( $tag, '/' ) . '\b([^>]*)>(.*?)<\/' . preg_quote( $tag, '/' ) . '>/is';
+
+	if ( ! preg_match_all( $pattern, $html, $matches, PREG_SET_ORDER ) ) {
+		return $mappings;
+	}
+
+	foreach ( $matches as $index => $match ) {
+		$attrs  = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+		$record = $records[ $index ] ?? $records[0] ?? array();
+		$item   = array(
+			'source'      => $tag . '[' . $index . ']',
+			'path'        => (string) ( $record['path'] ?? '' ),
+			'block_name'  => (string) ( $record['block_name'] ?? '' ),
+			'tag_name'    => $tag,
+			'class_name'  => (string) ( $attrs['class'] ?? $record['class_name'] ?? '' ),
+			'repair_hint' => 'preserve_or_replace_' . $tag . '_html',
+		);
+
+		if ( 'nav' === $tag ) {
+			$item['label'] = (string) ( $attrs['aria-label'] ?? '' );
+			$item['links'] = html_to_blocks_collect_anchor_links( (string) $match[2] );
+		} elseif ( 'form' === $tag ) {
+			$item['action']        = (string) ( $attrs['action'] ?? '' );
+			$item['method']        = strtolower( (string) ( $attrs['method'] ?? '' ) );
+			$item['control_count'] = preg_match_all( '/<(?:input|textarea|select|button)\b/i', (string) $match[2] );
+		}
+
+		$mappings[] = $item;
+	}
+
+	return $mappings;
+}
+
+/**
+ * Collect button-like source mappings.
+ *
+ * @param string $html           Source HTML fragment.
+ * @param array  $button_records Converted button records.
+ * @return array<int,array<string,mixed>> Button mappings.
+ */
+function html_to_blocks_visual_repair_button_mappings( string $html, array $button_records ): array {
+	$mappings = array();
+	$sources  = array();
+
+	if ( preg_match_all( '/<a\b([^>]*)>(.*?)<\/a>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$attrs      = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+			$class_name = (string) ( $attrs['class'] ?? '' );
+			$role       = strtolower( (string) ( $attrs['role'] ?? '' ) );
+			if ( '' === $class_name && 'button' !== $role ) {
+				continue;
+			}
+
+			$sources[] = array(
+				'source'     => 'a[' . $index . ']',
+				'tag_name'   => 'a',
+				'url'        => (string) ( $attrs['href'] ?? '' ),
+				'label'      => trim( wp_strip_all_tags( (string) $match[2] ) ),
+				'class_name' => $class_name,
+			);
+		}
+	}
+
+	if ( preg_match_all( '/<button\b([^>]*)>(.*?)<\/button>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$attrs     = html_to_blocks_parse_html_attribute_string( (string) $match[1] );
+			$sources[] = array(
+				'source'     => 'button[' . $index . ']',
+				'tag_name'   => 'button',
+				'url'        => '',
+				'label'      => trim( wp_strip_all_tags( (string) $match[2] ) ),
+				'class_name' => (string) ( $attrs['class'] ?? '' ),
+			);
+		}
+	}
+
+	foreach ( $sources as $index => $source ) {
+		$record     = $button_records[ $index ] ?? array();
+		$mappings[] = array(
+			'source'      => (string) $source['source'],
+			'path'        => (string) ( $record['path'] ?? '' ),
+			'block_name'  => (string) ( $record['block_name'] ?? '' ),
+			'tag_name'    => (string) $source['tag_name'],
+			'source_url'  => (string) $source['url'],
+			'block_url'   => (string) ( $record['url'] ?? '' ),
+			'label'       => (string) $source['label'],
+			'class_name'  => (string) $source['class_name'],
+			'repair_hint' => 'preserve_button_visual_mapping',
+		);
+	}
+
+	return $mappings;
+}
+
+/**
+ * Convert fallback category records into explicit fallback markers.
+ *
+ * @param array<int,array<string,mixed>> $fallback_records Fallback records.
+ * @param array<int,array<string,mixed>> $fallbacks        Fallback observations.
+ * @return array<int,array<string,mixed>> Fallback markers.
+ */
+function html_to_blocks_visual_repair_fallback_markers( array $fallback_records, array $fallbacks ): array {
+	$markers = array();
+	foreach ( $fallback_records as $index => $record ) {
+		$context   = isset( $fallbacks[ $index ]['context'] ) && is_array( $fallbacks[ $index ]['context'] ) ? $fallbacks[ $index ]['context'] : array();
+		$markers[] = array(
+			'path'      => (string) ( $record['path'] ?? '' ),
+			'block_name' => (string) ( $record['block_name'] ?? 'core/html' ),
+			'tag_name'  => (string) ( $record['tag_name'] ?? $context['tag_name'] ?? '' ),
+			'class_name' => (string) ( $record['class_name'] ?? '' ),
+			'reason'    => (string) ( $context['reason'] ?? 'preserved_html' ),
+			'is_lossless' => true,
+		);
+	}
+
+	return $markers;
+}
+
+/**
+ * Collect decorative source markers from ignored placeholders and decorative records.
+ *
+ * @param string $html               Source HTML fragment.
+ * @param array  $decorative_records Converted decorative records.
+ * @return array<int,array<string,mixed>> Decorative markers.
+ */
+function html_to_blocks_visual_repair_decorative_source_markers( string $html, array $decorative_records ): array {
+	$markers = array();
+	if ( preg_match_all( '/<(div|span)\b([^>]*)>(.*?)<\/\1>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$element = HTML_To_Blocks_HTML_Element::from_html( (string) $match[0] );
+			if ( ! $element || ! html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+				continue;
+			}
+
+			$attrs     = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+			$markers[] = array(
+				'source'      => strtolower( (string) $match[1] ) . '[' . $index . ']',
+				'path'        => '',
+				'tag_name'    => strtolower( (string) $match[1] ),
+				'class_name'  => (string) ( $attrs['class'] ?? '' ),
+				'repair_hint' => 'decorative_source_ignored',
+			);
+		}
+	}
+
+	foreach ( $decorative_records as $record ) {
+		$markers[] = array(
+			'source'      => 'block',
+			'path'        => (string) ( $record['path'] ?? '' ),
+			'block_name'  => (string) ( $record['block_name'] ?? '' ),
+			'tag_name'    => (string) ( $record['tag_name'] ?? '' ),
+			'class_name'  => (string) ( $record['class_name'] ?? '' ),
+			'repair_hint' => 'decorative_block_preserved',
+		);
+	}
+
+	return $markers;
+}
+
+/**
+ * Build diagnostics scoped to visual repair metadata.
+ *
+ * @param array<string,mixed> $metadata Visual repair metadata.
+ * @return array<int,array<string,mixed>> Diagnostics.
+ */
+function html_to_blocks_visual_repair_diagnostics( array $metadata ): array {
+	$diagnostics = array();
+
+	foreach ( $metadata['markers']['fallback_blocks'] ?? array() as $marker ) {
+		$diagnostics[] = array(
+			'code'       => 'visual_repair.fallback_block',
+			'severity'   => 'info',
+			'message'    => 'A source fragment was preserved as a lossless HTML fallback for downstream repair.',
+			'path'       => (string) ( $marker['path'] ?? '' ),
+			'context'    => array(
+				'reason'   => (string) ( $marker['reason'] ?? '' ),
+				'tag_name' => (string) ( $marker['tag_name'] ?? '' ),
+			),
+		);
+	}
+
+	foreach ( $metadata['markers']['decorative_sources'] ?? array() as $marker ) {
+		$diagnostics[] = array(
+			'code'       => 'visual_repair.decorative_marker',
+			'severity'   => 'info',
+			'message'    => 'Decorative source or block chrome was identified during fragment conversion.',
+			'path'       => (string) ( $marker['path'] ?? '' ),
+			'context'    => array(
+				'repair_hint' => (string) ( $marker['repair_hint'] ?? '' ),
+				'class_name'  => (string) ( $marker['class_name'] ?? '' ),
+			),
+		);
+	}
+
+	foreach ( array( 'forms', 'navigation' ) as $category ) {
+		foreach ( $metadata['mappings'][ $category ] ?? array() as $mapping ) {
+			$diagnostics[] = array(
+				'code'       => 'visual_repair.' . $category . '_candidate',
+				'severity'   => 'info',
+				'message'    => 'Source ' . $category . ' markup is available for downstream materialization or preservation.',
+				'path'       => (string) ( $mapping['path'] ?? '' ),
+				'context'    => array(
+					'source'      => (string) ( $mapping['source'] ?? '' ),
+					'repair_hint' => (string) ( $mapping['repair_hint'] ?? '' ),
+				),
+			);
+		}
+	}
+
+	return $diagnostics;
+}
+
+/**
+ * Find source metadata by URL.
+ *
+ * @param array<int,array<string,mixed>> $sources Source records.
+ * @param string                         $url     URL to match.
+ * @return array<string,mixed>|null Matching source record.
+ */
+function html_to_blocks_visual_repair_find_source_by_url( array $sources, string $url ): ?array {
+	foreach ( $sources as $source ) {
+		if ( '' !== $url && isset( $source['url'] ) && (string) $source['url'] === $url ) {
+			return $source;
+		}
+	}
+
+	return $sources[0] ?? null;
+}
+
+/**
+ * Build one normalized visual repair record from a block.
+ *
+ * @param array<string,mixed> $block Block array.
+ * @param array<int,int>      $path  Zero-based block tree path.
+ * @return array<string,mixed> Record.
+ */
+function html_to_blocks_visual_repair_record_from_block( array $block, array $path ): array {
+	$attrs      = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : array();
+	$class_name = isset( $attrs['className'] ) && is_scalar( $attrs['className'] ) ? trim( (string) $attrs['className'] ) : '';
+	$inner_html = isset( $block['innerHTML'] ) && is_string( $block['innerHTML'] ) ? $block['innerHTML'] : '';
+	$tag_name   = isset( $attrs['tagName'] ) && is_scalar( $attrs['tagName'] ) ? strtolower( (string) $attrs['tagName'] ) : '';
+	if ( 'core/html' === (string) ( $block['blockName'] ?? '' ) ) {
+		$fallback = html_to_blocks_first_element_summary_from_html( $inner_html );
+		if ( '' === $tag_name ) {
+			$tag_name = $fallback['tag_name'];
+		}
+		if ( '' === $class_name ) {
+			$class_name = $fallback['class_name'];
+		}
+	}
+
+	return array(
+		'path'       => implode( '.', array_map( 'strval', $path ) ),
+		'block_name' => isset( $block['blockName'] ) && is_scalar( $block['blockName'] ) ? (string) $block['blockName'] : '',
+		'class_name' => $class_name,
+		'classes'    => html_to_blocks_split_class_names( $class_name ),
+		'tag_name'   => $tag_name,
+		'url'        => isset( $attrs['url'] ) && is_scalar( $attrs['url'] ) ? (string) $attrs['url'] : '',
+		'has_inner_blocks' => ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ),
+		'inner_html_bytes' => strlen( $inner_html ),
+	);
+}
+
+/**
+ * Extract first-element tag and class data from fallback HTML.
+ *
+ * @param string $html HTML fragment.
+ * @return array{tag_name:string,class_name:string}
+ */
+function html_to_blocks_first_element_summary_from_html( string $html ): array {
+	$summary = array(
+		'tag_name'   => '',
+		'class_name' => '',
+	);
+
+	if ( ! preg_match( '/<\s*([a-z0-9:-]+)\b([^>]*)>/i', $html, $match ) ) {
+		return $summary;
+	}
+
+	$summary['tag_name'] = strtolower( (string) $match[1] );
+	$attrs               = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+	$summary['class_name'] = isset( $attrs['class'] ) ? (string) $attrs['class'] : '';
+
+	return $summary;
+}
+
+/**
+ * Determine visual repair categories for a normalized record.
+ *
+ * @param array<string,mixed> $record Visual repair record.
+ * @return array<int,string> Categories.
+ */
+function html_to_blocks_visual_repair_categories_for_record( array $record ): array {
+	$categories = array();
+	$block_name = (string) ( $record['block_name'] ?? '' );
+	$tag_name   = (string) ( $record['tag_name'] ?? '' );
+	$class_name = strtolower( (string) ( $record['class_name'] ?? '' ) );
+
+	if ( 'core/group' === $block_name ) {
+		$categories[] = 'groups';
+	}
+	if ( 'core/image' === $block_name ) {
+		$categories[] = 'images';
+	}
+	if ( in_array( $block_name, array( 'core/button', 'core/buttons' ), true ) || preg_match( '/(?:^|[-_\s])(btn|button|cta|action)(?:$|[-_\s])/', $class_name ) ) {
+		$categories[] = 'buttons';
+	}
+	if ( 'nav' === $tag_name || preg_match( '/(?:^|[-_\s])(nav|navbar|navigation|menu)(?:$|[-_\s])/', $class_name ) ) {
+		$categories[] = 'navigation';
+	}
+	if ( 'form' === $tag_name || preg_match( '/(?:^|[-_\s])(form|field|input|search|newsletter|subscribe)(?:$|[-_\s])/', $class_name ) ) {
+		$categories[] = 'forms';
+	}
+	if ( 'core/html' === $block_name ) {
+		$categories[] = 'fallbacks';
+	}
+	if ( html_to_blocks_visual_repair_record_is_decorative( $record ) ) {
+		$categories[] = 'decorative';
+	}
+
+	return array_values( array_unique( $categories ) );
+}
+
+/**
+ * Check whether a visual repair record describes decorative chrome.
+ *
+ * @param array<string,mixed> $record Visual repair record.
+ * @return bool Whether the record is decorative.
+ */
+function html_to_blocks_visual_repair_record_is_decorative( array $record ): bool {
+	$class_name = strtolower( (string) ( $record['class_name'] ?? '' ) );
+	if ( preg_match( '/(?:^|[-_\s])(accent|bar|bg|blob|chrome|decor|decorative|dot|fill|glow|halo|icon|line|orb|shape|spark|visual)(?:$|[-_\s])/', $class_name ) ) {
+		return true;
+	}
+
+	return 'core/group' === (string) ( $record['block_name'] ?? '' )
+		&& empty( $record['has_inner_blocks'] )
+		&& 0 === (int) ( $record['inner_html_bytes'] ?? 0 );
+}
+
+/**
+ * Split a class attribute into stable tokens.
+ *
+ * @param string $class_name Class attribute.
+ * @return array<int,string> Class tokens.
+ */
+function html_to_blocks_split_class_names( string $class_name ): array {
+	$classes = preg_split( '/\s+/', trim( $class_name ) );
+	if ( ! is_array( $classes ) ) {
+		return array();
+	}
+
+	return array_values( array_unique( array_filter( $classes, static fn ( string $class ): bool => '' !== $class ) ) );
 }
 
 /**
@@ -765,6 +1299,35 @@ function html_to_blocks_should_ignore_empty_decorative_placeholder( $element ): 
 		|| preg_match( '/(?:^|;)\s*opacity\s*:\s*0(?:\.0+)?\b/i', $style ) === 1
 		|| preg_match( '/(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden|pointer-events\s*:\s*none)\b/i', $style ) === 1
 		|| strtolower( (string) ( $attributes['aria-hidden'] ?? '' ) ) === 'true';
+}
+
+/**
+ * Checks whether a block wrapper contains only ignorable decorative children.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element The source element.
+ * @return bool True when the wrapper should be ignored with its children.
+ */
+function html_to_blocks_should_ignore_decorative_wrapper( $element ): bool {
+	if ( ! in_array( $element->get_tag_name(), array( 'P', 'DIV', 'SPAN' ), true ) ) {
+		return false;
+	}
+
+	if ( trim( wp_strip_all_tags( $element->get_inner_html() ) ) !== '' ) {
+		return false;
+	}
+
+	$children = $element->get_child_elements();
+	if ( empty( $children ) ) {
+		return false;
+	}
+
+	foreach ( $children as $child ) {
+		if ( ! html_to_blocks_should_ignore_empty_decorative_placeholder( $child ) && ! html_to_blocks_should_ignore_decorative_wrapper( $child ) ) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /**

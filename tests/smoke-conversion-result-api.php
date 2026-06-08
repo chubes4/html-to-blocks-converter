@@ -59,7 +59,7 @@ if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
 		}
 
 		public function is_registered( $name ) {
-			return in_array( $name, [ 'core/group', 'core/html', 'core/image', 'core/list', 'core/list-item', 'core/paragraph' ], true );
+			return in_array( $name, [ 'core/button', 'core/buttons', 'core/group', 'core/html', 'core/image', 'core/list', 'core/list-item', 'core/paragraph' ], true );
 		}
 
 		public function get_registered( $name ) {
@@ -174,8 +174,8 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 };
 
 $html = <<<'HTML'
-<nav class="primary" aria-label="Primary"><a href="/">Home</a><a href="/menu/">Menu</a></nav>
-<main><p>Hello <strong>world</strong>.</p><img src="assets/hero.webp" srcset="assets/hero.webp 1x, assets/hero@2x.webp 2x" alt="Hero"></main>
+<nav class="primary site-nav" aria-label="Primary"><a href="/">Home</a><a href="/menu/">Menu</a></nav>
+<main class="content-shell"><p>Hello <strong>world</strong>.</p><img class="hero-image" src="assets/hero.webp" srcset="assets/hero.webp 1x, assets/hero@2x.webp 2x" alt="Hero"><a class="btn hero-cta" href="/book/">Book</a><form class="newsletter-form" action="/subscribe"><input type="email" name="email"><button type="submit">Join</button></form><div class="glow-orb decorative-layer"></div></main>
 <custom-card data-state="unknown"><span>Opaque</span></custom-card>
 HTML;
 
@@ -207,6 +207,24 @@ $assert( in_array( 'assets/hero@2x.webp', $asset_urls, true ), 'result-captures-
 $assert( 1 === count( $result['navigation_candidates'] ), 'result-captures-navigation-candidate', json_encode( $result['navigation_candidates'] ) );
 $assert( 'Primary' === ( $result['navigation_candidates'][0]['label'] ?? '' ), 'navigation-candidate-preserves-label' );
 $assert( 2 === count( $result['navigation_candidates'][0]['links'] ?? [] ), 'navigation-candidate-preserves-links' );
+
+$repair = $result['visual_repair_metadata'] ?? [];
+$assert( 'html-to-blocks-converter/visual-repair-metadata/v1' === ( $repair['schema'] ?? '' ), 'result-exposes-visual-repair-schema', json_encode( $repair ) );
+$assert( 1 === ( $repair['version'] ?? 0 ), 'repair-metadata-exposes-version', json_encode( $repair ) );
+$assert( is_array( $repair['wrapper_classes'] ?? null ) && ! empty( $repair['wrapper_classes'] ), 'repair-metadata-captures-wrapper-classes', json_encode( $repair ) );
+$assert( is_array( $repair['mappings']['images'] ?? null ) && ! empty( $repair['mappings']['images'] ), 'repair-metadata-captures-image-mappings', json_encode( $repair ) );
+$assert( is_array( $repair['mappings']['forms'] ?? null ) && ! empty( $repair['mappings']['forms'] ), 'repair-metadata-captures-form-mappings', json_encode( $repair ) );
+$assert( is_array( $repair['mappings']['navigation'] ?? null ) && ! empty( $repair['mappings']['navigation'] ), 'repair-metadata-captures-navigation-mappings', json_encode( $repair ) );
+$assert( is_array( $repair['mappings']['buttons'] ?? null ) && ! empty( $repair['mappings']['buttons'] ), 'repair-metadata-captures-button-mappings', json_encode( $repair ) );
+$assert( is_array( $repair['markers']['fallback_blocks'] ?? null ) && ! empty( $repair['markers']['fallback_blocks'] ), 'repair-metadata-captures-fallback-markers', json_encode( $repair ) );
+$assert( is_array( $repair['markers']['decorative_sources'] ?? null ) && ! empty( $repair['markers']['decorative_sources'] ), 'repair-metadata-captures-decorative-markers', json_encode( $repair ) );
+$assert( is_array( $repair['diagnostics'] ?? null ) && ! empty( $repair['diagnostics'] ), 'repair-metadata-captures-diagnostics', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['groups'] ?? [] ), 'repair-metadata-captures-group-records', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['images'] ?? [] ), 'repair-metadata-captures-image-records', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['forms'] ?? [] ), 'repair-metadata-captures-form-records', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['navigation'] ?? [] ), 'repair-metadata-captures-navigation-records', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['buttons'] ?? [] ), 'repair-metadata-captures-button-records', json_encode( $repair ) );
+$assert( ! empty( $repair['categories']['decorative'] ?? [] ), 'repair-metadata-captures-decorative-records', json_encode( $repair ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
