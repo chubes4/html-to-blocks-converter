@@ -192,6 +192,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	}
 
 	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );
+	$collect_selector_provenance = ! empty( $args['collect_selector_provenance'] );
 	$metrics         = null;
 	$convert_started = 0.0;
 	if ( $collect_metrics ) {
@@ -331,7 +332,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			if ( $collect_metrics ) {
 				html_to_blocks_record_transform_metric( $metrics, 'fallback:no_transform', 'count', 1 );
 			}
-			$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
+			$block = html_to_blocks_create_unsupported_html_fallback_block(
 				$element_html,
 				array(
 					'reason'     => 'no_transform',
@@ -339,6 +340,10 @@ function html_to_blocks_convert( $html, $args = array() ) {
 					'occurrence' => $occurrence,
 				)
 			);
+			if ( $collect_selector_provenance ) {
+				$block = html_to_blocks_attach_selector_provenance_to_block( $block, $element, array( 'blockName' => 'core/html', 'transform_kind' => 'fallback:no_transform' ), $occurrence );
+			}
+			$blocks[] = $block;
 		} else {
 			$transform_fn = $raw_transform['transform'] ?? null;
 			$metric_name  = (string) ( $raw_transform['blockName'] ?? 'unknown' ) . ':p' . (string) ( $raw_transform['priority'] ?? 'default' );
@@ -373,6 +378,9 @@ function html_to_blocks_convert( $html, $args = array() ) {
 					}
 				}
 
+				if ( $collect_selector_provenance ) {
+					$block = html_to_blocks_attach_selector_provenance_to_block( $block, $element, $raw_transform, $occurrence );
+				}
 				$blocks[] = $block;
 			} else {
 				$phase_started = $collect_metrics ? microtime( true ) : 0.0;
@@ -381,7 +389,11 @@ function html_to_blocks_convert( $html, $args = array() ) {
 					$block_name,
 					$element_html
 				);
-				$blocks[]      = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
+				$block         = HTML_To_Blocks_Block_Factory::create_block( $block_name, $attributes );
+				if ( $collect_selector_provenance ) {
+					$block = html_to_blocks_attach_selector_provenance_to_block( $block, $element, $raw_transform, $occurrence );
+				}
+				$blocks[]      = $block;
 				if ( $collect_metrics ) {
 					$elapsed                          = html_to_blocks_elapsed_ms( $phase_started );
 					$metrics['transform_execute_ms'] += $elapsed;
@@ -451,13 +463,14 @@ function html_to_blocks_convert( $html, $args = array() ) {
  *
  * @param string $html Source HTML fragment.
  * @param array  $args Conversion context passed through to the raw handler.
- * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
+ * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,selector_provenance:array<int,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
  */
 function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
 	$args = array_merge(
 		$args,
 		array(
-			'HTML' => $html,
+			'HTML'                        => $html,
+			'collect_selector_provenance' => true,
 		)
 	);
 
@@ -495,6 +508,7 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 	return array(
 		'block_markup'          => html_to_blocks_serialize_block_markup( $blocks ),
 		'blocks'                => $blocks,
+		'selector_provenance'   => html_to_blocks_collect_selector_provenance_from_blocks( $blocks ),
 		'diagnostics'           => html_to_blocks_fallbacks_to_diagnostics( $fallbacks ),
 		'fallbacks'             => $fallbacks,
 		'asset_references'      => html_to_blocks_collect_asset_references( $html ),
@@ -506,6 +520,239 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 			'context'     => isset( $args['context'] ) && is_scalar( $args['context'] ) ? (string) $args['context'] : '',
 		),
 	);
+}
+
+/**
+ * Attach materializer-neutral source selector provenance to a generated block.
+ *
+ * @param array                         $block         Generated block array.
+ * @param HTML_To_Blocks_HTML_Element   $element       Source element.
+ * @param array<string,mixed>           $raw_transform Matched transform definition.
+ * @param int                           $occurrence    Source tag occurrence in the current fragment.
+ * @return array Block with non-serialized provenance metadata.
+ */
+function html_to_blocks_attach_selector_provenance_to_block( array $block, $element, array $raw_transform, int $occurrence ): array {
+	$provenance_element = $element;
+	if ( 'core/image' === ( $block['blockName'] ?? '' ) && 'IMG' !== $element->get_tag_name() ) {
+		$image = $element->query_selector( 'img' );
+		if ( $image ) {
+			$provenance_element = $image;
+		}
+	}
+
+	$block['sourceSelectorProvenance'] = html_to_blocks_build_selector_provenance_entry( $provenance_element, $block, $raw_transform, $occurrence );
+
+	if ( 'core/buttons' === ( $block['blockName'] ?? '' ) && ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+		$anchors = html_to_blocks_direct_source_elements_from_html( $element->get_inner_html(), 'a' );
+		foreach ( $block['innerBlocks'] as $index => $inner_block ) {
+			if ( 'core/button' !== ( $inner_block['blockName'] ?? '' ) || empty( $anchors[ $index ] ) ) {
+				continue;
+			}
+
+			$block['innerBlocks'][ $index ]['sourceSelectorProvenance'] = html_to_blocks_build_selector_provenance_entry(
+				$anchors[ $index ],
+				$inner_block,
+				array(
+					'blockName'       => 'core/button',
+					'transform_kind'  => 'button-anchor',
+					'parentBlockName' => 'core/buttons',
+				),
+				$index
+			);
+		}
+	}
+
+	if ( 'core/gallery' === ( $block['blockName'] ?? '' ) && ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+		$images = $element->query_selector_all( 'img' );
+		foreach ( $block['innerBlocks'] as $index => $inner_block ) {
+			if ( 'core/image' !== ( $inner_block['blockName'] ?? '' ) || empty( $images[ $index ] ) ) {
+				continue;
+			}
+
+			$block['innerBlocks'][ $index ]['sourceSelectorProvenance'] = html_to_blocks_build_selector_provenance_entry(
+				$images[ $index ],
+				$inner_block,
+				array(
+					'blockName'       => 'core/image',
+					'transform_kind'  => 'gallery-image',
+					'parentBlockName' => 'core/gallery',
+				),
+				$index
+			);
+		}
+	}
+
+	return $block;
+}
+
+/**
+ * Build one source-to-block selector provenance record.
+ *
+ * @param HTML_To_Blocks_HTML_Element $element       Source element.
+ * @param array<string,mixed>         $block         Generated block array.
+ * @param array<string,mixed>         $raw_transform Matched transform definition.
+ * @param int                         $occurrence    Source tag occurrence in the current fragment.
+ * @return array<string,mixed> Provenance entry.
+ */
+function html_to_blocks_build_selector_provenance_entry( $element, array $block, array $raw_transform, int $occurrence ): array {
+	$tag        = strtolower( $element->get_tag_name() );
+	$id         = trim( (string) ( $element->get_attribute( 'id' ) ?? '' ) );
+	$class_name = trim( (string) ( $element->get_attribute( 'class' ) ?? '' ) );
+	$classes    = '' === $class_name ? array() : preg_split( '/\s+/', $class_name );
+	$classes    = is_array( $classes ) ? array_values( array_filter( $classes, 'strlen' ) ) : array();
+
+	$entry = array(
+		'source'          => array(
+			'tag'                  => $tag,
+			'id'                   => $id,
+			'classes'              => $classes,
+			'class_name'           => $class_name,
+			'selector'             => html_to_blocks_source_element_selector( $tag, $id, $classes ),
+			'stable_selector_path' => html_to_blocks_source_element_selector_path( $tag, $id, $classes, $occurrence ),
+			'occurrence'           => $occurrence,
+		),
+		'transform'       => array(
+			'kind'       => isset( $raw_transform['transform_kind'] ) && is_scalar( $raw_transform['transform_kind'] ) ? (string) $raw_transform['transform_kind'] : 'raw_transform',
+			'block_type' => (string) ( $raw_transform['blockName'] ?? ( $block['blockName'] ?? '' ) ),
+		),
+		'generated_block' => array(
+			'type'    => (string) ( $block['blockName'] ?? '' ),
+			'targets' => html_to_blocks_generated_selector_targets( $block ),
+		),
+	);
+
+	if ( isset( $raw_transform['parentBlockName'] ) && is_scalar( $raw_transform['parentBlockName'] ) ) {
+		$entry['generated_block']['parent_type'] = (string) $raw_transform['parentBlockName'];
+	}
+
+	return $entry;
+}
+
+/**
+ * Build a compact source selector from element identity.
+ *
+ * @param string       $tag     Source tag.
+ * @param string       $id      Source id.
+ * @param array<int,string> $classes Source classes.
+ * @return string Selector.
+ */
+function html_to_blocks_source_element_selector( string $tag, string $id, array $classes ): string {
+	if ( '' !== $id && preg_match( '/^[A-Za-z_][-A-Za-z0-9_:.]*$/', $id ) ) {
+		return '#' . $id;
+	}
+
+	$selector = $tag;
+	foreach ( $classes as $class ) {
+		if ( preg_match( '/^[A-Za-z_-][A-Za-z0-9_-]*$/', $class ) ) {
+			$selector .= '.' . $class;
+		}
+	}
+
+	return $selector;
+}
+
+/**
+ * Build a stable selector path fallback for one source element.
+ *
+ * @param string            $tag        Source tag.
+ * @param string            $id         Source id.
+ * @param array<int,string> $classes    Source classes.
+ * @param int               $occurrence Source tag occurrence.
+ * @return string Stable selector path.
+ */
+function html_to_blocks_source_element_selector_path( string $tag, string $id, array $classes, int $occurrence ): string {
+	$selector = html_to_blocks_source_element_selector( $tag, $id, $classes );
+	if ( '' !== $id ) {
+		return $selector;
+	}
+
+	return $selector . ':nth-of-type(' . ( $occurrence + 1 ) . ')';
+}
+
+/**
+ * Return generated rendered target hints for known core block DOM shapes.
+ *
+ * @param array<string,mixed> $block Generated block.
+ * @return array<int,array{name:string,selector:string}> Generated target hints.
+ */
+function html_to_blocks_generated_selector_targets( array $block ): array {
+	$block_name = (string) ( $block['blockName'] ?? '' );
+	switch ( $block_name ) {
+		case 'core/group':
+			return array( array( 'name' => 'group-wrapper', 'selector' => '.wp-block-group' ) );
+		case 'core/image':
+			return array(
+				array( 'name' => 'image-wrapper', 'selector' => '.wp-block-image' ),
+				array( 'name' => 'image-img', 'selector' => '.wp-block-image img' ),
+			);
+		case 'core/buttons':
+			return array( array( 'name' => 'buttons-wrapper', 'selector' => '.wp-block-buttons' ) );
+		case 'core/button':
+			return array(
+				array( 'name' => 'button-wrapper', 'selector' => '.wp-block-button' ),
+				array( 'name' => 'button-link', 'selector' => '.wp-block-button__link' ),
+			);
+		case 'core/html':
+			$content = (string) ( $block['attrs']['content'] ?? $block['innerHTML'] ?? '' );
+			if ( preg_match( '/<\s*(?:form|label|input|select|textarea|button)\b/i', $content ) ) {
+				return array(
+					array( 'name' => 'html-fallback', 'selector' => '.wp-block-html' ),
+					array( 'name' => 'form-field', 'selector' => 'label' ),
+					array( 'name' => 'form-control', 'selector' => 'input, select, textarea, button' ),
+				);
+			}
+			return array( array( 'name' => 'html-fallback', 'selector' => '.wp-block-html' ) );
+	}
+
+	return array();
+}
+
+/**
+ * Collect direct child source elements from an HTML fragment.
+ *
+ * @param string $html Source HTML.
+ * @param string $tag  Lowercase tag to collect.
+ * @return array<int,HTML_To_Blocks_HTML_Element> Elements.
+ */
+function html_to_blocks_direct_source_elements_from_html( string $html, string $tag ): array {
+	$wrapper = HTML_To_Blocks_HTML_Element::from_html( '<div>' . $html . '</div>' );
+	if ( ! $wrapper ) {
+		return array();
+	}
+
+	return array_values(
+		array_filter(
+			$wrapper->get_child_elements(),
+			static function ( $element ) use ( $tag ): bool {
+				return strtolower( $element->get_tag_name() ) === strtolower( $tag );
+			}
+		)
+	);
+}
+
+/**
+ * Collect normalized selector provenance from a block tree.
+ *
+ * @param array<int|string,array<string,mixed>> $blocks Block tree.
+ * @return array<int,array<string,mixed>> Provenance entries.
+ */
+function html_to_blocks_collect_selector_provenance_from_blocks( array $blocks ): array {
+	$provenance = array();
+	foreach ( $blocks as $block ) {
+		if ( ! is_array( $block ) ) {
+			continue;
+		}
+
+		if ( isset( $block['sourceSelectorProvenance'] ) && is_array( $block['sourceSelectorProvenance'] ) ) {
+			$provenance[] = $block['sourceSelectorProvenance'];
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+			$provenance = array_merge( $provenance, html_to_blocks_collect_selector_provenance_from_blocks( $block['innerBlocks'] ) );
+		}
+	}
+
+	return $provenance;
 }
 
 /**
