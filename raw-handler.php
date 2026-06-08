@@ -451,7 +451,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
  *
  * @param string $html Source HTML fragment.
  * @param array  $args Conversion context passed through to the raw handler.
- * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
+ * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,svg_artifacts:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,metrics:array<string,mixed>,source:array<string,mixed>}
  */
 function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
 	$args = array_merge(
@@ -498,6 +498,7 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		'diagnostics'           => html_to_blocks_fallbacks_to_diagnostics( $fallbacks ),
 		'fallbacks'             => $fallbacks,
 		'asset_references'      => html_to_blocks_collect_asset_references( $html ),
+		'svg_artifacts'         => html_to_blocks_collect_svg_artifacts( $blocks ),
 		'navigation_candidates' => html_to_blocks_collect_navigation_candidates( $html ),
 		'metrics'               => $metrics,
 		'source'                => array(
@@ -532,15 +533,65 @@ function html_to_blocks_fallbacks_to_diagnostics( array $fallbacks ): array {
 	$diagnostics = array();
 	foreach ( $fallbacks as $fallback ) {
 		$context       = isset( $fallback['context'] ) && is_array( $fallback['context'] ) ? $fallback['context'] : array();
+		$element_html  = isset( $fallback['element_html'] ) && is_string( $fallback['element_html'] ) ? $fallback['element_html'] : '';
+		$is_svg        = ( $context['tag_name'] ?? '' ) === 'SVG' || preg_match( '/^\s*<svg\b/i', $element_html ) === 1;
+		$safety_reason = '';
+		if ( $is_svg && class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
+			$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( $element_html );
+			$safety_reason  = isset( $classification['reason'] ) && is_scalar( $classification['reason'] ) ? (string) $classification['reason'] : '';
+			if ( '' !== $safety_reason ) {
+				$context['safety_reason'] = $safety_reason;
+			}
+		}
+
 		$diagnostics[] = array(
-			'code'     => 'unsupported_html_fallback',
+			'code'     => $is_svg ? 'unsafe_inline_svg' : 'unsupported_html_fallback',
 			'severity' => 'warning',
-			'message'  => 'Source HTML fragment was preserved as core/html because no safe native block transform matched.',
+			'message'  => $is_svg ? 'Inline SVG was preserved as core/html because it did not pass conservative safe SVG validation.' : 'Source HTML fragment was preserved as core/html because no safe native block transform matched.',
 			'context'  => $context,
 		);
 	}
 
 	return $diagnostics;
+}
+
+/**
+ * Collect safe inline SVG placeholders as materializer-neutral artifacts.
+ *
+ * @param array<int|string,array<string,mixed>> $blocks Block arrays.
+ * @param string                               $path   Current block tree path.
+ * @return array<int,array<string,mixed>> SVG artifacts.
+ */
+function html_to_blocks_collect_svg_artifacts( array $blocks, string $path = '' ): array {
+	$artifacts = array();
+
+	foreach ( $blocks as $index => $block ) {
+		if ( ! is_array( $block ) ) {
+			continue;
+		}
+
+		$block_path = '' === $path ? (string) $index : $path . '.' . (string) $index;
+		if ( ( $block['blockName'] ?? '' ) === 'html-to-blocks/svg-icon' ) {
+			$svg      = isset( $block['attrs']['svg'] ) && is_string( $block['attrs']['svg'] ) ? $block['attrs']['svg'] : '';
+			$metadata = isset( $block['attrs']['metadata'] ) && is_array( $block['attrs']['metadata'] ) ? $block['attrs']['metadata'] : array();
+			if ( '' !== $svg ) {
+				$artifacts[] = array(
+					'type'         => 'safe_inline_svg',
+					'kind'         => isset( $metadata['kind'] ) && is_scalar( $metadata['kind'] ) ? (string) $metadata['kind'] : 'inline-svg',
+					'content_hash' => sha1( $svg ),
+					'svg'          => $svg,
+					'metadata'     => $metadata,
+					'block_path'   => $block_path,
+				);
+			}
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+			$artifacts = array_merge( $artifacts, html_to_blocks_collect_svg_artifacts( $block['innerBlocks'], $block_path ) );
+		}
+	}
+
+	return $artifacts;
 }
 
 /**

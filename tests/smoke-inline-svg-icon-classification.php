@@ -145,6 +145,14 @@ $assert( ! str_contains( $safe['svg'], 'xmlns' ), 'classifier-strips-nonessentia
 $assert( ( $safe['metadata']['kind'] ?? '' ) === 'inline-svg-icon', 'classifier-returns-kind-metadata' );
 $assert( ( $safe['metadata']['viewBox'] ?? '' ) === '0 0 24 24', 'classifier-returns-viewbox-metadata' );
 
+$symbol_svg = '<svg viewBox="0 0 24 24"><defs><symbol id="shape" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/></symbol></defs><use href="#shape" x="0" y="0"/></svg>';
+$symbol     = HTML_To_Blocks_SVG_Icon_Classifier::classify( $symbol_svg );
+$assert( ! empty( $symbol['is_safe'] ), 'classifier-accepts-local-symbol-use-svg', $symbol['reason'] ?? '' );
+$assert( in_array( 'symbol', $symbol['metadata']['tags'] ?? [], true ), 'classifier-records-symbol-tag', json_encode( $symbol['metadata'] ?? [] ) );
+$assert( in_array( 'use', $symbol['metadata']['tags'] ?? [], true ), 'classifier-records-use-tag', json_encode( $symbol['metadata'] ?? [] ) );
+$assert( in_array( 'shape', $symbol['metadata']['symbolIds'] ?? [], true ), 'classifier-records-symbol-id', json_encode( $symbol['metadata'] ?? [] ) );
+$assert( ( $symbol['metadata']['useReferences'][0]['target'] ?? '' ) === 'shape', 'classifier-records-use-target', json_encode( $symbol['metadata'] ?? [] ) );
+
 $safe_blocks = html_to_blocks_raw_handler( [ 'HTML' => $safe_svg ] );
 $icons       = $collect_blocks( $safe_blocks, 'html-to-blocks/svg-icon' );
 $fallbacks   = $collect_blocks( $safe_blocks, 'core/html' );
@@ -158,6 +166,7 @@ $assert( str_contains( $icons[0]['attrs']['svg'] ?? '', '<polyline' ), 'placehol
 
 $reference_svgs = [
 	'use-href'     => '<svg viewBox="0 0 24 24"><use href="#shape"/></svg>',
+	'use-external' => '<svg viewBox="0 0 24 24"><use href="sprite.svg#shape"/></svg>',
 	'image-data'   => '<svg viewBox="0 0 24 24"><image href="data:image/png;base64,abc"/></svg>',
 	'fill-url-ref' => '<svg viewBox="0 0 24 24"><path fill="url(#paint)" d="M0 0h24v24H0z"/></svg>',
 ];
