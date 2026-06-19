@@ -10,6 +10,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Automattic\BlocksEngine\PhpTransformer\HtmlToBlocks\HtmlTransformer;
+
+if ( ! class_exists( HtmlTransformer::class ) ) {
+	$html_to_blocks_autoload = __DIR__ . '/vendor/autoload.php';
+	if ( file_exists( $html_to_blocks_autoload ) ) {
+		require_once $html_to_blocks_autoload;
+	}
+}
+
+/**
+ * Gets the canonical Blocks Engine HTML transformer used by the H2BC wrapper.
+ *
+ * @return HtmlTransformer|null Transformer instance, or null when dependency autoloading is unavailable.
+ */
+function html_to_blocks_transformer(): ?HtmlTransformer {
+	static $transformer = null;
+
+	if ( $transformer instanceof HtmlTransformer ) {
+		return $transformer;
+	}
+
+	if ( ! class_exists( HtmlTransformer::class ) ) {
+		return null;
+	}
+
+	$transformer = new HtmlTransformer();
+
+	return $transformer;
+}
+
 /**
  * Main raw handler function - converts HTML to blocks
  *
@@ -189,6 +219,39 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	if ( html_to_blocks_is_standalone_hash_anchor_fragment( $html ) ) {
 		$html = html_to_blocks_normalise_blocks( $html );
+	}
+
+	$transformer = html_to_blocks_transformer();
+	if ( $transformer instanceof HtmlTransformer ) {
+		$result = $transformer->transform( (string) $html, is_array( $args ) ? $args : array() );
+		$blocks = $result->blocks;
+
+		foreach ( $result->fallbacks as $fallback ) {
+			if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+				continue;
+			}
+
+			$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
+				(string) $fallback['html'],
+				array(
+					'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
+					'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
+					'source'               => HtmlTransformer::class,
+					'transformer_fallback' => $fallback,
+				)
+			);
+		}
+
+		if ( function_exists( 'do_action' ) && function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' ) ) {
+			$metrics = $result->metrics;
+			if ( isset( $metrics['transform_duration_ms'] ) && ! isset( $metrics['total_ms'] ) ) {
+				$metrics['total_ms'] = $metrics['transform_duration_ms'];
+			}
+
+			do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
+		}
+
+		return $blocks;
 	}
 
 	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );

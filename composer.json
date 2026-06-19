@@ -10,8 +10,18 @@
       "homepage": "https://chubes.net"
     }
   ],
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../blocks-engine@draft-php-transformer-monorepo/php-transformer",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
   "require": {
-    "php": ">=7.4"
+    "php": ">=8.1",
+    "automattic/blocks-engine-php-transformer": "dev-draft/php-transformer-monorepo"
   },
   "autoload": {
     "files": [

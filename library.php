@@ -18,6 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	return;
 }
 
+if ( ! function_exists( 'add_action' ) || ! function_exists( 'did_action' ) ) {
+	return;
+}
+
 $html_to_blocks_library_path    = __DIR__;
 $html_to_blocks_library_version = '0.7.2';
 
@@ -32,6 +36,12 @@ if ( ! class_exists( 'HTML_To_Blocks_Versions', false ) ) {
 $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_path ): void {
 	if ( ! class_exists( 'HTML_To_Blocks_HTML_Element', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-html-element.php';
+	}
+	if ( ! class_exists( 'Automattic\\BlocksEngine\\PhpTransformer\\HtmlToBlocks\\HtmlTransformer', false ) ) {
+		$html_to_blocks_autoload = $html_to_blocks_library_path . '/vendor/autoload.php';
+		if ( file_exists( $html_to_blocks_autoload ) ) {
+			require_once $html_to_blocks_autoload;
+		}
 	}
 	if ( ! class_exists( 'HTML_To_Blocks_Block_Factory', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-block-factory.php';
