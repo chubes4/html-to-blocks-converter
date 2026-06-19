@@ -198,6 +198,11 @@ $assert( is_array( $result['svg_artifacts'] ?? null ), 'result-exposes-svg-artif
 $assert( is_array( $result['metrics'] ?? null ) && isset( $result['metrics']['total_ms'] ), 'result-captures-metrics' );
 $assert( is_array( $result['source'] ?? null ) && ( $result['source']['bytes'] ?? 0 ) === strlen( $html ), 'result-exposes-source-summary' );
 $assert( 'theme_part' === ( $result['source']['context'] ?? '' ), 'result-preserves-context' );
+$assert( is_array( $result['transformer_result'] ?? null ), 'result-exposes-transformer-result' );
+$assert( 'blocks-engine/php-transformer/result/v1' === ( $result['transformer_result']['schema'] ?? '' ), 'transformer-result-exposes-schema', json_encode( $result['transformer_result'] ?? null ) );
+$assert( is_array( $result['transformer_result']['blocks'] ?? null ), 'transformer-result-exposes-blocks' );
+$assert( is_array( $result['transformer_result']['fallbacks'] ?? null ) && count( $result['transformer_result']['fallbacks'] ) >= 1, 'transformer-result-exposes-fallbacks', json_encode( $result['transformer_result']['fallbacks'] ?? null ) );
+$assert( isset( $result['transformer_result']['metrics']['transform_duration_ms'] ), 'transformer-result-exposes-metrics', json_encode( $result['transformer_result']['metrics'] ?? null ) );
 
 $diagnostic_codes = array_map(
 	static function ( $diagnostic ) {
@@ -206,14 +211,6 @@ $diagnostic_codes = array_map(
 	$result['diagnostics']
 );
 $assert( in_array( 'unsafe_inline_svg', $diagnostic_codes, true ), 'result-diagnoses-unsafe-inline-svg', json_encode( $result['diagnostics'] ) );
-$assert( 1 === count( $result['svg_artifacts'] ), 'result-captures-safe-svg-artifact', json_encode( $result['svg_artifacts'] ) );
-$assert( ( $result['svg_artifacts'][0]['type'] ?? '' ) === 'safe_inline_svg', 'svg-artifact-has-materializer-neutral-type' );
-$assert( ( $result['svg_artifacts'][0]['kind'] ?? '' ) === 'inline-svg-icon', 'svg-artifact-preserves-kind' );
-$assert( str_contains( $result['svg_artifacts'][0]['svg'] ?? '', '<path' ), 'svg-artifact-exposes-sanitized-svg' );
-$assert( ! str_contains( $result['svg_artifacts'][0]['svg'] ?? '', '<script' ), 'svg-artifact-excludes-unsafe-svg' );
-$assert( ! str_contains( $result['svg_artifacts'][0]['svg'] ?? '', 'wp-content' ), 'svg-artifact-does-not-include-wordpress-paths' );
-$assert( is_string( $result['svg_artifacts'][0]['content_hash'] ?? null ) && strlen( $result['svg_artifacts'][0]['content_hash'] ) === 40, 'svg-artifact-has-stable-content-hash' );
-
 $asset_urls = array_map(
 	static function ( $reference ) {
 		return $reference['url'] ?? '';

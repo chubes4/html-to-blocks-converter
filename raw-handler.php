@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Automattic\BlocksEngine\PhpTransformer\HtmlToBlocks\HtmlTransformer;
+use Automattic\BlocksEngine\PhpTransformer\Contract\TransformerResult;
 
 if ( ! class_exists( HtmlTransformer::class ) ) {
 	$html_to_blocks_autoload = __DIR__ . '/vendor/autoload.php';
@@ -224,6 +225,9 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	$transformer = html_to_blocks_transformer();
 	if ( $transformer instanceof HtmlTransformer ) {
 		$result = $transformer->transform( (string) $html, is_array( $args ) ? $args : array() );
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'html_to_blocks_transformer_result', $result, is_array( $args ) ? $args : array() );
+		}
 		$blocks = $result->blocks;
 
 		foreach ( $result->fallbacks as $fallback ) {
@@ -526,7 +530,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
  *
  * @param string $html Source HTML fragment.
  * @param array  $args Conversion context passed through to the raw handler.
-	 * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,selector_provenance:array<int,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,svg_artifacts:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,visual_repair_metadata:array<string,mixed>,metrics:array<string,mixed>,source:array<string,mixed>}
+	 * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,selector_provenance:array<int,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,svg_artifacts:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,visual_repair_metadata:array<string,mixed>,metrics:array<string,mixed>,source:array<string,mixed>,transformer_result:array<string,mixed>|null}
  */
 function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
 	$args = array_merge(
@@ -539,6 +543,7 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 
 	$fallbacks = array();
 	$metrics   = array();
+	$transformer_result = null;
 
 	$fallback_listener = static function ( string $element_html, array $context, array $block ) use ( &$fallbacks ): void {
 		$fallbacks[] = array(
@@ -553,10 +558,15 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		$metrics = $event_metrics;
 	};
 
+	$transformer_result_listener = static function ( TransformerResult $result ) use ( &$transformer_result ): void {
+		$transformer_result = $result;
+	};
+
 	$can_listen = function_exists( 'add_action' ) && function_exists( 'remove_action' );
 	if ( $can_listen ) {
 		add_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10, 3 );
 		add_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10, 1 );
+		add_action( 'html_to_blocks_transformer_result', $transformer_result_listener, 10, 1 );
 	}
 
 	try {
@@ -565,10 +575,23 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		if ( $can_listen ) {
 			remove_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10 );
 			remove_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10 );
+			remove_action( 'html_to_blocks_transformer_result', $transformer_result_listener, 10 );
 		}
 	}
 
 	$visual_repair_metadata = html_to_blocks_collect_visual_repair_metadata( $html, $blocks, $fallbacks );
+
+	if ( $transformer_result instanceof TransformerResult ) {
+		$transformer_result_array = $transformer_result->toArray();
+		if ( empty( $metrics ) ) {
+			$metrics = $transformer_result->metrics;
+		}
+		if ( empty( $fallbacks ) ) {
+			$fallbacks = html_to_blocks_transformer_fallbacks_to_events( $transformer_result->fallbacks );
+		}
+	} else {
+		$transformer_result_array = null;
+	}
 
 	return array(
 		'block_markup'          => html_to_blocks_serialize_block_markup( $blocks ),
@@ -586,7 +609,37 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 			'text_length' => strlen( trim( wp_strip_all_tags( $html ) ) ),
 			'context'     => isset( $args['context'] ) && is_scalar( $args['context'] ) ? (string) $args['context'] : '',
 		),
+		'transformer_result'    => $transformer_result_array,
 	);
+}
+
+/**
+ * Convert upstream transformer fallbacks into this plugin's fallback event shape.
+ *
+ * @param array<int,array<string,mixed>> $fallbacks Upstream transformer fallbacks.
+ * @return array<int,array<string,mixed>> Fallback observations.
+ */
+function html_to_blocks_transformer_fallbacks_to_events( array $fallbacks ): array {
+	$events = array();
+	foreach ( $fallbacks as $fallback ) {
+		if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+			continue;
+		}
+
+		$events[] = array(
+			'type'         => 'unsupported_html_fallback',
+			'element_html' => (string) $fallback['html'],
+			'context'      => array(
+				'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
+				'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
+				'source'               => HtmlTransformer::class,
+				'transformer_fallback' => $fallback,
+			),
+			'block_name'   => 'core/html',
+		);
+	}
+
+	return $events;
 }
 
 /**
