@@ -21,6 +21,11 @@ HTML only when the fragment itself contains enough signal to choose a block
 without site, template, query, or editor state. Unsupported or ambiguous
 fragments are preserved as `core/html` rather than guessed.
 
+Blocks Engine PHP transformer owns the canonical raw conversion runtime. This
+package keeps the historical `html_to_blocks_*` API and compatibility gates for
+legacy consumers until each gate has matching Blocks Engine behavior and focused
+smoke coverage.
+
 ## Status Definitions
 
 | Status | Meaning |
