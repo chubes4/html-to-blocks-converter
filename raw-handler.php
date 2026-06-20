@@ -14,9 +14,43 @@ use Automattic\BlocksEngine\PhpTransformer\HtmlToBlocks\HtmlTransformer;
 use Automattic\BlocksEngine\PhpTransformer\Contract\TransformerResult;
 
 if ( ! class_exists( HtmlTransformer::class ) ) {
-	$html_to_blocks_autoload = __DIR__ . '/vendor/autoload.php';
-	if ( file_exists( $html_to_blocks_autoload ) ) {
-		require_once $html_to_blocks_autoload;
+	$html_to_blocks_autoload_paths = array(
+		__DIR__ . '/vendor/autoload.php',
+		dirname( __DIR__ ) . '/blocks-engine/php-transformer/vendor/autoload.php',
+	);
+
+	foreach ( $html_to_blocks_autoload_paths as $html_to_blocks_autoload ) {
+		if ( file_exists( $html_to_blocks_autoload ) ) {
+			require_once $html_to_blocks_autoload;
+			break;
+		}
+	}
+
+	if ( ! class_exists( HtmlTransformer::class ) ) {
+		$html_to_blocks_engine_src = dirname( __DIR__ ) . '/blocks-engine/php-transformer/src';
+		if ( is_dir( $html_to_blocks_engine_src ) ) {
+			spl_autoload_register(
+				static function ( string $class ) use ( $html_to_blocks_engine_src ): void {
+					$prefix = 'Automattic\\BlocksEngine\\PhpTransformer\\';
+					if ( strpos( $class, $prefix ) !== 0 ) {
+						return;
+					}
+
+					$relative = substr( $class, strlen( $prefix ) );
+					$file     = $html_to_blocks_engine_src . '/' . str_replace( '\\', '/', $relative ) . '.php';
+					if ( file_exists( $file ) ) {
+						require_once $file;
+					}
+				}
+			);
+		}
+	}
+}
+
+if ( ! function_exists( 'html_to_blocks_svg_icon_block_from_transformer_fallback' ) ) {
+	$html_to_blocks_svg_helpers = __DIR__ . '/includes/svg-icon-functions.php';
+	if ( file_exists( $html_to_blocks_svg_helpers ) ) {
+		require_once $html_to_blocks_svg_helpers;
 	}
 }
 
@@ -187,6 +221,70 @@ function html_to_blocks_elapsed_ms( float $started ): float {
 }
 
 /**
+ * Detects consumers that preloaded or replaced the legacy raw transform registry.
+ *
+ * @return bool True when legacy raw transforms should remain authoritative.
+ */
+function html_to_blocks_has_preloaded_raw_transforms(): bool {
+	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) || ! class_exists( 'ReflectionProperty' ) ) {
+		return false;
+	}
+
+	try {
+		$property = new ReflectionProperty( 'HTML_To_Blocks_Transform_Registry', 'transforms' );
+		return null !== $property->getValue();
+	} catch ( Throwable $error ) {
+		return false;
+	}
+}
+
+/**
+ * Detects nested safe-SVG fallbacks that still need H2BC wrapper preservation.
+ *
+ * @param string $html      Source HTML.
+ * @param array  $fallbacks Transformer fallback records.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_nested_svg_wrapper( string $html, array $fallbacks ): bool {
+	if ( preg_match( '/^\s*<svg\b/i', $html ) ) {
+		return false;
+	}
+
+	foreach ( $fallbacks as $fallback ) {
+		if ( ! is_array( $fallback ) || 'svg' !== strtolower( (string) ( $fallback['tag'] ?? '' ) ) || empty( $fallback['html'] ) || ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
+			continue;
+		}
+
+		$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( (string) $fallback['html'] );
+		if ( ! empty( $classification['is_safe'] ) && ! empty( $classification['svg'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Detects span-heavy visual wrappers that still rely on H2BC heuristics.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_span_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b[^>]*>.*<span\b/is', $html );
+}
+
+/**
+ * Detects code-window wrappers that still rely on H2BC transform families.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_code_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b[^>]*>.*<pre\b/is', $html ) || false !== strpos( $html, 'sc-code-panel' );
+}
+
+/**
  * Accumulate per-transform trace metrics.
  *
  * @param array  $metrics Metrics accumulator.
@@ -207,45 +305,6 @@ function html_to_blocks_record_transform_metric( array &$metrics, string $name, 
 }
 
 /**
- * Converts a safe upstream inline SVG fallback into H2BC's compatibility block.
- *
- * @param array<string,mixed> $fallback Upstream transformer fallback metadata.
- * @return array<string,mixed>|null SVG placeholder block when safe.
- */
-function html_to_blocks_svg_icon_block_from_transformer_fallback( array $fallback ): ?array {
-	if ( 'unsafe_inline_svg' === (string) ( $fallback['reason'] ?? '' ) || 'html_unsafe_inline_svg' === (string) ( $fallback['diagnostic_code'] ?? '' ) ) {
-		return null;
-	}
-
-	if ( 'svg' !== strtolower( (string) ( $fallback['tag'] ?? '' ) ) || empty( $fallback['html'] ) || ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
-		return null;
-	}
-
-	$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( (string) $fallback['html'] );
-	if ( empty( $classification['is_safe'] ) || empty( $classification['svg'] ) ) {
-		return null;
-	}
-
-	$svg      = (string) $classification['svg'];
-	$metadata = isset( $classification['metadata'] ) && is_array( $classification['metadata'] ) ? $classification['metadata'] : array();
-
-	if ( function_exists( 'do_action' ) ) {
-		do_action( 'html_to_blocks_safe_inline_svg_icon', $svg, $metadata, $classification );
-	}
-
-	return array(
-		'blockName'    => 'html-to-blocks/svg-icon',
-		'attrs'        => array(
-			'svg'      => $svg,
-			'metadata' => $metadata,
-		),
-		'innerBlocks'  => array(),
-		'innerHTML'    => $svg,
-		'innerContent' => array( $svg ),
-	);
-}
-
-/**
  * Converts HTML directly to blocks using registered transforms
  *
  * @param string $html HTML to convert
@@ -262,7 +321,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 	}
 
 	$transformer = html_to_blocks_transformer();
-	if ( $transformer instanceof HtmlTransformer ) {
+	if ( $transformer instanceof HtmlTransformer && ! html_to_blocks_has_preloaded_raw_transforms() ) {
 		$result = $transformer->transform( (string) $html, is_array( $args ) ? $args : array() );
 		if ( function_exists( 'do_action' ) ) {
 			do_action( 'html_to_blocks_transformer_result', $result, is_array( $args ) ? $args : array() );
@@ -300,7 +359,9 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
 		}
 
-		return $blocks;
+		if ( ! html_to_blocks_needs_legacy_nested_svg_wrapper( (string) $html, $result->fallbacks ) && ! html_to_blocks_needs_legacy_span_wrapper( (string) $html ) && ! html_to_blocks_needs_legacy_code_wrapper( (string) $html ) ) {
+			return $blocks;
+		}
 	}
 
 	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );
