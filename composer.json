@@ -10,8 +10,33 @@
       "homepage": "https://chubes.net"
     }
   ],
+  "repositories": [
+    {
+      "type": "package",
+      "package": {
+        "name": "automattic/blocks-engine-php-transformer",
+        "version": "dev-trunk",
+        "source": {
+          "type": "git",
+          "url": "https://github.com/Automattic/blocks-engine.git",
+          "reference": "trunk"
+        },
+        "autoload": {
+          "psr-4": {
+            "Automattic\\BlocksEngine\\PhpTransformer\\": "php-transformer/src/"
+          }
+        },
+        "require": {
+          "league/commonmark": "^2.5",
+          "league/html-to-markdown": "^5.1",
+          "php": ">=8.1"
+        }
+      }
+    }
+  ],
   "require": {
-    "php": ">=7.4"
+    "php": ">=8.1",
+    "automattic/blocks-engine-php-transformer": "dev-trunk"
   },
   "autoload": {
     "files": [

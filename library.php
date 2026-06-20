@@ -18,6 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	return;
 }
 
+if ( ! function_exists( 'add_action' ) || ! function_exists( 'did_action' ) ) {
+	return;
+}
+
 $html_to_blocks_library_path    = __DIR__;
 $html_to_blocks_library_version = '0.7.2';
 
@@ -32,6 +36,39 @@ if ( ! class_exists( 'HTML_To_Blocks_Versions', false ) ) {
 $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_path ): void {
 	if ( ! class_exists( 'HTML_To_Blocks_HTML_Element', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-html-element.php';
+	}
+	if ( ! class_exists( 'Automattic\\BlocksEngine\\PhpTransformer\\HtmlToBlocks\\HtmlTransformer', false ) ) {
+		$html_to_blocks_autoload_paths = array(
+			$html_to_blocks_library_path . '/vendor/autoload.php',
+			dirname( $html_to_blocks_library_path ) . '/blocks-engine/php-transformer/vendor/autoload.php',
+		);
+
+		foreach ( $html_to_blocks_autoload_paths as $html_to_blocks_autoload ) {
+			if ( file_exists( $html_to_blocks_autoload ) ) {
+				require_once $html_to_blocks_autoload;
+				break;
+			}
+		}
+
+		if ( ! class_exists( 'Automattic\\BlocksEngine\\PhpTransformer\\HtmlToBlocks\\HtmlTransformer', false ) ) {
+			$html_to_blocks_engine_src = dirname( $html_to_blocks_library_path ) . '/blocks-engine/php-transformer/src';
+			if ( is_dir( $html_to_blocks_engine_src ) ) {
+				spl_autoload_register(
+					static function ( string $class ) use ( $html_to_blocks_engine_src ): void {
+						$prefix = 'Automattic\\BlocksEngine\\PhpTransformer\\';
+						if ( strpos( $class, $prefix ) !== 0 ) {
+							return;
+						}
+
+						$relative = substr( $class, strlen( $prefix ) );
+						$file     = $html_to_blocks_engine_src . '/' . str_replace( '\\', '/', $relative ) . '.php';
+						if ( file_exists( $file ) ) {
+							require_once $file;
+						}
+					}
+				);
+			}
+		}
 	}
 	if ( ! class_exists( 'HTML_To_Blocks_Block_Factory', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-block-factory.php';

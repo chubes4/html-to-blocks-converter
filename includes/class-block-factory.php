@@ -23,13 +23,13 @@ class HTML_To_Blocks_Block_Factory {
 	public static function create_block( $name, $attributes = array(), $inner_blocks = array() ) {
 		$registry = WP_Block_Type_Registry::get_instance();
 
-		if ( ! $registry->is_registered( $name ) ) {
+		if ( ! $registry->is_registered( $name ) && ! self::can_serialize_block( $name, $inner_blocks ) ) {
 			return self::create_block( 'core/html', array(
 				'content' => '',
 			) );
 		}
 
-		$block_type = $registry->get_registered( $name );
+		$block_type = $registry->is_registered( $name ) ? $registry->get_registered( $name ) : (object) array( 'attributes' => array() );
 
 		$inner_html    = '';
 		$inner_content = array();
@@ -63,6 +63,51 @@ class HTML_To_Blocks_Block_Factory {
 			'innerBlocks'  => $inner_blocks,
 			'innerHTML'    => $inner_html,
 			'innerContent' => $inner_content,
+		);
+	}
+
+	/**
+	 * Checks whether this factory can serialize a block without registry metadata.
+	 *
+	 * @param string $name Block name.
+	 * @return bool True when the factory has explicit HTML generation support.
+	 */
+	private static function can_serialize_block( string $name, array $inner_blocks = array() ): bool {
+		if ( 'core/group' === $name && ! empty( $inner_blocks ) ) {
+			return false;
+		}
+
+		return in_array(
+			$name,
+			array(
+				'core/audio',
+				'core/button',
+				'core/buttons',
+				'core/code',
+				'core/column',
+				'core/columns',
+				'core/details',
+				'core/embed',
+				'core/file',
+				'core/gallery',
+				'core/group',
+				'core/heading',
+				'core/html',
+				'core/image',
+				'core/list',
+				'core/list-item',
+				'core/media-text',
+				'core/paragraph',
+				'core/preformatted',
+				'core/pullquote',
+				'core/quote',
+				'core/separator',
+				'core/shortcode',
+				'core/table',
+				'core/verse',
+				'core/video',
+			),
+			true
 		);
 	}
 

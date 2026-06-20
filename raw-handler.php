@@ -10,6 +10,71 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Automattic\BlocksEngine\PhpTransformer\HtmlToBlocks\HtmlTransformer;
+use Automattic\BlocksEngine\PhpTransformer\Contract\TransformerResult;
+
+if ( ! class_exists( HtmlTransformer::class ) ) {
+	$html_to_blocks_autoload_paths = array(
+		__DIR__ . '/vendor/autoload.php',
+		dirname( __DIR__ ) . '/blocks-engine/php-transformer/vendor/autoload.php',
+	);
+
+	foreach ( $html_to_blocks_autoload_paths as $html_to_blocks_autoload ) {
+		if ( file_exists( $html_to_blocks_autoload ) ) {
+			require_once $html_to_blocks_autoload;
+			break;
+		}
+	}
+
+	if ( ! class_exists( HtmlTransformer::class ) ) {
+		$html_to_blocks_engine_src = dirname( __DIR__ ) . '/blocks-engine/php-transformer/src';
+		if ( is_dir( $html_to_blocks_engine_src ) ) {
+			spl_autoload_register(
+				static function ( string $class ) use ( $html_to_blocks_engine_src ): void {
+					$prefix = 'Automattic\\BlocksEngine\\PhpTransformer\\';
+					if ( strpos( $class, $prefix ) !== 0 ) {
+						return;
+					}
+
+					$relative = substr( $class, strlen( $prefix ) );
+					$file     = $html_to_blocks_engine_src . '/' . str_replace( '\\', '/', $relative ) . '.php';
+					if ( file_exists( $file ) ) {
+						require_once $file;
+					}
+				}
+			);
+		}
+	}
+}
+
+if ( ! function_exists( 'html_to_blocks_svg_icon_block_from_transformer_fallback' ) ) {
+	$html_to_blocks_svg_helpers = __DIR__ . '/includes/svg-icon-functions.php';
+	if ( file_exists( $html_to_blocks_svg_helpers ) ) {
+		require_once $html_to_blocks_svg_helpers;
+	}
+}
+
+/**
+ * Gets the canonical Blocks Engine HTML transformer used by the H2BC wrapper.
+ *
+ * @return HtmlTransformer|null Transformer instance, or null when dependency autoloading is unavailable.
+ */
+function html_to_blocks_transformer(): ?HtmlTransformer {
+	static $transformer = null;
+
+	if ( $transformer instanceof HtmlTransformer ) {
+		return $transformer;
+	}
+
+	if ( ! class_exists( HtmlTransformer::class ) ) {
+		return null;
+	}
+
+	$transformer = new HtmlTransformer();
+
+	return $transformer;
+}
+
 /**
  * Main raw handler function - converts HTML to blocks
  *
@@ -156,6 +221,183 @@ function html_to_blocks_elapsed_ms( float $started ): float {
 }
 
 /**
+ * Detects consumers that preloaded or replaced the legacy raw transform registry.
+ *
+ * @return bool True when legacy raw transforms should remain authoritative.
+ */
+function html_to_blocks_has_preloaded_raw_transforms(): bool {
+	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) || ! class_exists( 'ReflectionProperty' ) ) {
+		return false;
+	}
+
+	try {
+		$property = new ReflectionProperty( 'HTML_To_Blocks_Transform_Registry', 'transforms' );
+		return null !== $property->getValue();
+	} catch ( Throwable $error ) {
+		return false;
+	}
+}
+
+/**
+ * Detects nested safe-SVG fallbacks that still need H2BC wrapper preservation.
+ *
+ * @param string $html      Source HTML.
+ * @param array  $fallbacks Transformer fallback records.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_nested_svg_wrapper( string $html, array $fallbacks ): bool {
+	if ( preg_match( '/^\s*<svg\b/i', $html ) ) {
+		return false;
+	}
+
+	foreach ( $fallbacks as $fallback ) {
+		if ( ! is_array( $fallback ) || 'svg' !== strtolower( (string) ( $fallback['tag'] ?? '' ) ) || empty( $fallback['html'] ) || ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
+			continue;
+		}
+
+		$classification = HTML_To_Blocks_SVG_Icon_Classifier::classify( (string) $fallback['html'] );
+		if ( ! empty( $classification['is_safe'] ) && ! empty( $classification['svg'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Detects span-heavy visual wrappers that still rely on H2BC heuristics.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_span_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b[^>]*>.*<span\b/is', $html );
+}
+
+/**
+ * Detects code-window wrappers that still rely on H2BC transform families.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_code_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b[^>]*>.*<pre\b/is', $html ) || false !== strpos( $html, 'sc-code-panel' );
+}
+
+/**
+ * Detects empty decorative wrappers that H2BC preserved as native groups.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_empty_decorative_wrapper( string $html ): bool {
+	if ( preg_match_all( '/<(div|span)\b([^>]*)>\s*<\/\1>/is', $html, $matches, PREG_SET_ORDER ) < 1 ) {
+		return false;
+	}
+
+	foreach ( $matches as $match ) {
+		$attributes = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+		$class_name = (string) ( $attributes['class'] ?? '' );
+		if ( preg_match( '/(?:^|[-_\s])(?:divider|separator|rule|line|connector|noise|icon|patch|img|bg|progress|fill|status|traffic[-_\s]?light|tl[-_\s]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Detects definition lists still handled by H2BC visual/list transforms.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_definition_list( string $html ): bool {
+	return 1 === preg_match( '/<dl\b/i', $html );
+}
+
+/**
+ * Detects aria-labelled visual media wrappers still preserved by H2BC groups.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_visual_media_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b(?=[^>]*\baria-label=)(?=[^>]*(?:\brole=["\']img["\']|\bclass=["\'][^"\']*(?:^|[-_\s])(?:media|collage|visual)(?:$|[-_\s])[^"\']*["\']))/i', $html );
+}
+
+/**
+ * Detects nested section wrappers where H2BC preserves outer classes/anchors.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_nested_section_wrapper( string $html ): bool {
+	return 1 === preg_match( '/^\s*<div\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>\s*<section\b[^>]*\bid=["\'][^"\']+["\']/is', $html );
+}
+
+/**
+ * Detects script islands that H2BC preserves as local HTML fallbacks.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_script_fallback( string $html ): bool {
+	return 1 === preg_match( '/<script\b/i', $html );
+}
+
+/**
+ * Detects resized SVG image serialization handled by H2BC BlockFactory.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_resized_svg_image( string $html ): bool {
+	return 1 === preg_match( '/<img\b(?=[^>]*\bsrc=["\'][^"\']+\.svg(?:[?#][^"\']*)?["\'])(?=[^>]*\bwidth=)(?=[^>]*\bheight=)/i', $html );
+}
+
+/**
+ * Detects checkbox labels handled by H2BC label/input heuristics.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_checkbox_label( string $html ): bool {
+	return 1 === preg_match( '/<label\b[^>]*>.*<input\b[^>]*\btype=["\']?checkbox/i', $html );
+}
+
+/**
+ * Detects testimonial figure wrappers with blockquote/caption structure.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_blockquote_figure( string $html ): bool {
+	return 1 === preg_match( '/<figure\b[^>]*>.*<blockquote\b.*<figcaption\b/is', $html );
+}
+
+/**
+ * Detects text-only divs that H2BC keeps as paragraph text.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_text_div( string $html ): bool {
+	return 1 === preg_match( '/^\s*<div\b[^>]*>[^<]+<\/div>\s*$/is', $html );
+}
+
+/**
+ * Detects visual or nested lists still handled by H2BC list transforms.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_visual_or_nested_list( string $html ): bool {
+	return 1 === preg_match( '/^\s*<[ou]l\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>.*<li\b[^>]*\bclass=["\'][^"\']+["\']/is', $html )
+		|| 1 === preg_match( '/<[ou]l\b[^>]*>.*<li\b[^>]*>.*<[ou]l\b/is', $html );
+}
+
+/**
  * Accumulate per-transform trace metrics.
  *
  * @param array  $metrics Metrics accumulator.
@@ -189,6 +431,64 @@ function html_to_blocks_convert( $html, $args = array() ) {
 
 	if ( html_to_blocks_is_standalone_hash_anchor_fragment( $html ) ) {
 		$html = html_to_blocks_normalise_blocks( $html );
+	}
+
+	$transformer = html_to_blocks_transformer();
+	if ( $transformer instanceof HtmlTransformer && ! html_to_blocks_has_preloaded_raw_transforms() ) {
+		$result = $transformer->transform( (string) $html, is_array( $args ) ? $args : array() );
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'html_to_blocks_transformer_result', $result, is_array( $args ) ? $args : array() );
+		}
+
+		$needs_legacy_wrapper = html_to_blocks_needs_legacy_nested_svg_wrapper( (string) $html, $result->fallbacks )
+			|| html_to_blocks_needs_legacy_span_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_code_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_empty_decorative_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_definition_list( (string) $html )
+			|| html_to_blocks_needs_legacy_visual_media_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_nested_section_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_script_fallback( (string) $html )
+			|| html_to_blocks_needs_legacy_resized_svg_image( (string) $html )
+			|| html_to_blocks_needs_legacy_checkbox_label( (string) $html )
+			|| html_to_blocks_needs_legacy_blockquote_figure( (string) $html )
+			|| html_to_blocks_needs_legacy_text_div( (string) $html )
+			|| html_to_blocks_needs_legacy_visual_or_nested_list( (string) $html );
+
+		if ( ! $needs_legacy_wrapper ) {
+			$blocks = $result->blocks;
+
+			foreach ( $result->fallbacks as $fallback ) {
+				if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+					continue;
+				}
+
+				$svg_icon_block = html_to_blocks_svg_icon_block_from_transformer_fallback( $fallback );
+				if ( is_array( $svg_icon_block ) ) {
+					$blocks[] = $svg_icon_block;
+					continue;
+				}
+
+				$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
+					(string) $fallback['html'],
+					array(
+						'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
+						'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
+						'source'               => HtmlTransformer::class,
+						'transformer_fallback' => $fallback,
+					)
+				);
+			}
+
+			if ( function_exists( 'do_action' ) && function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' ) ) {
+				$metrics = $result->metrics;
+				if ( isset( $metrics['transform_duration_ms'] ) && ! isset( $metrics['total_ms'] ) ) {
+					$metrics['total_ms'] = $metrics['transform_duration_ms'];
+				}
+				do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
+			}
+
+			return $blocks;
+		}
 	}
 
 	$collect_metrics = function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' );
@@ -463,7 +763,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
  *
  * @param string $html Source HTML fragment.
  * @param array  $args Conversion context passed through to the raw handler.
-	 * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,selector_provenance:array<int,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,svg_artifacts:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,visual_repair_metadata:array<string,mixed>,metrics:array<string,mixed>,source:array<string,mixed>}
+	 * @return array{block_markup:string,blocks:array<int|string,array<string,mixed>>,selector_provenance:array<int,array<string,mixed>>,diagnostics:array<int,array<string,mixed>>,fallbacks:array<int,array<string,mixed>>,asset_references:array<int,array<string,mixed>>,svg_artifacts:array<int,array<string,mixed>>,navigation_candidates:array<int,array<string,mixed>>,visual_repair_metadata:array<string,mixed>,metrics:array<string,mixed>,source:array<string,mixed>,transformer_result:array<string,mixed>|null}
  */
 function html_to_blocks_convert_fragment( string $html, array $args = array() ): array {
 	$args = array_merge(
@@ -476,6 +776,7 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 
 	$fallbacks = array();
 	$metrics   = array();
+	$transformer_result = null;
 
 	$fallback_listener = static function ( string $element_html, array $context, array $block ) use ( &$fallbacks ): void {
 		$fallbacks[] = array(
@@ -490,10 +791,15 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		$metrics = $event_metrics;
 	};
 
+	$transformer_result_listener = static function ( TransformerResult $result ) use ( &$transformer_result ): void {
+		$transformer_result = $result;
+	};
+
 	$can_listen = function_exists( 'add_action' ) && function_exists( 'remove_action' );
 	if ( $can_listen ) {
 		add_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10, 3 );
 		add_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10, 1 );
+		add_action( 'html_to_blocks_transformer_result', $transformer_result_listener, 10, 1 );
 	}
 
 	try {
@@ -502,15 +808,36 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 		if ( $can_listen ) {
 			remove_action( 'html_to_blocks_unsupported_html_fallback', $fallback_listener, 10 );
 			remove_action( 'html_to_blocks_convert_metrics', $metrics_listener, 10 );
+			remove_action( 'html_to_blocks_transformer_result', $transformer_result_listener, 10 );
 		}
 	}
 
 	$visual_repair_metadata = html_to_blocks_collect_visual_repair_metadata( $html, $blocks, $fallbacks );
+	$selector_provenance    = html_to_blocks_collect_selector_provenance_from_blocks( $blocks );
+	if ( empty( $selector_provenance ) ) {
+		$selector_provenance = html_to_blocks_collect_selector_provenance_from_visual_repair_metadata( $visual_repair_metadata );
+	}
+	$selector_provenance = html_to_blocks_merge_selector_provenance(
+		$selector_provenance,
+		html_to_blocks_collect_selector_provenance_from_source_html( $html )
+	);
+
+	if ( $transformer_result instanceof TransformerResult ) {
+		$transformer_result_array = $transformer_result->toArray();
+		if ( empty( $metrics ) ) {
+			$metrics = $transformer_result->metrics;
+		}
+		if ( empty( $fallbacks ) ) {
+			$fallbacks = html_to_blocks_transformer_fallbacks_to_events( $transformer_result->fallbacks );
+		}
+	} else {
+		$transformer_result_array = null;
+	}
 
 	return array(
 		'block_markup'          => html_to_blocks_serialize_block_markup( $blocks ),
 		'blocks'                => $blocks,
-		'selector_provenance'   => html_to_blocks_collect_selector_provenance_from_blocks( $blocks ),
+		'selector_provenance'   => $selector_provenance,
 		'diagnostics'           => html_to_blocks_fallbacks_to_diagnostics( $fallbacks ),
 		'fallbacks'             => $fallbacks,
 		'asset_references'      => html_to_blocks_collect_asset_references( $html ),
@@ -523,7 +850,244 @@ function html_to_blocks_convert_fragment( string $html, array $args = array() ):
 			'text_length' => strlen( trim( wp_strip_all_tags( $html ) ) ),
 			'context'     => isset( $args['context'] ) && is_scalar( $args['context'] ) ? (string) $args['context'] : '',
 		),
+		'transformer_result'    => $transformer_result_array,
 	);
+}
+
+/**
+ * Convert upstream transformer fallbacks into this plugin's fallback event shape.
+ *
+ * @param array<int,array<string,mixed>> $fallbacks Upstream transformer fallbacks.
+ * @return array<int,array<string,mixed>> Fallback observations.
+ */
+function html_to_blocks_transformer_fallbacks_to_events( array $fallbacks ): array {
+	$events = array();
+	foreach ( $fallbacks as $fallback ) {
+		if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+			continue;
+		}
+
+		$events[] = array(
+			'type'         => 'unsupported_html_fallback',
+			'element_html' => (string) $fallback['html'],
+			'context'      => array(
+				'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
+				'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
+				'source'               => HtmlTransformer::class,
+				'transformer_fallback' => $fallback,
+			),
+			'block_name'   => 'core/html',
+		);
+	}
+
+	return $events;
+}
+
+/**
+ * Build selector provenance from result-wrapper metadata when upstream blocks do
+ * not carry H2BC's non-serialized sourceSelectorProvenance field.
+ *
+ * @param array<string,mixed> $metadata Visual repair metadata.
+ * @return array<int,array<string,mixed>> Provenance entries.
+ */
+function html_to_blocks_collect_selector_provenance_from_visual_repair_metadata( array $metadata ): array {
+	$entries = array();
+
+	foreach ( $metadata['categories'] ?? array() as $records ) {
+		if ( ! is_array( $records ) ) {
+			continue;
+		}
+
+		foreach ( $records as $record ) {
+			if ( ! is_array( $record ) ) {
+				continue;
+			}
+
+			$entry = html_to_blocks_visual_repair_record_to_selector_provenance( $record );
+			if ( null !== $entry ) {
+				$entries[] = $entry;
+			}
+		}
+	}
+
+	return $entries;
+}
+
+/**
+ * Convert one visual repair record into the public selector provenance shape.
+ *
+ * @param array<string,mixed> $record Visual repair record.
+ * @return array<string,mixed>|null Provenance entry when source identity exists.
+ */
+function html_to_blocks_visual_repair_record_to_selector_provenance( array $record ): ?array {
+	$block_name = isset( $record['block_name'] ) && is_scalar( $record['block_name'] ) ? (string) $record['block_name'] : '';
+	$tag        = isset( $record['tag_name'] ) && is_scalar( $record['tag_name'] ) ? strtolower( (string) $record['tag_name'] ) : '';
+	$class_name = isset( $record['class_name'] ) && is_scalar( $record['class_name'] ) ? trim( (string) $record['class_name'] ) : '';
+	$classes    = isset( $record['classes'] ) && is_array( $record['classes'] ) ? array_values( array_filter( $record['classes'], 'is_string' ) ) : html_to_blocks_split_class_names( $class_name );
+
+	if ( '' === $tag ) {
+		$tag = html_to_blocks_default_source_tag_for_block( $block_name, $classes );
+	}
+
+	if ( '' === $tag || '' === $block_name ) {
+		return null;
+	}
+
+	$occurrence = 0;
+	$path       = isset( $record['path'] ) && is_scalar( $record['path'] ) ? (string) $record['path'] : '';
+	if ( preg_match( '/(?:^|\.)(\d+)$/', $path, $matches ) ) {
+		$occurrence = (int) $matches[1];
+	}
+
+	return array(
+		'source'          => array(
+			'tag'                  => $tag,
+			'id'                   => '',
+			'classes'              => $classes,
+			'class_name'           => $class_name,
+			'selector'             => html_to_blocks_source_element_selector( $tag, '', $classes ),
+			'stable_selector_path' => html_to_blocks_source_element_selector_path( $tag, '', $classes, $occurrence ),
+			'occurrence'           => $occurrence,
+		),
+		'transform'       => array(
+			'kind'       => 'visual_repair_metadata',
+			'block_type' => $block_name,
+		),
+		'generated_block' => array(
+			'type'    => $block_name,
+			'targets' => html_to_blocks_generated_selector_targets( array(
+				'blockName' => $block_name,
+				'attrs'     => array( 'content' => isset( $record['inner_html'] ) && is_scalar( $record['inner_html'] ) ? (string) $record['inner_html'] : '' ),
+			) ),
+		),
+	);
+}
+
+/**
+ * Infer source element tags when upstream metadata omits the original tag.
+ *
+ * @param string            $block_name Block name.
+ * @param array<int,string> $classes    Source class tokens.
+ * @return string Source tag.
+ */
+function html_to_blocks_default_source_tag_for_block( string $block_name, array $classes ): string {
+	switch ( $block_name ) {
+		case 'core/group':
+			return 'div';
+		case 'core/image':
+			return 'img';
+		case 'core/button':
+		case 'core/buttons':
+			return 'a';
+	}
+
+	return '';
+}
+
+/**
+ * Merge provenance lists without duplicating source selector/block pairs.
+ *
+ * @param array<int,array<string,mixed>> $primary   Primary provenance entries.
+ * @param array<int,array<string,mixed>> $secondary Secondary provenance entries.
+ * @return array<int,array<string,mixed>> Merged entries.
+ */
+function html_to_blocks_merge_selector_provenance( array $primary, array $secondary ): array {
+	$merged = array();
+	$seen   = array();
+
+	foreach ( array_merge( $primary, $secondary ) as $entry ) {
+		if ( ! is_array( $entry ) ) {
+			continue;
+		}
+
+		$key = (string) ( $entry['source']['selector'] ?? '' ) . ':' . (string) ( $entry['generated_block']['type'] ?? '' );
+		if ( isset( $seen[ $key ] ) ) {
+			$existing_index   = $seen[ $key ];
+			$existing_targets = isset( $merged[ $existing_index ]['generated_block']['targets'] ) && is_array( $merged[ $existing_index ]['generated_block']['targets'] ) ? $merged[ $existing_index ]['generated_block']['targets'] : array();
+			$new_targets      = isset( $entry['generated_block']['targets'] ) && is_array( $entry['generated_block']['targets'] ) ? $entry['generated_block']['targets'] : array();
+			if ( count( $new_targets ) > count( $existing_targets ) ) {
+				$merged[ $existing_index ] = $entry;
+			}
+			continue;
+		}
+
+		$seen[ $key ] = count( $merged );
+		$merged[]     = $entry;
+	}
+
+	return $merged;
+}
+
+/**
+ * Build conservative result-API provenance directly from source HTML for block
+ * families whose source identity is required by downstream materializers.
+ *
+ * @param string $html Source HTML.
+ * @return array<int,array<string,mixed>> Provenance entries.
+ */
+function html_to_blocks_collect_selector_provenance_from_source_html( string $html ): array {
+	$entries = array();
+	if ( preg_match_all( '/<(section|div|img|a|form)\b([^>]*)>/i', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$tag        = strtolower( (string) $match[1] );
+			$attrs      = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+			$class_name = isset( $attrs['class'] ) ? trim( (string) $attrs['class'] ) : '';
+			$classes    = html_to_blocks_split_class_names( $class_name );
+			$block_name = html_to_blocks_source_tag_default_generated_block( $tag );
+			if ( '' === $block_name ) {
+				continue;
+			}
+
+			$target_block = array( 'blockName' => $block_name, 'attrs' => array() );
+			if ( 'form' === $tag ) {
+				$target_block['attrs']['content'] = '<form></form>';
+			}
+
+			$entries[] = array(
+				'source'          => array(
+					'tag'                  => $tag,
+					'id'                   => isset( $attrs['id'] ) ? (string) $attrs['id'] : '',
+					'classes'              => $classes,
+					'class_name'           => $class_name,
+					'selector'             => html_to_blocks_source_element_selector( $tag, isset( $attrs['id'] ) ? (string) $attrs['id'] : '', $classes ),
+					'stable_selector_path' => html_to_blocks_source_element_selector_path( $tag, isset( $attrs['id'] ) ? (string) $attrs['id'] : '', $classes, $index ),
+					'occurrence'           => $index,
+				),
+				'transform'       => array(
+					'kind'       => 'source_html_result_metadata',
+					'block_type' => $block_name,
+				),
+				'generated_block' => array(
+					'type'    => $block_name,
+					'targets' => html_to_blocks_generated_selector_targets( $target_block ),
+				),
+			);
+		}
+	}
+
+	return $entries;
+}
+
+/**
+ * Resolve default generated block type for source provenance records.
+ *
+ * @param string $tag Source tag.
+ * @return string Block type.
+ */
+function html_to_blocks_source_tag_default_generated_block( string $tag ): string {
+	switch ( $tag ) {
+		case 'section':
+		case 'div':
+			return 'core/group';
+		case 'img':
+			return 'core/image';
+		case 'a':
+			return 'core/button';
+		case 'form':
+			return 'core/html';
+	}
+
+	return '';
 }
 
 /**
@@ -596,6 +1160,18 @@ function html_to_blocks_collect_visual_repair_metadata( string $html, array $blo
 		'fallback_blocks'    => html_to_blocks_visual_repair_fallback_markers( $metadata['categories']['fallbacks'], $fallbacks ),
 		'decorative_sources' => html_to_blocks_visual_repair_decorative_source_markers( $html, $metadata['categories']['decorative'] ),
 	);
+	foreach ( $metadata['markers']['decorative_sources'] as $marker ) {
+		$metadata['categories']['decorative'][] = array(
+			'path'       => (string) ( $marker['path'] ?? '' ),
+			'block_name' => '',
+			'class_name' => (string) ( $marker['class_name'] ?? '' ),
+			'classes'    => html_to_blocks_split_class_names( (string) ( $marker['class_name'] ?? '' ) ),
+			'tag_name'   => (string) ( $marker['tag_name'] ?? '' ),
+			'url'        => '',
+			'has_inner_blocks' => false,
+			'inner_html_bytes' => 0,
+		);
+	}
 	$metadata['diagnostics']     = html_to_blocks_visual_repair_diagnostics( $metadata );
 
 	return $metadata;
@@ -829,14 +1405,14 @@ function html_to_blocks_visual_repair_fallback_markers( array $fallback_records,
  */
 function html_to_blocks_visual_repair_decorative_source_markers( string $html, array $decorative_records ): array {
 	$markers = array();
-	if ( preg_match_all( '/<(div|span)\b([^>]*)>(.*?)<\/\1>/is', $html, $matches, PREG_SET_ORDER ) ) {
-		foreach ( $matches as $index => $match ) {
+	if ( preg_match_all( '/<(div|span)\b([^>]*)>\s*<\/\1>/is', $html, $empty_matches, PREG_SET_ORDER ) ) {
+		foreach ( $empty_matches as $index => $match ) {
+			$attrs = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
 			$element = HTML_To_Blocks_HTML_Element::from_html( (string) $match[0] );
-			if ( ! $element || ! html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) {
+			if ( ( ! $element || ! html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) && ! html_to_blocks_class_name_is_decorative_source( (string) ( $attrs['class'] ?? '' ) ) ) {
 				continue;
 			}
 
-			$attrs     = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
 			$markers[] = array(
 				'source'      => strtolower( (string) $match[1] ) . '[' . $index . ']',
 				'path'        => '',
@@ -846,6 +1422,37 @@ function html_to_blocks_visual_repair_decorative_source_markers( string $html, a
 			);
 		}
 	}
+
+	if ( preg_match_all( '/<(div|span)\b([^>]*)>(.*?)<\/\1>/is', $html, $matches, PREG_SET_ORDER ) ) {
+		foreach ( $matches as $index => $match ) {
+			$attrs = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+			$element = HTML_To_Blocks_HTML_Element::from_html( (string) $match[0] );
+			if ( ( ! $element || ! html_to_blocks_should_ignore_empty_decorative_placeholder( $element ) ) && ! html_to_blocks_class_name_is_decorative_source( (string) ( $attrs['class'] ?? '' ) ) ) {
+				continue;
+			}
+
+			$markers[] = array(
+				'source'      => strtolower( (string) $match[1] ) . '[' . $index . ']',
+				'path'        => '',
+				'tag_name'    => strtolower( (string) $match[1] ),
+				'class_name'  => (string) ( $attrs['class'] ?? '' ),
+				'repair_hint' => 'decorative_source_ignored',
+			);
+		}
+	}
+
+	$seen = array();
+	$markers = array_values( array_filter(
+		$markers,
+		static function ( array $marker ) use ( &$seen ): bool {
+			$key = (string) ( $marker['tag_name'] ?? '' ) . ':' . (string) ( $marker['class_name'] ?? '' ) . ':' . (string) ( $marker['repair_hint'] ?? '' );
+			if ( isset( $seen[ $key ] ) ) {
+				return false;
+			}
+			$seen[ $key ] = true;
+			return true;
+		}
+	) );
 
 	foreach ( $decorative_records as $record ) {
 		$markers[] = array(
@@ -859,6 +1466,16 @@ function html_to_blocks_visual_repair_decorative_source_markers( string $html, a
 	}
 
 	return $markers;
+}
+
+/**
+ * Check whether a source class list identifies visual/decorative chrome.
+ *
+ * @param string $class_name Class attribute.
+ * @return bool Whether the class list is decorative.
+ */
+function html_to_blocks_class_name_is_decorative_source( string $class_name ): bool {
+	return preg_match( '/(?:^|[-_\s])(accent|bar|bg|blob|chrome|decor|decorative|dot|fill|glow|halo|icon|line|orb|shape|spark|visual)(?:$|[-_\s])/', strtolower( $class_name ) ) === 1;
 }
 
 /**
