@@ -313,7 +313,7 @@ function html_to_blocks_needs_legacy_empty_decorative_wrapper( string $html ): b
  * @return bool True when local compatibility transforms should supply blocks.
  */
 function html_to_blocks_needs_legacy_definition_list( string $html ): bool {
-	return 1 === preg_match( '/<dl\b/i', $html );
+	return 1 === preg_match( '/<dl\b[^>]*>\s*<div\b/is', $html );
 }
 
 /**
@@ -393,8 +393,7 @@ function html_to_blocks_needs_legacy_text_div( string $html ): bool {
  * @return bool True when local compatibility transforms should supply blocks.
  */
 function html_to_blocks_needs_legacy_visual_or_nested_list( string $html ): bool {
-	return 1 === preg_match( '/^\s*<[ou]l\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>.*<li\b[^>]*\bclass=["\'][^"\']+["\']/is', $html )
-		|| 1 === preg_match( '/<[ou]l\b[^>]*>.*<li\b[^>]*>.*<[ou]l\b/is', $html );
+	return 1 === preg_match( '/^\s*<[ou]l\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>.*<li\b[^>]*\bclass=["\'][^"\']+["\']/is', $html );
 }
 
 /**

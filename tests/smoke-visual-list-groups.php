@@ -186,6 +186,8 @@ $nested_names  = $flatten_block_names( $nested_blocks );
 $assert( ( $nested_blocks[0]['blockName'] ?? '' ) === 'core/list', 'nested-list-stays-core-list' );
 $assert( count( array_keys( $nested_names, 'core/list', true ) ) === 2, 'nested-list-keeps-nested-list' );
 $assert( ! in_array( 'core/group', $nested_names, true ), 'nested-list-has-no-groups' );
+$assert( ! html_to_blocks_needs_legacy_visual_or_nested_list( '<ul><li>Parent<ul><li>Child</li></ul></li></ul>' ), 'nested-list-uses-transformer-wrapper-path' );
+$assert( html_to_blocks_needs_legacy_visual_or_nested_list( '<ol class="pipeline-steps"><li class="pipeline-step">Step</li></ol>' ), 'classed-visual-list-keeps-legacy-wrapper-path' );
 
 if ( $failures ) {
 	fwrite( STDERR, implode( "\n", $failures ) . "\n" );
