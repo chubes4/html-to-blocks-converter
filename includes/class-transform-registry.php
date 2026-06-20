@@ -1415,6 +1415,20 @@ class HTML_To_Blocks_Transform_Registry {
 				},
 			),
 			array(
+				'blockName' => 'core/paragraph',
+				'priority'  => 9,
+				'selector'  => 'a',
+				'isMatch'   => function ( $element ) {
+					return $element->get_tag_name() === 'A'
+						&& $element->has_attribute( 'aria-label' )
+						&& $element->query_selector( 'img' )
+						&& trim( wp_strip_all_tags( $element->get_inner_html() ) ) !== '';
+				},
+				'transform' => function ( $element ) {
+					return self::create_branded_inline_anchor_paragraph( $element );
+				},
+			),
+			array(
 				'blockName' => 'core/buttons',
 				'priority'  => 9,
 				'selector'  => 'a',
