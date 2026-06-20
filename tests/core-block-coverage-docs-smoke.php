@@ -7,6 +7,12 @@
 
 // phpcs:disable
 
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	function wp_strip_all_tags( $text ) {
+		return strip_tags( (string) $text );
+	}
+}
+
 $repo_root  = dirname( __DIR__ );
 $failures   = [];
 $assertions = 0;
@@ -20,7 +26,9 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 
 $read_file = static function ( string $path ) use ( $assert ): string {
 	global $wp_filesystem;
-	$contents = $wp_filesystem->get_contents( $path );
+	$contents = is_object( $wp_filesystem ) && method_exists( $wp_filesystem, 'get_contents' )
+		? $wp_filesystem->get_contents( $path )
+		: file_get_contents( $path );
 	$assert( is_string( $contents ) && '' !== $contents, basename( $path ) . '-readable', 'Unable to read ' . $path );
 
 	return is_string( $contents ) ? $contents : '';

@@ -59,7 +59,9 @@ namespace {
 
 	$read_required_file = static function ( string $path ) use ( $smoke_assert ): string {
 		global $wp_filesystem;
-		$contents = $wp_filesystem->get_contents( $path );
+		$contents = is_object( $wp_filesystem ) && method_exists( $wp_filesystem, 'get_contents' )
+			? $wp_filesystem->get_contents( $path )
+			: file_get_contents( $path );
 		$smoke_assert(
 			is_string( $contents ) && '' !== $contents,
 			basename( $path ) . '-readable',
