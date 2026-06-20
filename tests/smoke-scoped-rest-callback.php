@@ -79,8 +79,37 @@ function html_to_blocks_smoke_registered_callbacks(): array {
 	return array_column( $registered_filters, 1 );
 }
 
+function html_to_blocks_smoke_read_file( string $path ): string {
+	global $wp_filesystem;
+	$contents = is_object( $wp_filesystem ) && method_exists( $wp_filesystem, 'get_contents' )
+		? $wp_filesystem->get_contents( $path )
+		: file_get_contents( $path );
+
+	return is_string( $contents ) ? $contents : '';
+}
+
+function html_to_blocks_smoke_write_file( string $path, string $contents ): bool {
+	global $wp_filesystem;
+	if ( is_object( $wp_filesystem ) && method_exists( $wp_filesystem, 'put_contents' ) ) {
+		return (bool) $wp_filesystem->put_contents( $path, $contents );
+	}
+
+	return false !== file_put_contents( $path, $contents );
+}
+
+function html_to_blocks_smoke_delete_file( string $path ): void {
+	if ( function_exists( __NAMESPACE__ . '\wp_delete_file' ) ) {
+		wp_delete_file( $path );
+		return;
+	}
+
+	if ( is_file( $path ) ) {
+		unlink( $path );
+	}
+}
+
 // Load the production hook file as if php-scoper had placed it in this namespace.
-$source         = $wp_filesystem->get_contents( dirname( __DIR__ ) . '/includes/hooks.php' );
+$source         = html_to_blocks_smoke_read_file( dirname( __DIR__ ) . '/includes/hooks.php' );
 if ( ! is_string( $source ) || '' === $source ) {
 	fwrite( STDERR, "FAIL: unable to read includes/hooks.php.\n" );
 	exit( 1 );
@@ -101,9 +130,9 @@ $source         = str_replace(
 );
 
 $tmp = tempnam( sys_get_temp_dir(), 'h2bc-scoped-hooks-' );
-$wp_filesystem->put_contents( $tmp, $source );
+html_to_blocks_smoke_write_file( $tmp, $source );
 require $tmp;
-wp_delete_file( $tmp );
+html_to_blocks_smoke_delete_file( $tmp );
 
 $register_rest_filters = __NAMESPACE__ . '\\html_to_blocks_register_rest_filters';
 // @phpstan-ignore-next-line Dynamic require loads this scoped callback at runtime.
