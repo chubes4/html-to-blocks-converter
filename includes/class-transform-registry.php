@@ -2659,6 +2659,10 @@ class HTML_To_Blocks_Transform_Registry {
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
 
+			if ( 'DIV' === $child->get_tag_name() && '' === trim( wp_strip_all_tags( $child->get_inner_html() ) ) && preg_match( '/(?:^|\s)arrow[-_]?divider(?:$|\s)/i', $class_name ) === 1 ) {
+				continue;
+			}
+
 			if ( 'PRE' === $child->get_tag_name() ) {
 				$inner_blocks[] = self::create_pre_code_preformatted_block( $child );
 				continue;
@@ -2678,7 +2682,7 @@ class HTML_To_Blocks_Transform_Registry {
 				continue;
 			}
 
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]+header|panel[-_]+label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$inner_blocks[] = self::create_code_window_text_group( $child );
 				continue;
 			}
@@ -2840,7 +2844,7 @@ class HTML_To_Blocks_Transform_Registry {
 			return false;
 		}
 
-		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
+		return self::class_matches( $element, '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]+header|panel[-_]+label|badge)|code[-_]?preview[-_]?(?:header|tab[-_]?bar)|window[-_]?(?:bar|title|header)|arrow[-_]?row)[A-Za-z0-9_-]*(?:$|\s)/i' );
 	}
 
 	/**
@@ -2858,7 +2862,7 @@ class HTML_To_Blocks_Transform_Registry {
 		$has_body   = false;
 		foreach ( $element->get_child_elements() as $child ) {
 			$class_name = $child->has_attribute( 'class' ) ? $child->get_attribute( 'class' ) : '';
-			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label)|code[-_]?preview[-_]?header)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
+			if ( preg_match( '/(?:^|\s)[A-Za-z0-9_-]*(?:code[-_]?(?:bar|titlebar|header|pane[-_]+header|panel[-_]+label)|code[-_]?preview[-_]?header)[A-Za-z0-9_-]*(?:$|\s)/i', $class_name ) === 1 ) {
 				$has_header = true;
 			}
 
@@ -2868,7 +2872,7 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		$inner_html = $element->get_inner_html();
-		if ( ! $has_header && preg_match( '/class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?(?:bar|titlebar|header|pane[-_]?header|panel[-_]?label)[A-Za-z0-9_-]*[^"\']*["\']/i', $inner_html ) === 1 ) {
+		if ( ! $has_header && preg_match( '/class=["\'][^"\']*[A-Za-z0-9_-]*code[-_]?(?:bar|titlebar|header|pane[-_]+header|panel[-_]+label)[A-Za-z0-9_-]*[^"\']*["\']/i', $inner_html ) === 1 ) {
 			$has_header = true;
 		}
 
@@ -3183,8 +3187,11 @@ class HTML_To_Blocks_Transform_Registry {
 				'priority'  => 11,
 				'selector'  => 'div,span',
 				'isMatch'   => function ( $element ) {
+					$class_name = $element->has_attribute( 'class' ) ? $element->get_attribute( 'class' ) : '';
+
 					return in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true )
 						&& self::is_empty_element( $element )
+						&& preg_match( '/(?:^|\s)divider(?:$|\s)/i', $class_name ) !== 1
 						&& self::class_matches( $element, '/(?:^|[-_\s])(divider|separator|rule|ruler)(?:$|[-_\s]|\d)/i' );
 				},
 				'transform' => function ( $element ) {
@@ -3912,7 +3919,7 @@ class HTML_To_Blocks_Transform_Registry {
 					return self::is_group_element( $element );
 				},
 				'transform' => function ( $element, $handler ) {
-					$attributes = self::is_empty_decorative_element( $element )
+					$attributes = in_array( $element->get_tag_name(), array( 'DIV', 'SPAN' ), true ) && self::is_empty_decorative_element( $element )
 						? self::get_empty_decorative_group_attributes( $element )
 						: self::get_common_layout_attributes( $element );
 
@@ -3940,7 +3947,6 @@ class HTML_To_Blocks_Transform_Registry {
 				'class_name' => true,
 				'align'      => true,
 				'colors'     => true,
-				'dimensions' => true,
 				'spacing'    => true,
 				'border'     => true,
 				'aria_label' => true,
@@ -4502,6 +4508,10 @@ class HTML_To_Blocks_Transform_Registry {
 		}
 
 		if ( self::class_matches( $element, '/(?:^|[-_\s])quote[-_\s]+(?:attr|attribution)(?:$|[-_\s])/i' ) ) {
+			return true;
+		}
+
+		if ( $element->has_attribute( 'aria-label' ) && 'img' === strtolower( trim( (string) $element->get_attribute( 'role' ) ) ) ) {
 			return true;
 		}
 

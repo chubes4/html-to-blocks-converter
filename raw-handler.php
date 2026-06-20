@@ -285,6 +285,119 @@ function html_to_blocks_needs_legacy_code_wrapper( string $html ): bool {
 }
 
 /**
+ * Detects empty decorative wrappers that H2BC preserved as native groups.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_empty_decorative_wrapper( string $html ): bool {
+	if ( preg_match_all( '/<(div|span)\b([^>]*)>\s*<\/\1>/is', $html, $matches, PREG_SET_ORDER ) < 1 ) {
+		return false;
+	}
+
+	foreach ( $matches as $match ) {
+		$attributes = html_to_blocks_parse_html_attribute_string( (string) $match[2] );
+		$class_name = (string) ( $attributes['class'] ?? '' );
+		if ( preg_match( '/(?:^|[-_\s])(?:divider|separator|rule|line|connector|noise|icon|patch|img|bg|progress|fill|status|traffic[-_\s]?light|tl[-_\s]?(?:red|yellow|green)|task[-_\s]?check)(?:$|[-_\s]|\d)/i', $class_name ) === 1 ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Detects definition lists still handled by H2BC visual/list transforms.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_definition_list( string $html ): bool {
+	return 1 === preg_match( '/<dl\b/i', $html );
+}
+
+/**
+ * Detects aria-labelled visual media wrappers still preserved by H2BC groups.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_visual_media_wrapper( string $html ): bool {
+	return 1 === preg_match( '/<div\b(?=[^>]*\baria-label=)(?=[^>]*(?:\brole=["\']img["\']|\bclass=["\'][^"\']*(?:^|[-_\s])(?:media|collage|visual)(?:$|[-_\s])[^"\']*["\']))/i', $html );
+}
+
+/**
+ * Detects nested section wrappers where H2BC preserves outer classes/anchors.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_nested_section_wrapper( string $html ): bool {
+	return 1 === preg_match( '/^\s*<div\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>\s*<section\b[^>]*\bid=["\'][^"\']+["\']/is', $html );
+}
+
+/**
+ * Detects script islands that H2BC preserves as local HTML fallbacks.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_script_fallback( string $html ): bool {
+	return 1 === preg_match( '/<script\b/i', $html );
+}
+
+/**
+ * Detects resized SVG image serialization handled by H2BC BlockFactory.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_resized_svg_image( string $html ): bool {
+	return 1 === preg_match( '/<img\b(?=[^>]*\bsrc=["\'][^"\']+\.svg(?:[?#][^"\']*)?["\'])(?=[^>]*\bwidth=)(?=[^>]*\bheight=)/i', $html );
+}
+
+/**
+ * Detects checkbox labels handled by H2BC label/input heuristics.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_checkbox_label( string $html ): bool {
+	return 1 === preg_match( '/<label\b[^>]*>.*<input\b[^>]*\btype=["\']?checkbox/i', $html );
+}
+
+/**
+ * Detects testimonial figure wrappers with blockquote/caption structure.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_blockquote_figure( string $html ): bool {
+	return 1 === preg_match( '/<figure\b[^>]*>.*<blockquote\b.*<figcaption\b/is', $html );
+}
+
+/**
+ * Detects text-only divs that H2BC keeps as paragraph text.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_text_div( string $html ): bool {
+	return 1 === preg_match( '/^\s*<div\b[^>]*>[^<]+<\/div>\s*$/is', $html );
+}
+
+/**
+ * Detects visual or nested lists still handled by H2BC list transforms.
+ *
+ * @param string $html Source HTML.
+ * @return bool True when local compatibility transforms should supply blocks.
+ */
+function html_to_blocks_needs_legacy_visual_or_nested_list( string $html ): bool {
+	return 1 === preg_match( '/^\s*<[ou]l\b[^>]*\bclass=["\'][^"\']+["\'][^>]*>.*<li\b[^>]*\bclass=["\'][^"\']+["\']/is', $html )
+		|| 1 === preg_match( '/<[ou]l\b[^>]*>.*<li\b[^>]*>.*<[ou]l\b/is', $html );
+}
+
+/**
  * Accumulate per-transform trace metrics.
  *
  * @param array  $metrics Metrics accumulator.
@@ -326,40 +439,54 @@ function html_to_blocks_convert( $html, $args = array() ) {
 		if ( function_exists( 'do_action' ) ) {
 			do_action( 'html_to_blocks_transformer_result', $result, is_array( $args ) ? $args : array() );
 		}
-		$blocks = $result->blocks;
 
-		foreach ( $result->fallbacks as $fallback ) {
-			if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
-				continue;
+		$needs_legacy_wrapper = html_to_blocks_needs_legacy_nested_svg_wrapper( (string) $html, $result->fallbacks )
+			|| html_to_blocks_needs_legacy_span_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_code_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_empty_decorative_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_definition_list( (string) $html )
+			|| html_to_blocks_needs_legacy_visual_media_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_nested_section_wrapper( (string) $html )
+			|| html_to_blocks_needs_legacy_script_fallback( (string) $html )
+			|| html_to_blocks_needs_legacy_resized_svg_image( (string) $html )
+			|| html_to_blocks_needs_legacy_checkbox_label( (string) $html )
+			|| html_to_blocks_needs_legacy_blockquote_figure( (string) $html )
+			|| html_to_blocks_needs_legacy_text_div( (string) $html )
+			|| html_to_blocks_needs_legacy_visual_or_nested_list( (string) $html );
+
+		if ( ! $needs_legacy_wrapper ) {
+			$blocks = $result->blocks;
+
+			foreach ( $result->fallbacks as $fallback ) {
+				if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+					continue;
+				}
+
+				$svg_icon_block = html_to_blocks_svg_icon_block_from_transformer_fallback( $fallback );
+				if ( is_array( $svg_icon_block ) ) {
+					$blocks[] = $svg_icon_block;
+					continue;
+				}
+
+				$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
+					(string) $fallback['html'],
+					array(
+						'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
+						'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
+						'source'               => HtmlTransformer::class,
+						'transformer_fallback' => $fallback,
+					)
+				);
 			}
 
-			$svg_icon_block = html_to_blocks_svg_icon_block_from_transformer_fallback( $fallback );
-			if ( is_array( $svg_icon_block ) ) {
-				$blocks[] = $svg_icon_block;
-				continue;
+			if ( function_exists( 'do_action' ) && function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' ) ) {
+				$metrics = $result->metrics;
+				if ( isset( $metrics['transform_duration_ms'] ) && ! isset( $metrics['total_ms'] ) ) {
+					$metrics['total_ms'] = $metrics['transform_duration_ms'];
+				}
+				do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
 			}
 
-			$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
-				(string) $fallback['html'],
-				array(
-					'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
-					'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
-					'source'               => HtmlTransformer::class,
-					'transformer_fallback' => $fallback,
-				)
-			);
-		}
-
-		if ( function_exists( 'do_action' ) && function_exists( 'has_action' ) && has_action( 'html_to_blocks_convert_metrics' ) ) {
-			$metrics = $result->metrics;
-			if ( isset( $metrics['transform_duration_ms'] ) && ! isset( $metrics['total_ms'] ) ) {
-				$metrics['total_ms'] = $metrics['transform_duration_ms'];
-			}
-
-			do_action( 'html_to_blocks_convert_metrics', $metrics, $args );
-		}
-
-		if ( ! html_to_blocks_needs_legacy_nested_svg_wrapper( (string) $html, $result->fallbacks ) && ! html_to_blocks_needs_legacy_span_wrapper( (string) $html ) && ! html_to_blocks_needs_legacy_code_wrapper( (string) $html ) ) {
 			return $blocks;
 		}
 	}
