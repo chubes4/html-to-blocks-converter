@@ -1,8 +1,9 @@
 # Core Block Coverage Matrix
 
-This matrix is the human-readable summary of which WordPress core blocks
-`html-to-blocks-converter` may infer from raw HTML. The machine-readable gate
-is:
+This matrix records the historical h2bc facade boundary. Blocks Engine owns the
+canonical list of which WordPress core blocks may be inferred from raw HTML. The
+local classification files remain only as wrapper documentation for
+context-required and unsupported block families.
 
 - Runtime-generated inventory from the WordPress core under test:
   `wp-includes/blocks/*/block.json`.
@@ -30,7 +31,7 @@ selection.
 
 | Status | Meaning |
 |---|---|
-| `supported` | Blocks Engine can emit this block family through the h2bc facade for deterministic raw HTML. |
+| `delegated` | Blocks Engine can emit this block family through the h2bc facade for deterministic raw HTML. |
 | `fallback-observed` | h2bc intentionally preserves this HTML as `core/html` when Blocks Engine does not return a safe native block. |
 | `context-required` | The block needs site, template, query, post, comment, navigation, or theme context that raw HTML does not carry. |
 | `explicit-marker supported` | The facade may expose this block only when explicit source markup names the exact static structure. |
@@ -38,42 +39,17 @@ selection.
 | `unsupported` | h2bc and a block theme compiler should not produce this block from raw HTML without a separate product/design contract. |
 | `future candidate` | Deterministic Blocks Engine support may be possible later, but no support ships today. |
 
-## Supported Static Transforms
+## Delegated Static Transforms
 
-| Block name/family | Status | Required HTML signal | Test coverage file | Notes |
-|---|---|---|---|---|
-| `core/heading` | `supported` | `<h1>` through `<h6>` | `tests/smoke-blocks-engine-parity-facade.php` | Always maps to a static heading. Site, post, and query title identity is context-required. |
-| `core/paragraph` | `supported` | Plain text or `<p>` content that does not match a higher-priority conversion | `tests/smoke-blocks-engine-parity-facade.php`, `tests/smoke-media-embed-transforms.php` | Lowest-priority text fallback before `core/html`. |
-| `core/list`, `core/list-item` | `supported` | `<ul>` or `<ol>` with `<li>` children | `tests/smoke-definition-list-transforms.php`, `tests/smoke-visual-list-groups.php` | Nested lists are supported. |
-| `core/quote` | `supported` | `<blockquote>` without an explicit pullquote signal | `tests/smoke-quote-attribution-wrapper.php`, `tests/smoke-quote-author-avatar-meta.php` | Nested static content is routed back through the raw handler. |
-| `core/image` | `supported` | `<img>` or `<figure><img>` | `tests/smoke-media-embed-transforms.php` | Preserves static image attributes and captions when present; does not infer media-library attachment identity unless a safe `wp-image-*` class is present. |
-| `core/code` | `supported` | `<pre><code>` | `tests/smoke-code-chrome-decorative-fallbacks.php` | Code-specific conversion wins over plain preformatted text. |
-| `core/preformatted` | `supported` | `<pre>` without a verse or code signal | `tests/smoke-blocks-engine-parity-facade.php` | Preserves preformatted static text. |
-| `core/separator` | `supported` | `<hr>` | `tests/smoke-blocks-engine-parity-facade.php` | Direct static conversion. |
-| `core/table` | `supported` | `<table>` | `tests/smoke-blocks-engine-parity-facade.php` | Static table conversion only; no data-source or query inference. |
-| `core/shortcode` | `supported` | WordPress shortcode text matched by `get_shortcode_regex()` | `tests/GutenbergRawHandlerParityUnitTest.php` | Mirrors Gutenberg rawHandler's shortcode conversion path for WordPress shortcodes. |
-| `core/group` | `supported` | High-confidence semantic wrapper such as `<section>` or explicit grouping classes | `tests/smoke-nested-landing-layout-content.php`, `tests/smoke-decorative-div-fallbacks.php` | Arbitrary `<div>` does not qualify. Inner content recurses through the raw handler. |
-| `core/columns`, `core/column` | `supported` | Explicit row/grid wrapper plus direct column-like children | `tests/smoke-nested-landing-layout-content.php` | Requires layout classes such as `row` and `col-*`; ambiguous wrappers fall back. |
-| `core/cover` | `supported` | Hero/cover wrapper with explicit background image or color signal | `tests/smoke-blocks-engine-parity-facade.php` | Preserves static background values and routes inner content through the raw handler. |
-| `core/spacer` | `supported` | Empty explicit spacer element with an explicit height | `tests/smoke-terminal-blank-spacer-spans.php`, `tests/smoke-blocks-engine-parity-facade.php` | Content-bearing or heightless wrappers do not qualify. |
-| `core/buttons`, `core/button` | `supported` | Native WordPress button anchor, such as `.wp-block-button__link` or `.wp-element-button` | `tests/smoke-decorative-cta-wrapper-divs.php` | Ordinary inline links and custom class CTA anchors such as `.btn` stay inside paragraph/group content so anchor-targeted CSS still applies. |
-| `core/details` | `supported` | `<details>` with optional `<summary>` | `tests/smoke-detail-br-wrapper-fallback.php` | Summary becomes an attribute; body content recurses through the raw handler. |
-| `core/pullquote` | `supported` | `<blockquote>` with explicit pullquote signal, such as `.wp-block-pullquote` | `tests/smoke-blocks-engine-parity-facade.php` | Ordinary blockquotes remain `core/quote`. |
-| `core/verse` | `supported` | `<pre>` with explicit verse signal, such as `.wp-block-verse` | `tests/smoke-blocks-engine-parity-facade.php` | Preserves line breaks and inline `<br>` tags. |
-| `core/video` | `supported` | `<video src>`, `<video><source src>`, or `<figure>` containing a video with a source | `tests/smoke-media-embed-transforms.php` | Preserves static media attributes and figure captions where safe. |
-| `core/audio` | `supported` | `<audio src>`, `<audio><source src>`, or `<figure>` containing audio with a source | `tests/smoke-media-embed-transforms.php` | Static transform only; no media-library identity inference. |
-| `core/gallery` | `supported` | Gallery-like wrapper class plus multiple images | `tests/smoke-media-embed-transforms.php` | Builds `core/image` inner blocks. Ambiguous image collections without a gallery signal do not qualify. |
-| `core/media-text` | `supported` | `.wp-block-media-text` or `media-text` wrapper containing image or video media plus content | `tests/smoke-media-embed-transforms.php` | Inner text content recurses through the raw handler. |
-| `core/file` | `supported` | Anchor whose `href` has a recognized downloadable file extension | `tests/smoke-media-embed-transforms.php` | Ordinary CTA or navigation links do not become file blocks. |
-| `core/embed` | `supported` | `<iframe src>` for a recognized provider URL | `tests/smoke-media-embed-transforms.php` | Recognized providers are normalized into static embed URLs; unknown iframes fall back. |
-| `core/pattern` | `future-candidate` | Explicit marker such as `data-h2bc-pattern="namespace/slug"` or shared BFB alias `data-bfb-pattern="namespace/slug"` | None | Pattern markers are a wrapper compatibility gap while Blocks Engine owns raw conversion. h2bc does not emit `core/pattern` today or infer reusable patterns from repeated layout. |
-| `core/template-part` | `future-candidate` | Explicit marker such as `data-h2bc-template-part="area-or-slug"` or shared BFB alias `data-bfb-template-part="area-or-slug"` | None | Template-part markers are a wrapper compatibility gap while Blocks Engine owns raw conversion. h2bc does not emit `core/template-part` today or split regions by visual similarity. |
+H2BC no longer maintains a local supported-transform table. Static raw HTML
+conversion is delegated to Blocks Engine, and facade tests should assert only the
+public `html_to_blocks_*` behavior that callers consume.
 
 ## Mechanical Block Support Mappings
 
-h2bc maps only direct, mechanical HTML attributes into block support attributes.
-It does not infer theme tokens, palette slugs, typography presets, or creative
-layout intent.
+Blocks Engine maps only direct, mechanical HTML attributes into block support
+attributes. H2BC does not infer theme tokens, palette slugs, typography presets,
+or creative layout intent.
 
 Supported direct mappings:
 

@@ -2,7 +2,6 @@
 /**
  * Raw handler facade for server-side HTML-to-block conversion.
  *
- * Uses WordPress HTML API (WP_HTML_Processor) for spec-compliant HTML5 parsing.
  * Delegates canonical HTML-to-block conversion to Blocks Engine and adapts the
  * result into the historical h2bc public APIs.
  */
