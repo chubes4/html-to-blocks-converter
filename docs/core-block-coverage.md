@@ -22,9 +22,9 @@ without site, template, query, or editor state. Unsupported or ambiguous
 fragments are preserved as `core/html` rather than guessed.
 
 Blocks Engine PHP transformer owns the canonical raw conversion runtime. This
-package keeps the historical `html_to_blocks_*` API and compatibility gates for
-legacy consumers until each gate has matching Blocks Engine behavior and focused
-smoke coverage.
+package keeps the historical `html_to_blocks_*` facade API, conversion result
+shape, and compiler-facing diagnostics while Blocks Engine owns raw transform
+selection.
 
 ## Status Definitions
 

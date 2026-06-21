@@ -55,11 +55,12 @@ class GutenbergRawHandlerParityUnitTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Google Docs', $doc );
 		$this->assertStringContainsString( 'Microsoft Word', $doc );
 		$this->assertStringContainsString( 'Dynamic, contextual, or Site Editor block inference', $doc );
-		$this->assertStringContainsString( 'Blocks Engine Delegation Gates', $doc );
-		$this->assertStringContainsString( 'compatibility gates', $doc );
+		$this->assertStringContainsString( 'Blocks Engine Canonical Runtime', $doc );
+		$this->assertStringContainsString( 'canonical Blocks Engine transformer', $doc );
+		$this->assertStringContainsString( 'H2BC facade', $doc );
 		$this->assertStringContainsString( 'canonical', $doc );
 		$this->assertStringContainsString( 'runtime ownership', $doc );
-		$this->assertStringContainsString( 'Removal condition', $doc );
+		$this->assertStringNotContainsString( 'html_to_blocks_needs_legacy_', $doc );
 	}
 
 	/**

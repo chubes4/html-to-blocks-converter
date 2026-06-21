@@ -1,6 +1,6 @@
 <?php
 /**
- * Smoke test: visual list/card layouts become editable groups.
+ * Smoke test: visual list/card layouts follow canonical list conversion.
  *
  * Run: php tests/smoke-visual-list-groups.php
  */
@@ -135,17 +135,6 @@ $flatten_block_names = static function ( array $blocks ) use ( &$flatten_block_n
 	return $names;
 };
 
-$flatten_class_names = static function ( array $blocks ) use ( &$flatten_class_names ): array {
-	$classes = [];
-	foreach ( $blocks as $block ) {
-		if ( ! empty( $block['attrs']['className'] ) ) {
-			$classes[] = $block['attrs']['className'];
-		}
-		$classes = array_merge( $classes, $flatten_class_names( $block['innerBlocks'] ?? [] ) );
-	}
-	return $classes;
-};
-
 $visual_list_html = <<<'HTML'
 <ol class="pipeline-steps">
   <li class="pipeline-step">
@@ -158,20 +147,19 @@ HTML;
 
 $visual_blocks = html_to_blocks_raw_handler( [ 'HTML' => $visual_list_html ] );
 $visual_names  = $flatten_block_names( $visual_blocks );
-$visual_classes = implode( ' ', $flatten_class_names( $visual_blocks ) );
+$visual_item_content = $visual_blocks[0]['innerBlocks'][0]['attrs']['content'] ?? '';
 
-$assert( ( $visual_blocks[0]['blockName'] ?? '' ) === 'core/group', 'visual-list-wrapper-is-group' );
+$assert( ( $visual_blocks[0]['blockName'] ?? '' ) === 'core/list', 'visual-list-wrapper-is-canonical-list' );
 $assert( ( $visual_blocks[0]['attrs']['className'] ?? '' ) === 'pipeline-steps', 'visual-list-preserves-wrapper-class' );
-$assert( ( $visual_blocks[0]['innerBlocks'][0]['blockName'] ?? '' ) === 'core/group', 'visual-list-item-is-group' );
+$assert( ( $visual_blocks[0]['attrs']['ordered'] ?? false ) === true, 'visual-list-preserves-ordered-list' );
+$assert( ( $visual_blocks[0]['innerBlocks'][0]['blockName'] ?? '' ) === 'core/list-item', 'visual-list-item-is-canonical-list-item' );
 $assert( ( $visual_blocks[0]['innerBlocks'][0]['attrs']['className'] ?? '' ) === 'pipeline-step', 'visual-list-item-preserves-class' );
-$assert( in_array( 'core/heading', $visual_names, true ), 'visual-list-contains-heading' );
-$assert( in_array( 'core/paragraph', $visual_names, true ), 'visual-list-contains-paragraph' );
-$assert( ! in_array( 'core/list', $visual_names, true ), 'visual-list-has-no-core-list' );
-$assert( ! in_array( 'core/list-item', $visual_names, true ), 'visual-list-has-no-core-list-item' );
+$assert( in_array( 'core/list', $visual_names, true ), 'visual-list-contains-core-list' );
+$assert( in_array( 'core/list-item', $visual_names, true ), 'visual-list-contains-core-list-item' );
 $assert( ! in_array( 'core/html', $visual_names, true ), 'visual-list-has-no-core-html' );
-$assert( strpos( $visual_classes, 'step-number' ) !== false, 'visual-list-preserves-step-number-class' );
-$assert( strpos( $visual_classes, 'step-content' ) !== false, 'visual-list-preserves-step-content-class' );
-$assert( strpos( $visual_classes, 'step-visual' ) !== false, 'visual-list-preserves-step-visual-class' );
+$assert( strpos( $visual_item_content, 'class="step-number"' ) !== false, 'visual-list-preserves-step-number-content' );
+$assert( strpos( $visual_item_content, 'class="step-content"' ) !== false, 'visual-list-preserves-step-content-content' );
+$assert( strpos( $visual_item_content, 'class="step-visual"' ) !== false, 'visual-list-preserves-step-visual-content' );
 
 $simple_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<ul><li>Plain text</li></ul>' ] );
 $simple_names  = $flatten_block_names( $simple_blocks );
@@ -186,8 +174,13 @@ $nested_names  = $flatten_block_names( $nested_blocks );
 $assert( ( $nested_blocks[0]['blockName'] ?? '' ) === 'core/list', 'nested-list-stays-core-list' );
 $assert( count( array_keys( $nested_names, 'core/list', true ) ) === 2, 'nested-list-keeps-nested-list' );
 $assert( ! in_array( 'core/group', $nested_names, true ), 'nested-list-has-no-groups' );
-$assert( ! html_to_blocks_needs_legacy_visual_or_nested_list( '<ul><li>Parent<ul><li>Child</li></ul></li></ul>' ), 'nested-list-uses-transformer-wrapper-path' );
-$assert( html_to_blocks_needs_legacy_visual_or_nested_list( '<ol class="pipeline-steps"><li class="pipeline-step">Step</li></ol>' ), 'classed-visual-list-keeps-legacy-wrapper-path' );
+$classed_list_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<ol class="pipeline-steps"><li class="pipeline-step">Step</li></ol>' ] );
+$classed_list_names  = $flatten_block_names( $classed_list_blocks );
+
+$assert( ( $classed_list_blocks[0]['blockName'] ?? '' ) === 'core/list', 'classed-visual-list-facade-produces-list' );
+$assert( ( $classed_list_blocks[0]['attrs']['className'] ?? '' ) === 'pipeline-steps', 'classed-visual-list-facade-preserves-wrapper-class' );
+$assert( ( $classed_list_blocks[0]['innerBlocks'][0]['attrs']['className'] ?? '' ) === 'pipeline-step', 'classed-visual-list-facade-preserves-item-class' );
+$assert( ! in_array( 'core/html', $classed_list_names, true ), 'classed-visual-list-facade-has-no-html-fallback' );
 
 if ( $failures ) {
 	fwrite( STDERR, implode( "\n", $failures ) . "\n" );
