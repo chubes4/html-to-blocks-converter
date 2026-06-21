@@ -197,7 +197,7 @@ $headings   = $collect_blocks( $blocks, 'core/heading' );
 $paragraphs = $collect_blocks( $blocks, 'core/paragraph' );
 $fallbacks  = $collect_blocks( $blocks, 'core/html' );
 
-$assert( count( $blocks ) === 1 && ( $blocks[0]['blockName'] ?? '' ) === 'core/group', 'root-page-becomes-group', $serialized );
+$assert( count( $blocks ) === 2 && ( $blocks[0]['blockName'] ?? '' ) === 'core/group', 'root-page-becomes-group-with-appended-script-fallback', $serialized );
 $assert( count( $groups ) >= 3, 'page-and-sections-become-groups', $serialized );
 $assert( count( $headings ) === 2, 'normal-headings-are-native', $serialized );
 $assert( count( $paragraphs ) === 2, 'normal-copy-is-native', $serialized );
@@ -218,7 +218,7 @@ $assert( ! str_contains( $fallback_content, 'sc-after' ), 'fallback-does-not-wra
 $assert( count( $fallback_events ) === 1, 'script-fallback-emits-one-event', (string) count( $fallback_events ) );
 $event = $fallback_events[0] ?? [];
 $assert( ( $event[0] ?? '' ) === $fallback_content, 'event-html-is-scoped-script', print_r( $event, true ) );
-$assert( ( $event[1]['reason'] ?? '' ) === 'no_transform', 'event-reason-is-no-transform', print_r( $event, true ) );
+$assert( ( $event[1]['reason'] ?? '' ) === 'script_requires_runtime', 'event-reason-is-transformer-script-runtime', print_r( $event, true ) );
 $assert( ( $event[1]['tag_name'] ?? '' ) === 'SCRIPT', 'event-tag-name-is-script', print_r( $event, true ) );
 $assert( ( $event[2]['blockName'] ?? '' ) === 'core/html', 'event-block-is-core-html', print_r( $event, true ) );
 
