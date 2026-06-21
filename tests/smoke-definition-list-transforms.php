@@ -170,8 +170,10 @@ $assert( ( $definition_group['innerBlocks'][0]['innerBlocks'][1]['attrs']['conte
 $direct_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl><dt>Origin</dt><dd>Charleston</dd></dl>' ] );
 $assert( ( $direct_blocks[0]['blockName'] ?? '' ) === 'core/list', 'direct-definition-list-becomes-list' );
 $assert( ( $direct_blocks[0]['innerBlocks'][0]['attrs']['content'] ?? '' ) === 'Origin: Charleston', 'direct-definition-list-content' );
+$assert( ! html_to_blocks_needs_legacy_definition_list( '<dl><dt>Origin</dt><dd>Charleston</dd></dl>' ), 'direct-definition-list-uses-transformer-wrapper-path' );
 
 $wrapper_stat_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl class="hero-stats" aria-label="Store highlights"><div><dt>5</dt><dd>workflow categories</dd></div><div><dt>18+</dt><dd>bench-ready tools</dd></div><div><dt>0</dt><dd>guesswork mornings</dd></div></dl>' ] );
+$assert( html_to_blocks_needs_legacy_definition_list( '<dl class="hero-stats" aria-label="Store highlights"><div><dt>5</dt><dd>workflow categories</dd></div></dl>' ), 'wrapped-definition-list-keeps-legacy-wrapper-path' );
 $assert( count( $wrapper_stat_blocks ) === 1, 'wrapped-stat-definition-list-produces-single-block' );
 $assert( ( $wrapper_stat_blocks[0]['blockName'] ?? '' ) === 'core/group', 'wrapped-stat-definition-list-becomes-group' );
 $assert( ( $wrapper_stat_blocks[0]['attrs']['className'] ?? '' ) === 'hero-stats', 'wrapped-stat-definition-list-preserves-class' );
