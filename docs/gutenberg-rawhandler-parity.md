@@ -21,28 +21,19 @@ The executable parity contract lives in
 `tests/GutenbergRawHandlerParityUnitTest.php`. The broader support matrix lives
 in `docs/core-block-coverage.md`.
 
-## Blocks Engine Delegation Gates
+## Blocks Engine Canonical Runtime
 
-`html-to-blocks-converter` now delegates ordinary conversion to Blocks Engine PHP
-transformer when no local raw transforms were preloaded. The remaining
-`html_to_blocks_needs_legacy_*` gates are compatibility gates, not canonical
-runtime ownership. Keep a gate until Blocks Engine matches the legacy behavior
-and a characterization test proves the wrapper can accept the delegated output.
+`html-to-blocks-converter` uses the canonical Blocks Engine transformer for raw
+HTML conversion. The H2BC facade keeps the historical `html_to_blocks_*` API,
+normalizes shortcode and parsed-block inputs, serializes conversion results for
+callers, and exposes diagnostics, fallbacks, assets, SVG artifacts, metrics, and
+the underlying transformer result.
 
-Current gate debt:
-
-| Gate | Compatibility behavior protected | Removal condition |
-|---|---|---|
-| `html_to_blocks_needs_legacy_visual_or_nested_list()` | Visual list-like wrappers stay editable groups while plain lists remain native lists. | Split the gate so plain nested lists delegate, and keep visual wrappers local until Blocks Engine distinguishes them. |
-| `html_to_blocks_needs_legacy_script_fallback()` | Scoped script fallbacks preserve the original `<script>` body for observability. | Blocks Engine fallback payloads preserve the scoped script content or the public fallback contract changes. |
-| `html_to_blocks_needs_legacy_code_wrapper()` and `html_to_blocks_needs_legacy_span_wrapper()` | Code-window markup becomes preformatted/code content without decorative chrome. | Blocks Engine emits the same editable code body and drops decorative wrappers. |
-| `html_to_blocks_needs_legacy_checkbox_label()` | Checkbox inputs are dropped while label text remains editable content. | Blocks Engine matches the legacy checkbox-label transform. |
-| `html_to_blocks_needs_legacy_definition_list()` | Visual definition-list wrappers remain groups while direct definition lists remain lists. | Blocks Engine distinguishes visual wrappers from semantic `<dl>` input. |
-| `html_to_blocks_needs_legacy_blockquote_figure()` | Testimonial figure/blockquote classes and attribution stay compatible with older consumers. | Blocks Engine output matches the legacy class and attribution contract. |
-| `html_to_blocks_needs_legacy_text_div()` and wrapper/media/SVG gates | Static-site chrome, decorative wrappers, resized SVGs, and visual media wrappers retain legacy serialization. | Blocks Engine output matches the wrapper fixture expectations and the smoke tests pass without local routing. |
-
-Gate deletion should pair a narrowing/removal change with the focused smoke test
-for the protected shape plus the parity/unit coverage named below.
+Tests should assert public facade behavior and the Blocks Engine block families
+produced for supported static HTML. When behavior changes, update the focused
+smoke fixture for the public shape plus the parity/unit coverage named below.
+Blocks Engine keeps runtime ownership for canonical transformation behavior;
+h2bc keeps only the historical facade contract.
 
 ## Covered Static Expectations
 

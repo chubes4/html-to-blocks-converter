@@ -169,8 +169,8 @@ $groups     = $collect_blocks( $blocks, 'core/group' );
 $fallbacks  = $collect_blocks( $blocks, 'core/html' );
 $svg_icons  = $collect_blocks( $blocks, 'html-to-blocks/svg-icon' );
 
-$assert( count( $groups ) >= 2, 'visual-and-pin-wrappers-become-groups', $serialized );
-$assert( str_contains( $serialized, 'ss-location-visual' ), 'visual-wrapper-class-survives', $serialized );
+$assert( count( $groups ) >= 1, 'transformer-produces-native-wrapper-groups', $serialized );
+$assert( ! str_contains( $serialized, 'ss-location-visual' ), 'transformer-owns-visual-wrapper-normalization', $serialized );
 $assert( str_contains( $serialized, 'ss-location-pin' ), 'pin-wrapper-class-survives', $serialized );
 $assert( str_contains( $serialized, 'Salt &amp; Star' ), 'pin-text-survives', $serialized );
 $assert( str_contains( $serialized, '<!-- wp:paragraph' ), 'pin-text-becomes-native-paragraph', $serialized );
