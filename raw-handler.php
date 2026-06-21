@@ -1,9 +1,10 @@
 <?php
 /**
- * Raw handler pipeline ported from Gutenberg JavaScript to PHP
+ * Raw handler facade for server-side HTML-to-block conversion.
  *
  * Uses WordPress HTML API (WP_HTML_Processor) for spec-compliant HTML5 parsing.
- * Converts HTML to Gutenberg blocks using registered transforms.
+ * Delegates canonical HTML-to-block conversion to Blocks Engine and adapts the
+ * result into the historical h2bc public APIs.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -241,11 +242,12 @@ function html_to_blocks_transformer_fallback_html( array $fallback ): string {
 }
 
 /**
- * Converts HTML directly to blocks using registered transforms
+ * Converts HTML directly to blocks through the canonical Blocks Engine transformer.
  *
  * @param string $html HTML to convert
  * @param array  $args Raw handler arguments for transform context.
- * @return array Array of blocks
+ * @return array Array of blocks.
+ * @throws RuntimeException When Blocks Engine's HtmlTransformer is unavailable.
  */
 function html_to_blocks_convert( $html, $args = array() ) {
 	if ( empty( trim( $html ) ) ) {
@@ -1774,7 +1776,7 @@ function html_to_blocks_create_unsupported_html_fallback_block( string $element_
 
 	if ( function_exists( 'do_action' ) ) {
 		/**
-		 * Fires when h2bc falls back to core/html because no supported transform exists.
+		 * Fires when h2bc preserves Blocks Engine fallback markup as core/html.
 		 *
 		 * @param string $element_html Unsupported HTML fragment.
 		 * @param array  $context      Context including reason, tag_name, and occurrence when available.
@@ -1791,7 +1793,7 @@ function html_to_blocks_create_unsupported_html_fallback_block( string $element_
  *
  * Some upstream callers pass already-serialized block markup through h2bc. In that
  * path parse_blocks() would otherwise preserve harmless image-only core/html
- * fragments instead of applying the raw image transforms.
+ * fragments instead of delegating those fragments back through Blocks Engine.
  *
  * @param array<int|string,array<string,mixed>> $blocks Parsed blocks.
  * @return array<int|string,array<string,mixed>> Normalized blocks.
@@ -1951,7 +1953,7 @@ function html_to_blocks_is_decorative_inline_span_fragment( string $html ): bool
  * Checks whether an HTML fragment is only an image, optionally inside one wrapper.
  *
  * @param string $html HTML fragment.
- * @return bool True when the fragment can safely be re-run through image transforms.
+ * @return bool True when the fragment can safely be delegated back to Blocks Engine.
  */
 function html_to_blocks_is_image_only_html_fragment( string $html ): bool {
 	$element = HTML_To_Blocks_HTML_Element::from_html( $html );

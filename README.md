@@ -18,9 +18,9 @@ This plugin provides server-side HTML-to-blocks conversion using WordPress Core'
 - Programmatically creating posts with block-based content
 - Converting HTML from headless CMS or content pipelines
 
-## Supported Block Transforms
+## Supported Block Output
 
-The plugin converts high-confidence static HTML patterns to their corresponding Gutenberg blocks:
+The plugin delegates canonical conversion to Blocks Engine and exposes the resulting Gutenberg block arrays through the historical h2bc facade:
 
 | HTML signal | Block type |
 |-------------|------------|
@@ -47,15 +47,15 @@ The plugin converts high-confidence static HTML patterns to their corresponding 
 
 Nested lists and blockquotes with multiple paragraphs are fully supported.
 
-For the source-of-truth status of supported transforms, observed fallbacks,
-future candidates, and context-required block families, see the
+For the source-of-truth status of Blocks Engine-backed output, observed
+fallbacks, future candidates, and context-required block families, see the
 [Core Block Coverage Matrix](docs/core-block-coverage.md).
 
 For Site Editor and block theme boundaries, including which block families
 should not be inferred from raw HTML alone, see
 [Site Editor Boundary](docs/site-editor-boundary.md).
 
-For the supported subset h2bc intentionally keeps aligned with Gutenberg's
+For the supported subset the public h2bc facade keeps aligned with Gutenberg's
 `rawHandler`, see [Gutenberg rawHandler Parity](docs/gutenberg-rawhandler-parity.md).
 
 Unsupported top-level elements are preserved as `core/html` instead of guessed.
@@ -64,9 +64,9 @@ with the unsupported HTML fragment, fallback context, and generated block so
 production pipelines can log, warn, or fail on unexpected fallback usage.
 
 Downstream tools can call `html_to_blocks_get_capabilities()` for a stable
-capability inventory instead of parsing transform source. The inventory reports
-the package version, raw handler availability, transform families, supported core
-blocks, explicit Site Editor marker attributes, and fallback/metrics hook names.
+capability inventory instead of parsing source. The inventory reports the package
+version, raw handler availability, the Blocks Engine provider, supported core
+blocks observed through the provider, and fallback/metrics hook names.
 
 ## Installation
 
@@ -133,6 +133,10 @@ $html = '<h1>Title</h1><p>Paragraph with <strong>bold</strong> text.</p>';
 $blocks = html_to_blocks_raw_handler(['HTML' => $html]);
 $block_content = serialize_blocks($blocks);
 ```
+
+Direct conversion requires Blocks Engine's `HtmlTransformer`. If the dependency
+cannot be autoloaded, `html_to_blocks_convert()` throws `RuntimeException` instead
+of falling back to a legacy internal conversion path.
 
 Compilers and importers that need diagnostics and source references can call the
 result API instead:
@@ -240,7 +244,7 @@ the library initializer.
 ## Requirements
 
 - WordPress 6.4+ (required for `WP_HTML_Processor`)
-- PHP 7.4+
+- PHP 8.1+
 
 ## License
 

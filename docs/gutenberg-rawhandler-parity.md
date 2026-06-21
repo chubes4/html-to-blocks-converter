@@ -45,7 +45,7 @@ The retained public facade surface is intentionally limited to:
   fallback observation, metrics, and load-time integration.
 
 Post-parity behavior that Blocks Engine now owns should be covered through the
-public facade rather than duplicated in H2BC transforms. The retirement-readiness
+public facade rather than duplicated in H2BC. The retirement-readiness
 smoke in `tests/smoke-blocks-engine-parity-facade.php` proves that H2BC passes
 caller asset metadata through to Blocks Engine image conversion, exposes the
 Blocks Engine result schema/coverage, and returns native spacer blocks without a
