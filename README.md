@@ -1,6 +1,6 @@
 # HTML to Blocks Converter
 
-A WordPress plugin **and Composer package** that converts raw HTML to Gutenberg block arrays using WordPress Core's HTML API.
+A legacy WordPress plugin **and Composer package** that exposes the historical `html_to_blocks_*` facade while delegating canonical raw HTML conversion to Blocks Engine.
 
 It works in two modes:
 
@@ -9,7 +9,7 @@ It works in two modes:
 
 ## Description
 
-This plugin provides server-side HTML-to-blocks conversion using WordPress Core's HTML API (`WP_HTML_Processor`) for spec-compliant HTML5 parsing. Inspired by Gutenberg's client-side `rawHandler` function from [`packages/blocks/src/api/raw-handling`](https://github.com/WordPress/gutenberg/tree/trunk/packages/blocks/src/api/raw-handling), it enables programmatic content creation with proper block structure, and ensures the block editor sees proper blocks for supported post types even when `post_content` contains raw HTML.
+This package is a compatibility facade for callers that still use the `html_to_blocks_*` APIs. It delegates conversion to Blocks Engine's `HtmlTransformer`, keeps the WordPress plugin/package shell, and adapts the canonical result into the historical raw-handler arrays, fallback hooks, diagnostics, and automatic write/read hooks.
 
 ### Use Cases
 
@@ -18,34 +18,9 @@ This plugin provides server-side HTML-to-blocks conversion using WordPress Core'
 - Programmatically creating posts with block-based content
 - Converting HTML from headless CMS or content pipelines
 
-## Supported Block Output
+## Delegated Block Output
 
-The plugin delegates canonical conversion to Blocks Engine and exposes the resulting Gutenberg block arrays through the historical h2bc facade:
-
-| HTML signal | Block type |
-|-------------|------------|
-| `<h1>` - `<h6>` | `core/heading` |
-| `<p>` and plain text | `core/paragraph` |
-| `<ul>`, `<ol>` | `core/list` with `core/list-item` children |
-| `<blockquote>` | `core/quote` |
-| `<blockquote class="wp-block-pullquote">` | `core/pullquote` |
-| `<figure><img>`, `<img>` | `core/image` |
-| gallery-like wrappers with multiple images | `core/gallery` with `core/image` children |
-| `<video>` / `<audio>` with a source | `core/video` / `core/audio` |
-| recognized provider `<iframe>` embeds | `core/embed` |
-| downloadable file anchors | `core/file` |
-| media-text wrappers | `core/media-text` |
-| WordPress button anchors | `core/buttons` with `core/button` children |
-| `<details>` | `core/details` |
-| `<pre class="wp-block-verse">` | `core/verse` |
-| `<pre><code>` | `core/code` |
-| `<pre>` | `core/preformatted` |
-| `<hr>` | `core/separator` |
-| `<table>` | `core/table` |
-| WordPress shortcodes | `core/shortcode` |
-| high-confidence semantic/layout wrappers | `core/group`, `core/columns`, `core/column`, `core/cover`, `core/spacer` |
-
-Nested lists and blockquotes with multiple paragraphs are fully supported.
+The plugin exposes Gutenberg block arrays returned by Blocks Engine through the historical h2bc facade. H2BC does not maintain a separate supported-block registry or local transform priority list.
 
 For the source-of-truth status of Blocks Engine-backed output, observed
 fallbacks, future candidates, and context-required block families, see the
@@ -232,14 +207,6 @@ definitions.
 plugin's WordPress/PHP guard checks, then loads `library.php`. Composer consumers
 skip the plugin shell but still load the raw handler and automatic hooks through
 the library initializer.
-
-### Why WordPress HTML API?
-
-- HTML5 spec-compliant parsing that matches browser behavior
-- Proper UTF-8 character encoding handling
-- Correct handling of implied/virtual tags
-- WordPress Core maintained and security hardened
-- Future-proof as the API continues to improve
 
 ## Requirements
 

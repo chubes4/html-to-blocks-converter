@@ -1,9 +1,10 @@
 # Site Editor Boundary
 
-`html-to-blocks-converter` is a WordPress-facing facade for Blocks Engine raw
-conversion. It delegates deterministic HTML fragments to Blocks Engine, adapts
-the result into Gutenberg block arrays, and falls back safely when a fragment is
-not convertible. It is not a block theme or Site Editor compiler.
+`html-to-blocks-converter` is a retired implementation surface kept as a
+WordPress-facing facade for Blocks Engine raw conversion. It delegates
+deterministic HTML fragments to Blocks Engine, adapts the result into Gutenberg
+block arrays, and exposes fallback diagnostics when Blocks Engine reports
+unconverted fragments. It is not a block theme or Site Editor compiler.
 
 ## Raw Handler Pattern
 
@@ -12,33 +13,25 @@ The `html_to_blocks_raw_handler()` flow mirrors Gutenberg's raw-handler shape:
 ```text
 HTML fragment
   -> shortcode split
-  -> HTML5 fragment parse through WP_HTML_Processor
   -> Blocks Engine HtmlTransformer
-  -> core/html fallback adaptation for unconverted top-level elements
+  -> wrapper fallback diagnostics for unconverted fragments
   -> block arrays for serialize_blocks()
 ```
 
 This layer is intentionally deterministic. It should only produce a semantic
 block when the HTML fragment itself contains enough information to choose that
 block without knowing the surrounding template, site identity, query, or theme.
-The source-of-truth list of supported output, observed fallbacks, future
-candidates, and context-required block families lives in the
-[Core Block Coverage Matrix](core-block-coverage.md).
+The source-of-truth list of supported output and observed fallbacks belongs to
+Blocks Engine. The [Core Block Coverage Matrix](core-block-coverage.md) records
+the h2bc facade boundary and context-required block families only.
 
 ## Block Family Boundary
 
 | Block family | Status | Boundary |
 |---|---|---|
-| `core/paragraph` | Raw-transformable | Plain text and `<p>` map directly. |
-| `core/heading` | Raw-transformable | `<h1>` through `<h6>` map to heading levels. A compiler may later choose a site-title, post-title, or query-title block when it has that intent. |
-| `core/list`, `core/list-item` | Raw-transformable | `<ul>` and `<ol>` map directly, including nested lists. |
-| `core/quote` | Raw-transformable | `<blockquote>` maps directly, with nested static content handled recursively. |
-| `core/image` | Raw-transformable with conservative heuristics | `<img>` and `<figure><img>` map to static image blocks. Media-library attachment identity is not inferred. |
-| `core/code`, `core/preformatted` | Raw-transformable | `<pre><code>` and `<pre>` map directly. |
-| `core/separator` | Raw-transformable | `<hr>` maps directly. |
-| `core/table` | Raw-transformable | `<table>` maps to a static table block. |
+| Common static text/media blocks | Delegated | Paragraphs, headings, lists, quotes, images, code, separators, tables, and similar static blocks are emitted only when Blocks Engine returns them. |
 | `core/html` | Safe fallback | Unknown or intentionally unsupported fragments are preserved as custom HTML instead of guessed. |
-| Layout-only static containers | Raw-transformable with conservative heuristics | Groups, columns, covers, buttons, and similar layout blocks may be added only when the HTML pattern is unambiguous and the fallback remains lossless. |
+| Layout-only static containers | Delegated | Groups, columns, covers, buttons, and similar layout blocks are emitted only when Blocks Engine returns them. |
 | `core/pattern` | Future candidate | Explicit markers such as `data-h2bc-pattern="namespace/slug"` or the shared BFB alias `data-bfb-pattern="namespace/slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Similar-looking layout is not enough. |
 | `core/template-part` | Future candidate | Explicit markers such as `data-h2bc-template-part="area-or-slug"` or the shared BFB alias `data-bfb-template-part="area-or-slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Header/footer-looking layout is not enough. |
 | Rendered navigation markup | Safe fallback | `<nav>` fragments are preserved as `core/html` in default raw conversion because native navigation blocks do not have a valid static serialization shape here. |
@@ -53,8 +46,9 @@ candidates, and context-required block families lives in the
 | Interactive or stateful app blocks | Intentionally unsupported | Arbitrary HTML is not enough to infer application state, data sources, or editor controls. |
 
 The important rule is that rendered HTML is not identity. The same `<h1>` could
-be a static heading, site title, post title, or query title. This package should
-choose `core/heading` because that is the only answer proven by the fragment.
+be a static heading, site title, post title, or query title. H2BC does not make
+that decision locally; it delegates the raw conversion answer to Blocks Engine
+and keeps context-required blocks out of the facade boundary.
 
 ## Public Capability Inventory
 
