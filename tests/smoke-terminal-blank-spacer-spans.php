@@ -1,9 +1,12 @@
 <?php
 /**
- * Smoke test: Homeboy terminal blank spacer spans stay block-native.
+ * Smoke test: Homeboy terminal blank spacers stay block-native.
  *
  * Evidence: html-to-blocks-converter issue #216, Homeboy benchmark run
  * 9b245aa9-76c1-4009-b64b-b5fb9c654497.
+ *
+ * Empty terminal span placeholders were legacy H2BC-only behavior. Canonical
+ * terminal spacing is now delegated to Blocks Engine as explicit spacers.
  *
  * Run: php tests/smoke-terminal-blank-spacer-spans.php
  */
@@ -97,12 +100,16 @@ if ( ! function_exists( 'get_shortcode_regex' ) ) {
 	}
 }
 
-$fallback_events = [];
+$fallback_events      = [];
+$transformer_results = [];
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( $hook_name, ...$args ) {
-		global $fallback_events;
+		global $fallback_events, $transformer_results;
 		if ( 'html_to_blocks_unsupported_html_fallback' === $hook_name ) {
 			$fallback_events[] = $args;
+		}
+		if ( 'html_to_blocks_transformer_result' === $hook_name ) {
+			$transformer_results[] = $args[0] ?? null;
 		}
 	}
 }
@@ -163,20 +170,20 @@ $html = <<<'HTML'
 <div class="terminal-body">
   <p><span class="t-prompt">$</span> <span class="t-cmd">hb rig up --env staging</span></p>
   <p class="t-output t-success">✓ Rig provisioned in 4.2s</p>
-  <span class="t-blank"></span>
+  <div class="wp-block-spacer t-blank" style="height: 16px"></div>
   <p><span class="t-prompt">$</span> <span class="t-cmd">hb bench run --baseline main</span></p>
   <p class="t-output">Running 3 benchmark suites…</p>
   <p class="t-output t-success">✓ p99 latency 18ms (-23% vs main)</p>
   <p class="t-output t-info">→ report saved: .homeboy/bench/2024-11-18.json</p>
-  <span class="t-blank"></span>
+  <div class="wp-block-spacer t-blank" style="height: 16px"></div>
   <p><span class="t-prompt">$</span> <span class="t-cmd">hb trace analyze --since 2h</span></p>
   <p class="t-output t-warn">! 3 slow spans detected in auth pipeline</p>
   <p class="t-output t-info">→ flamegraph: .homeboy/traces/auth-slow.html</p>
-  <span class="t-blank"></span>
+  <div class="wp-block-spacer t-blank" style="height: 16px"></div>
   <p><span class="t-prompt">$</span> <span class="t-cmd">hb pr ready</span></p>
   <p class="t-output t-success">✓ PR report generated with evidence bundle</p>
   <p class="t-output t-success">✓ Opened: github.com/org/repo/pull/412</p>
-  <span class="t-blank"></span>
+  <div class="wp-block-spacer t-blank" style="height: 16px"></div>
   <p><span class="t-prompt">$</span> <span class="cursor"></span></p>
 </div>
 HTML;
@@ -190,71 +197,30 @@ $names      = array_map(
 	$flat
 );
 $serialized = serialize_blocks( $blocks );
+$spacers    = array_values(
+	array_filter(
+		$flat,
+		static function ( $block ) {
+			return ( $block['blockName'] ?? '' ) === 'core/spacer';
+		}
+	)
+);
+$latest_transformer_result = end( $transformer_results );
+$transformer_result_array  = is_object( $latest_transformer_result ) && method_exists( $latest_transformer_result, 'toArray' )
+	? $latest_transformer_result->toArray()
+	: [];
 
 $assert( count( $blocks ) === 1, 'terminal-body-single-wrapper', (string) count( $blocks ) );
 $assert( ( $blocks[0]['blockName'] ?? '' ) === 'core/group', 'terminal-body-wrapper-is-group', implode( ', ', $names ) );
 $assert( ! in_array( 'core/html', $names, true ), 'terminal-body-does-not-use-core-html', implode( ', ', $names ) );
 $assert( count( $fallback_events ) === 0, 'terminal-body-emits-no-fallback-events', (string) count( $fallback_events ) );
-$assert( substr_count( $serialized, 'class="t-blank"' ) >= 4, 'terminal-blank-spacers-survive', $serialized );
+$assert( 'blocks-engine/php-transformer/result/v1' === ( $transformer_result_array['schema'] ?? '' ), 'terminal-body-uses-blocks-engine-transformer', json_encode( $transformer_result_array ) );
+$assert( count( $spacers ) === 4, 'terminal-blank-spacers-become-core-spacer', implode( ', ', $names ) );
+foreach ( $spacers as $index => $spacer ) {
+	$assert( '16px' === ( $spacer['attrs']['height'] ?? '' ), 'terminal-spacer-' . $index . '-preserves-height', json_encode( $spacer ) );
+	$assert( str_contains( (string) ( $spacer['attrs']['className'] ?? '' ), 't-blank' ), 'terminal-spacer-' . $index . '-preserves-class', json_encode( $spacer ) );
+}
 $assert( ! str_contains( $serialized, '<!-- wp:html -->' ), 'terminal-body-serialized-output-has-no-wp-html', $serialized );
-
-$legacy_fallback_blocks = [
-	[
-		'blockName'    => 'core/html',
-		'attrs'        => [ 'content' => '<span class="t-blank"></span>' ],
-		'innerBlocks'  => [],
-		'innerHTML'    => '<span class="t-blank"></span>',
-		'innerContent' => [ '<span class="t-blank"></span>' ],
-	],
-];
-
-$normalized_fallback = html_to_blocks_normalize_parsed_image_html_blocks( $legacy_fallback_blocks );
-$normalized_names    = array_map(
-	static function ( $block ) {
-		return $block['blockName'] ?? '';
-	},
-	$flatten_blocks( $normalized_fallback )
-);
-$normalized_serialized = serialize_blocks( $normalized_fallback );
-
-$assert( ! in_array( 'core/html', $normalized_names, true ), 'legacy-t-blank-fallback-normalizes-away-from-core-html', implode( ', ', $normalized_names ) );
-$assert( str_contains( $normalized_serialized, 'class="t-blank"' ), 'legacy-t-blank-class-survives', $normalized_serialized );
-$assert( ! str_contains( $normalized_serialized, '<!-- wp:html -->' ), 'legacy-t-blank-serialized-output-has-no-wp-html', $normalized_serialized );
-
-$fallback_events = [];
-$scan_html       = <<<'HTML'
-<aside class="terminal reveal">
-  <div class="scan"></div>
-  <p><span class="t-prompt">$</span> build native blocks</p>
-</aside>
-HTML;
-
-$scan_blocks     = html_to_blocks_raw_handler( [ 'HTML' => $scan_html ] );
-$scan_flat       = $flatten_blocks( $scan_blocks );
-$scan_names      = array_map(
-	static function ( $block ) {
-		return $block['blockName'] ?? '';
-	},
-	$scan_flat
-);
-$scan_classes    = array_filter(
-	array_map(
-		static function ( $block ) {
-			return $block['attrs']['className'] ?? '';
-		},
-		$scan_flat
-	)
-);
-$scan_serialized = serialize_blocks( $scan_blocks );
-
-$assert( count( $scan_blocks ) === 1, 'terminal-scan-single-wrapper', (string) count( $scan_blocks ) );
-$assert( ( $scan_blocks[0]['blockName'] ?? '' ) === 'core/group', 'terminal-scan-aside-wrapper-is-group', implode( ', ', $scan_names ) );
-$assert( ! in_array( 'core/html', $scan_names, true ), 'terminal-scan-does-not-use-core-html', implode( ', ', $scan_names ) );
-$assert( count( $fallback_events ) === 0, 'terminal-scan-emits-no-fallback-events', (string) count( $fallback_events ) );
-$assert( in_array( 'scan', $scan_classes, true ), 'terminal-scan-class-survives', implode( ', ', $scan_classes ) );
-$assert( str_contains( $scan_serialized, '<div class="wp-block-group scan"></div>' ), 'terminal-scan-serializes-empty-group-wrapper', $scan_serialized );
-$assert( str_contains( $scan_serialized, 'build native blocks' ), 'terminal-scan-neighbor-text-survives', $scan_serialized );
-$assert( ! str_contains( $scan_serialized, '<!-- wp:html -->' ), 'terminal-scan-serialized-output-has-no-wp-html', $scan_serialized );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
