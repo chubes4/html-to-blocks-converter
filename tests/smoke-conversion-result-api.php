@@ -158,10 +158,8 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 
 $repo_root = dirname( __DIR__ );
 require_once $repo_root . '/includes/class-block-factory.php';
-require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
 require_once $repo_root . '/includes/class-svg-icon-classifier.php';
-require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
 $failures   = [];

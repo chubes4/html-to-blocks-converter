@@ -127,9 +127,7 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 
 $repo_root = getenv( 'HOMEBOY_TRACE_COMPONENT_PATH' ) ?: dirname( __DIR__, 2 );
 require_once $repo_root . '/includes/class-block-factory.php';
-require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
-require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
 $results_file = getenv( 'HOMEBOY_TRACE_RESULTS_FILE' );

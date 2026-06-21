@@ -9,26 +9,23 @@ Server-side HTML-to-Gutenberg-blocks conversion plugin using WordPress Core's HT
 | File | Responsibility |
 |------|---------------|
 | `html-to-blocks-converter.php` | Plugin bootstrap, WordPress hook registration |
-| `raw-handler.php` | Main conversion pipeline, HTML normalization, shortcode handling |
+| `raw-handler.php` | Blocks Engine facade, HTML normalization, shortcode handling, result envelope |
 | `includes/class-html-element.php` | DOM-like interface adapter over WP_HTML_Processor |
-| `includes/class-transform-registry.php` | Block transform definitions (heading, list, image, quote, code, preformatted, separator, table, paragraph) |
 | `includes/class-block-factory.php` | Block array creation compatible with serialize_blocks() |
-| `includes/class-attribute-parser.php` | Block attribute extraction from HTML using DOM parsing |
 
 ### Conversion Pipeline Flow
 
 1. `html_to_blocks_convert_on_insert()` - Hooks into `wp_insert_post_data` filter
 2. `html_to_blocks_raw_handler()` - Main entry point, handles shortcode preservation
 3. `html_to_blocks_normalise_blocks()` - Wraps orphan inline content in paragraphs
-4. `html_to_blocks_convert()` - Iterates top-level elements, matches transforms
-5. Transform callbacks create blocks via `HTML_To_Blocks_Block_Factory::create_block()`
+4. `html_to_blocks_convert()` - Delegates conversion to Blocks Engine `HtmlTransformer`
+5. H2BC adapts Blocks Engine results into legacy block arrays, fallback hooks, and result envelopes
 
 ### Key Technical Decisions
 
 - **WordPress HTML API (`WP_HTML_Processor`)**: HTML5 spec-compliant parsing that matches browser behavior
-- **Token-based iteration**: Uses depth tracking to identify top-level elements
-- **Balanced element extraction**: Custom regex-based extraction for nested structures
-- **Transform priority system**: Lower priority = higher precedence (code transforms before preformatted)
+- **Blocks Engine delegation**: H2BC no longer owns an internal transform registry
+- **Facade compatibility**: Existing public raw-handler/result APIs remain backed by Blocks Engine output
 
 ## Supported Block Transforms
 
@@ -81,11 +78,3 @@ DOM-like interface over WP_HTML_Processor:
 ### HTML_To_Blocks_Block_Factory
 
 - `create_block( string $name, array $attributes, array $inner_blocks )` - Creates block array structure
-
-### HTML_To_Blocks_Transform_Registry
-
-- `get_raw_transforms()` - Returns all registered transforms sorted by priority
-
-### HTML_To_Blocks_Attribute_Parser
-
-- `get_block_attributes( string $block_name, string $html, array $overrides )` - Parse attributes from HTML
