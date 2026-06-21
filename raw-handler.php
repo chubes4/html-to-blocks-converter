@@ -339,11 +339,24 @@ function html_to_blocks_needs_legacy_nested_section_wrapper( string $html ): boo
 /**
  * Detects script islands that H2BC preserves as local HTML fallbacks.
  *
- * @param string $html Source HTML.
+ * @param string $html      Source HTML.
+ * @param array  $fallbacks Transformer fallback records.
  * @return bool True when local compatibility transforms should supply blocks.
  */
-function html_to_blocks_needs_legacy_script_fallback( string $html ): bool {
-	return 1 === preg_match( '/<script\b/i', $html );
+function html_to_blocks_needs_legacy_script_fallback( string $html, array $fallbacks ): bool {
+	if ( 1 !== preg_match( '/<script\b/i', $html ) ) {
+		return false;
+	}
+
+	foreach ( $fallbacks as $fallback ) {
+		if ( ! is_array( $fallback ) || 'script' !== strtolower( (string) ( $fallback['tag'] ?? '' ) ) ) {
+			continue;
+		}
+
+		return ! array_key_exists( 'body', $fallback );
+	}
+
+	return true;
 }
 
 /**
@@ -417,6 +430,36 @@ function html_to_blocks_record_transform_metric( array &$metrics, string $name, 
 }
 
 /**
+ * Builds display-safe fallback HTML from canonical transformer fallback metadata.
+ *
+ * @param array<string,mixed> $fallback Transformer fallback record.
+ * @return string Scoped fallback HTML fragment.
+ */
+function html_to_blocks_transformer_fallback_html( array $fallback ): string {
+	$html = isset( $fallback['html'] ) ? (string) $fallback['html'] : '';
+	if ( '' !== $html ) {
+		return $html;
+	}
+
+	if ( 'script' !== strtolower( (string) ( $fallback['tag'] ?? '' ) ) || ! array_key_exists( 'body', $fallback ) ) {
+		return '';
+	}
+
+	$attributes = array();
+	foreach ( (array) ( $fallback['attributes'] ?? array() ) as $name => $value ) {
+		$name = strtolower( (string) $name );
+		if ( ! preg_match( '/^[a-z][a-z0-9:-]*$/', $name ) ) {
+			continue;
+		}
+		$attributes[] = $name . '="' . htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ) . '"';
+	}
+
+	$attribute_html = array() === $attributes ? '' : ' ' . implode( ' ', $attributes );
+
+	return '<script' . $attribute_html . '>' . (string) $fallback['body'] . '</script>';
+}
+
+/**
  * Converts HTML directly to blocks using registered transforms
  *
  * @param string $html HTML to convert
@@ -446,7 +489,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			|| html_to_blocks_needs_legacy_definition_list( (string) $html )
 			|| html_to_blocks_needs_legacy_visual_media_wrapper( (string) $html )
 			|| html_to_blocks_needs_legacy_nested_section_wrapper( (string) $html )
-			|| html_to_blocks_needs_legacy_script_fallback( (string) $html )
+			|| html_to_blocks_needs_legacy_script_fallback( (string) $html, $result->fallbacks )
 			|| html_to_blocks_needs_legacy_resized_svg_image( (string) $html )
 			|| html_to_blocks_needs_legacy_checkbox_label( (string) $html )
 			|| html_to_blocks_needs_legacy_blockquote_figure( (string) $html )
@@ -457,7 +500,12 @@ function html_to_blocks_convert( $html, $args = array() ) {
 			$blocks = $result->blocks;
 
 			foreach ( $result->fallbacks as $fallback ) {
-				if ( ! is_array( $fallback ) || empty( $fallback['html'] ) ) {
+				if ( ! is_array( $fallback ) ) {
+					continue;
+				}
+
+				$fallback_html = html_to_blocks_transformer_fallback_html( $fallback );
+				if ( '' === $fallback_html ) {
 					continue;
 				}
 
@@ -468,7 +516,7 @@ function html_to_blocks_convert( $html, $args = array() ) {
 				}
 
 				$blocks[] = html_to_blocks_create_unsupported_html_fallback_block(
-					(string) $fallback['html'],
+					$fallback_html,
 					array(
 						'reason'               => (string) ( $fallback['reason'] ?? 'no_transform' ),
 						'tag_name'             => strtoupper( (string) ( $fallback['tag'] ?? '' ) ),
