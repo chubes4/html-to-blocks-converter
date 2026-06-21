@@ -1,11 +1,6 @@
 <?php
 /**
- * Smoke test: media/embed raw transforms.
- *
- * Runs without WordPress by stubbing the tiny surface needed by the transform
- * registry and block factory. This keeps the transform contract deterministic:
- * high-confidence media patterns become semantic blocks, while unsafe patterns
- * remain unmatched for the raw handler's core/html fallback.
+ * Smoke test: media/embed facade output follows Blocks Engine canonical output.
  *
  * Run: php tests/smoke-media-embed-transforms.php
  */
@@ -16,277 +11,181 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ );
 }
 
-if ( ! function_exists( 'esc_attr' ) ) {
-	function esc_attr( $value ) {
-		return htmlspecialchars( (string) $value, ENT_QUOTES, 'UTF-8' );
+if ( ! class_exists( 'WP_HTML_Processor', false ) ) {
+	$wp_html_api_candidates = array_filter(
+		[
+			getenv( 'WP_HTML_API_PATH' ) ? getenv( 'WP_HTML_API_PATH' ) : '',
+			'/wordpress/wp-includes/html-api',
+			'/Users/chubes/Studio/intelligence-chubes4/wp-includes/html-api',
+		]
+	);
+	$wp_html_api_path       = '';
+
+	foreach ( $wp_html_api_candidates as $candidate ) {
+		if ( is_file( rtrim( $candidate, '/' ) . '/class-wp-html-processor.php' ) ) {
+			$wp_html_api_path = rtrim( $candidate, '/' );
+			break;
+		}
+	}
+
+	if ( '' === $wp_html_api_path ) {
+		fwrite( STDERR, "FAIL: WP_HTML_Processor is unavailable. Set WP_HTML_API_PATH to wp-includes/html-api.\n" );
+		exit( 1 );
+	}
+
+	$core_root = dirname( $wp_html_api_path );
+	if ( is_file( $core_root . '/class-wp-token-map.php' ) ) {
+		require_once $core_root . '/class-wp-token-map.php';
+	}
+	if ( is_file( $wp_html_api_path . '/html5-named-character-references.php' ) ) {
+		require_once $wp_html_api_path . '/html5-named-character-references.php';
+	}
+
+	foreach ( [
+		'class-wp-html-attribute-token.php',
+		'class-wp-html-span.php',
+		'class-wp-html-text-replacement.php',
+		'class-wp-html-decoder.php',
+		'class-wp-html-doctype-info.php',
+		'class-wp-html-unsupported-exception.php',
+		'class-wp-html-token.php',
+		'class-wp-html-tag-processor.php',
+		'class-wp-html-stack-event.php',
+		'class-wp-html-open-elements.php',
+		'class-wp-html-active-formatting-elements.php',
+		'class-wp-html-processor-state.php',
+		'class-wp-html-processor.php',
+	] as $file ) {
+		require_once $wp_html_api_path . '/' . $file;
 	}
 }
-if ( ! function_exists( 'esc_url' ) ) {
-	function esc_url( $value ) {
-		return (string) $value;
+
+foreach ( [ 'esc_attr', 'esc_html', 'esc_url' ] as $function_name ) {
+	if ( ! function_exists( $function_name ) ) {
+		eval( 'function ' . $function_name . '( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES, "UTF-8" ); }' );
 	}
 }
-if ( ! function_exists( 'sanitize_html_class' ) ) {
-	function sanitize_html_class( $value ) {
-		return preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $value );
+
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	function wp_strip_all_tags( $text ) {
+		return trim( strip_tags( (string) $text ) );
 	}
 }
+
 if ( ! function_exists( 'wp_parse_url' ) ) {
 	function wp_parse_url( $url, $component = -1 ) {
 		return parse_url( $url, $component );
 	}
 }
 
-if ( ! class_exists( 'WP_Block_Type_Registry', false ) ) {
-	class WP_Block_Type_Registry {
-		private static $instance;
-		private $blocks = [];
-
-		public static function get_instance() {
-			if ( ! self::$instance ) {
-				self::$instance = new self();
-			}
-			return self::$instance;
-		}
-
-		public function __construct() {
-			$source_string = [ 'type' => 'string', 'source' => 'attribute' ];
-			$source_rich   = [ 'type' => 'rich-text', 'source' => 'rich-text' ];
-			foreach ( [ 'core/video', 'core/audio', 'core/image' ] as $name ) {
-				$this->blocks[ $name ] = (object) [
-					'attributes' => [
-						'src'       => $source_string,
-						'url'       => $source_string,
-						'alt'       => $source_string,
-						'caption'   => $source_rich,
-						'poster'    => $source_string,
-						'preload'   => $source_string,
-						'autoplay'  => [ 'type' => 'boolean', 'source' => 'attribute' ],
-						'controls'  => [ 'type' => 'boolean', 'source' => 'attribute' ],
-						'loop'      => [ 'type' => 'boolean', 'source' => 'attribute' ],
-						'muted'     => [ 'type' => 'boolean', 'source' => 'attribute' ],
-						'id'        => [ 'type' => 'number' ],
-						'className' => [ 'type' => 'string' ],
-					],
-				];
-			}
-
-			$this->blocks['core/gallery'] = (object) [
-				'attributes' => [
-					'ids'     => [ 'type' => 'array' ],
-					'columns' => [ 'type' => 'number' ],
-				],
-			];
-			$this->blocks['core/media-text'] = (object) [
-				'attributes' => [
-					'mediaUrl'          => [ 'type' => 'string' ],
-					'mediaId'           => [ 'type' => 'number' ],
-					'mediaAlt'          => $source_string,
-					'mediaType'         => [ 'type' => 'string' ],
-					'mediaPosition'     => [ 'type' => 'string' ],
-					'mediaWidth'        => [ 'type' => 'number' ],
-					'isStackedOnMobile' => [ 'type' => 'boolean' ],
-				],
-			];
-			$this->blocks['core/file'] = (object) [
-				'attributes' => [
-					'href'               => [ 'type' => 'string' ],
-					'textLinkHref'       => $source_string,
-					'fileName'           => $source_rich,
-					'showDownloadButton' => [ 'type' => 'boolean' ],
-				],
-			];
-			$this->blocks['core/embed'] = (object) [
-				'attributes' => [
-					'url'              => [ 'type' => 'string' ],
-					'type'             => [ 'type' => 'string' ],
-					'providerNameSlug' => [ 'type' => 'string' ],
-					'responsive'       => [ 'type' => 'boolean' ],
-				],
-			];
-			foreach ( [ 'core/paragraph', 'core/html' ] as $name ) {
-				$this->blocks[ $name ] = (object) [ 'attributes' => [ 'content' => [ 'type' => 'string' ] ] ];
-			}
-		}
-
-		public function is_registered( $name ) {
-			return isset( $this->blocks[ $name ] );
-		}
-
-		public function get_registered( $name ) {
-			return $this->blocks[ $name ] ?? null;
-		}
+if ( ! function_exists( 'get_shortcode_regex' ) ) {
+	function get_shortcode_regex() {
+		return '(?!)';
 	}
 }
 
-require_once dirname( __DIR__ ) . '/includes/class-block-factory.php';
-require_once dirname( __DIR__ ) . '/includes/class-transform-registry.php';
-
-class H2BC_Fake_Element {
-	private $tag;
-	private $attrs;
-	private $inner;
-	private $children;
-
-	public function __construct( $tag, $attrs = [], $inner = '', $children = [] ) {
-		$this->tag      = strtoupper( $tag );
-		$this->attrs    = array_change_key_case( $attrs, CASE_LOWER );
-		$this->inner    = $inner;
-		$this->children = $children;
-	}
-
-	public function get_tag_name() { return $this->tag; }
-	public function has_attribute( string $name ): bool { return array_key_exists( strtolower( $name ), $this->attrs ); }
-	public function get_attribute( string $name ): ?string { return $this->attrs[ strtolower( $name ) ] ?? null; }
-	public function get_inner_html(): string { return $this->inner; }
-	public function get_text_content(): string { return trim( wp_strip_all_tags( $this->inner ) ); }
-	public function get_outer_html(): string { return '<' . strtolower( $this->tag ) . '>' . $this->inner . '</' . strtolower( $this->tag ) . '>'; }
-	public function get_child_elements(): array { return $this->children; }
-	public function query_selector( string $selector ) { $all = $this->query_selector_all( $selector ); return $all[0] ?? null; }
-	public function query_selector_all( string $selector ): array {
-		$results = [];
-		foreach ( $this->children as $child ) {
-			if ( $child->matches( $selector ) ) {
-				$results[] = $child;
-			}
-			$results = array_merge( $results, $child->query_selector_all( $selector ) );
-		}
-		return $results;
-	}
-	private function matches( string $selector ): bool {
-		if ( '.' === $selector[0] ) {
-			$class = $this->attrs['class'] ?? '';
-			return preg_match( '/(?:^|\s)' . preg_quote( substr( $selector, 1 ), '/' ) . '(?:$|\s)/', $class ) === 1;
-		}
-		return strtoupper( $selector ) === $this->tag;
-	}
+if ( ! function_exists( 'do_action' ) ) {
+	function do_action( $hook_name, ...$args ) {}
 }
+
+$repo_root = dirname( __DIR__ );
+require_once $repo_root . '/includes/class-block-factory.php';
+require_once $repo_root . '/includes/class-attribute-parser.php';
+require_once $repo_root . '/includes/class-html-element.php';
+require_once $repo_root . '/raw-handler.php';
 
 $failures   = [];
 $assertions = 0;
-$assert     = function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
+
+$assert = static function ( $condition, $label, $detail = '' ) use ( &$failures, &$assertions ) {
 	$assertions++;
 	if ( ! $condition ) {
 		$failures[] = 'FAIL [' . $label . ']' . ( '' !== $detail ? ': ' . $detail : '' );
 	}
 };
 
-$find_transform = function ( $element ) {
-	foreach ( HTML_To_Blocks_Transform_Registry::get_raw_transforms() as $transform ) {
-		if ( call_user_func( $transform['isMatch'], $element ) ) {
-			return $transform;
-		}
+$flatten_blocks = static function ( array $blocks ) use ( &$flatten_blocks ): array {
+	$flat = [];
+	foreach ( $blocks as $block ) {
+		$flat[] = $block;
+		$flat  = array_merge( $flat, $flatten_blocks( $block['innerBlocks'] ?? [] ) );
 	}
-	return null;
+
+	return $flat;
 };
 
-$convert = function ( $element, array $args = [] ) use ( $find_transform ) {
-	$transform = $find_transform( $element );
-	if ( ! $transform ) {
-		return null;
-	}
-	$handler = function () {
-		return [ HTML_To_Blocks_Block_Factory::create_block( 'core/paragraph', [ 'content' => 'Nested text' ] ) ];
-	};
-	return call_user_func( $transform['transform'], $element, $handler, $args );
+$assert_facade_matches_transformer = static function ( string $html, string $label, array $args = [] ) use ( $assert ): array {
+	$facade_args        = array_merge( $args, [ 'HTML' => $html ] );
+	$facade_blocks      = html_to_blocks_raw_handler( $facade_args );
+	$transformer_result = html_to_blocks_transformer()->transform( $html, $facade_args )->toArray();
+	$transformer_blocks = $transformer_result['blocks'] ?? [];
+
+	$assert( $facade_blocks === $transformer_blocks, $label . '-facade-matches-blocks-engine', json_encode( [ 'facade' => $facade_blocks, 'transformer' => $transformer_blocks ] ) );
+
+	return [ $facade_blocks, $transformer_result ];
 };
 
-$video = $convert( new H2BC_Fake_Element( 'video', [ 'src' => 'movie.mp4', 'poster' => 'poster.jpg', 'controls' => '' ] ) );
-$assert( 'core/video' === $video['blockName'], 'video-direct-block' );
-$assert( strpos( $video['innerHTML'], 'movie.mp4' ) !== false && strpos( $video['innerHTML'], 'poster.jpg' ) !== false, 'video-direct-html' );
-
-$video_source = $convert( new H2BC_Fake_Element( 'video', [], '', [ new H2BC_Fake_Element( 'source', [ 'src' => 'nested.mp4' ] ) ] ) );
-$assert( 'core/video' === $video_source['blockName'], 'video-source-block' );
-$assert( strpos( $video_source['innerHTML'], 'nested.mp4' ) !== false, 'video-source-html' );
-
-$audio = $convert( new H2BC_Fake_Element( 'audio', [], '', [ new H2BC_Fake_Element( 'source', [ 'src' => 'clip.mp3' ] ) ] ) );
-$assert( 'core/audio' === $audio['blockName'], 'audio-source-block' );
-$assert( strpos( $audio['innerHTML'], 'clip.mp3' ) !== false, 'audio-source-html' );
-
-$gallery = $convert(
-	new H2BC_Fake_Element( 'div', [ 'class' => 'gallery columns-2' ], '', [
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'a.jpg', 'alt' => 'A', 'class' => 'wp-image-10' ] ), new H2BC_Fake_Element( 'figcaption', [], 'Caption A' ) ] ),
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'b.jpg', 'alt' => 'B' ] ), new H2BC_Fake_Element( 'figcaption', [], 'Caption B' ) ] ),
-	] )
-);
-$assert( 'core/gallery' === $gallery['blockName'], 'gallery-block' );
-$assert( count( $gallery['innerBlocks'] ) === 2, 'gallery-inner-image-count' );
-$assert( strpos( $gallery['innerHTML'], 'wp-block-gallery' ) !== false, 'gallery-wrapper-html' );
-$assert( strpos( $gallery['innerBlocks'][0]['innerHTML'], 'Caption A' ) !== false, 'gallery-caption-preserved' );
-
-$resolved_gallery = $convert(
-	new H2BC_Fake_Element( 'div', [ 'class' => 'gallery columns-2' ], '', [
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'a.jpg', 'alt' => 'A' ] ) ] ),
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'b.jpg', 'alt' => 'B' ] ) ] ),
-	] ),
+[ $media_blocks, $media_result ] = $assert_facade_matches_transformer(
+	'<figure class="wp-block-image"><img src="product.jpg" alt="Product" width="640" height="480"><figcaption>Product shot</figcaption></figure><p><a href="https://example.com/report.pdf">Download report</a></p><iframe src="https://www.youtube.com/embed/abc123"></iframe><iframe src="https://example.com/widget"></iframe>',
+	'media-embed-fragment',
 	[
 		'context' => [
 			'asset_metadata' => [
-				'a.jpg' => [ 'id' => 101, 'url' => 'https://example.test/uploads/a.jpg' ],
-				'b.jpg' => [ 'id' => 102, 'url' => 'https://example.test/uploads/b.jpg' ],
+				'product.jpg' => [
+					'id'  => 301,
+					'url' => 'https://example.test/uploads/product.jpg',
+				],
 			],
 		],
 	]
 );
-$assert( [ 101, 102 ] === ( $resolved_gallery['attrs']['ids'] ?? [] ), 'gallery-resolved-ids' );
-$assert( strpos( $resolved_gallery['innerBlocks'][0]['innerHTML'], 'https://example.test/uploads/a.jpg' ) !== false, 'gallery-resolved-image-url' );
 
-$media_text = $convert(
-	new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text' ], '', [
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'hero.jpg', 'alt' => 'Hero' ] ) ] ),
-		new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text__content' ], '<p>Copy</p>' ),
-	] )
+$media_flat   = $flatten_blocks( $media_blocks );
+$media_names  = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$media_flat
 );
-$assert( 'core/media-text' === $media_text['blockName'], 'media-text-block' );
-$assert( ( $media_text['attrs']['mediaUrl'] ?? '' ) === 'hero.jpg', 'media-text-media-url' );
-$assert( count( $media_text['innerBlocks'] ) === 1, 'media-text-inner-blocks' );
+$image        = null;
+$embeds       = [];
+foreach ( $media_flat as $block ) {
+	if ( 'core/image' === ( $block['blockName'] ?? '' ) ) {
+		$image = $block;
+	}
+	if ( 'core/embed' === ( $block['blockName'] ?? '' ) ) {
+		$embeds[] = $block;
+	}
+}
 
-$resolved_media_text = $convert(
-	new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text' ], '', [
-		new H2BC_Fake_Element( 'figure', [], '', [ new H2BC_Fake_Element( 'img', [ 'src' => 'hero.jpg', 'alt' => 'Hero' ] ) ] ),
-		new H2BC_Fake_Element( 'div', [ 'class' => 'wp-block-media-text__content' ], '<p>Copy</p>' ),
-	] ),
-	[
-		'context' => [
-			'asset_metadata' => [
-				'hero.jpg' => [ 'id' => 201, 'url' => 'https://example.test/uploads/hero.jpg', 'alt' => 'Resolved alt' ],
-			],
-		],
-	]
+$coverage_blocks = $media_result['coverage'][0]['supported_blocks'] ?? [];
+$assert( in_array( 'core/image', $coverage_blocks, true ), 'media-coverage-includes-image', json_encode( $coverage_blocks ) );
+$assert( in_array( 'core/embed', $coverage_blocks, true ), 'media-coverage-includes-embed', json_encode( $coverage_blocks ) );
+$assert( in_array( 'core/image', $media_names, true ), 'media-fragment-emits-image', implode( ', ', $media_names ) );
+$assert( in_array( 'core/paragraph', $media_names, true ), 'file-link-remains-paragraph', implode( ', ', $media_names ) );
+$assert( in_array( 'core/embed', $media_names, true ), 'media-fragment-emits-embed', implode( ', ', $media_names ) );
+$assert( [] === ( $media_result['fallbacks'] ?? [] ), 'media-fragment-has-no-blocks-engine-fallbacks', json_encode( $media_result['fallbacks'] ?? [] ) );
+$assert( 301 === ( $image['attrs']['id'] ?? null ), 'image-resolved-id', json_encode( $image ) );
+$assert( 'https://example.test/uploads/product.jpg' === ( $image['attrs']['url'] ?? '' ), 'image-resolved-url', json_encode( $image ) );
+$assert( 'Product' === ( $image['attrs']['alt'] ?? '' ), 'image-preserves-source-alt', json_encode( $image ) );
+$assert( count( $embeds ) === 2, 'iframe-count-follows-blocks-engine', json_encode( $embeds ) );
+$assert( ( $embeds[0]['attrs']['providerNameSlug'] ?? '' ) === 'youtube', 'youtube-provider', json_encode( $embeds[0] ?? null ) );
+$assert( ( $embeds[0]['attrs']['url'] ?? '' ) === 'https://www.youtube.com/watch?v=abc123', 'youtube-url-normalised', json_encode( $embeds[0] ?? null ) );
+$assert( ( $embeds[1]['attrs']['url'] ?? '' ) === 'https://example.com/widget', 'unknown-iframe-preserved-as-embed-url', json_encode( $embeds[1] ?? null ) );
+
+[ $cta_blocks, $cta_result ] = $assert_facade_matches_transformer(
+	'<p><a href="https://example.com/signup">Sign up</a></p><iframe src="https://example.com/widget"></iframe>',
+	'fallback-boundary-fragment'
 );
-$assert( ( $resolved_media_text['attrs']['mediaUrl'] ?? '' ) === 'https://example.test/uploads/hero.jpg', 'media-text-resolved-url' );
-$assert( ( $resolved_media_text['attrs']['mediaId'] ?? null ) === 201, 'media-text-resolved-id' );
-$assert( strpos( $resolved_media_text['innerHTML'], 'alt="Hero"' ) !== false, 'media-text-preserves-source-alt' );
-
-$resolved_image = $convert(
-	new H2BC_Fake_Element( 'img', [ 'src' => 'product.jpg', 'alt' => 'Product', 'width' => '640', 'height' => '480' ] ),
-	[
-		'context' => [
-			'asset_metadata' => [
-				'product.jpg' => [ 'id' => 301, 'url' => 'https://example.test/uploads/product.jpg', 'width' => '1280' ],
-			],
-		],
-	]
+$cta_names = array_map(
+	static function ( $block ) {
+		return $block['blockName'] ?? '';
+	},
+	$flatten_blocks( $cta_blocks )
 );
-$assert( ( $resolved_image['attrs']['id'] ?? null ) === 301, 'image-resolved-id' );
-$assert( strpos( $resolved_image['innerHTML'], 'https://example.test/uploads/product.jpg' ) !== false, 'image-resolved-url' );
-$assert( strpos( $resolved_image['innerHTML'], 'width="640"' ) !== false, 'image-preserves-source-width' );
-$assert( strpos( $resolved_image['innerHTML'], 'https://example.test/uploads/product.jpg' ) !== false, 'image-resolved-inner-html' );
-
-$file = $convert( new H2BC_Fake_Element( 'a', [ 'href' => 'https://example.com/report.pdf' ], 'Download report' ) );
-$assert( 'core/file' === $file['blockName'], 'file-link-block' );
-$assert( ( $file['attrs']['href'] ?? '' ) === 'https://example.com/report.pdf', 'file-link-href' );
-
-$cta = $find_transform( new H2BC_Fake_Element( 'a', [ 'href' => 'https://example.com/signup' ], 'Sign up' ) );
-$assert( ! $cta || ( $cta['blockName'] ?? '' ) !== 'core/file', 'normal-cta-link-not-file' );
-
-$embed = $convert( new H2BC_Fake_Element( 'iframe', [ 'src' => 'https://www.youtube.com/embed/abc123' ] ) );
-$assert( 'core/embed' === $embed['blockName'], 'youtube-iframe-block' );
-$assert( ( $embed['attrs']['providerNameSlug'] ?? '' ) === 'youtube', 'youtube-provider' );
-$assert( ( $embed['attrs']['url'] ?? '' ) === 'https://www.youtube.com/watch?v=abc123', 'youtube-url-normalised' );
-
-$unknown_iframe = $find_transform( new H2BC_Fake_Element( 'iframe', [ 'src' => 'https://example.com/widget' ] ) );
-$assert( null === $unknown_iframe, 'unknown-iframe-safe-fallback' );
+$assert( ! in_array( 'core/file', $cta_names, true ), 'normal-cta-link-not-file', implode( ', ', $cta_names ) );
+$assert( in_array( 'core/embed', $cta_names, true ), 'unknown-iframe-remains-canonical-embed', implode( ', ', $cta_names ) );
+$assert( [] === ( $cta_result['fallbacks'] ?? [] ), 'unknown-iframe-has-no-fallback-under-blocks-engine', json_encode( $cta_result['fallbacks'] ?? [] ) );
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
