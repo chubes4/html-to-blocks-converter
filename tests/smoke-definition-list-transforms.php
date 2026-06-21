@@ -1,6 +1,6 @@
 <?php
 /**
- * Smoke test: simple definition lists become native list blocks.
+ * Smoke test: definition lists follow Blocks Engine canonical output.
  *
  * Run: php tests/smoke-definition-list-transforms.php
  */
@@ -113,7 +113,6 @@ $repo_root = dirname( __DIR__ );
 require_once $repo_root . '/includes/class-block-factory.php';
 require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
-require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
 $failures   = [];
@@ -135,19 +134,34 @@ $flatten_block_names = static function ( array $blocks ) use ( &$flatten_block_n
 	return $names;
 };
 
-$direct_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl><dt>Origin</dt><dd>Charleston</dd></dl>' ] );
+$assert_facade_matches_transformer = static function ( string $html, string $label ) use ( $assert ): array {
+	$facade_args        = [ 'HTML' => $html ];
+	$facade_blocks      = html_to_blocks_raw_handler( $facade_args );
+	$transformer_result = html_to_blocks_transformer()->transform( $html, $facade_args )->toArray();
+	$transformer_blocks = $transformer_result['blocks'] ?? [];
+	$coverage_blocks    = $transformer_result['coverage'][0]['supported_blocks'] ?? [];
+
+	$assert( $facade_blocks === $transformer_blocks, $label . '-facade-matches-blocks-engine', json_encode( [ 'facade' => $facade_blocks, 'transformer' => $transformer_blocks ] ) );
+	$assert( in_array( 'core/list', $coverage_blocks, true ), $label . '-blocks-engine-coverage-includes-list', json_encode( $coverage_blocks ) );
+	$assert( in_array( 'core/list-item', $coverage_blocks, true ), $label . '-blocks-engine-coverage-includes-list-item', json_encode( $coverage_blocks ) );
+	$assert( [] === ( $transformer_result['fallbacks'] ?? [] ), $label . '-blocks-engine-reports-no-fallbacks', json_encode( $transformer_result['fallbacks'] ?? [] ) );
+
+	return $facade_blocks;
+};
+
+$direct_blocks = $assert_facade_matches_transformer( '<dl><dt>Origin</dt><dd>Charleston</dd></dl>', 'direct-definition-list' );
 $direct_names  = $flatten_block_names( $direct_blocks );
 $assert( ( $direct_blocks[0]['blockName'] ?? '' ) === 'core/list', 'direct-definition-list-becomes-list' );
 $assert( ( $direct_blocks[0]['innerBlocks'][0]['attrs']['content'] ?? '' ) === '<strong>Origin</strong> Charleston', 'direct-definition-list-content' );
 $assert( ( $direct_blocks[0]['innerBlocks'][0]['blockName'] ?? '' ) === 'core/list-item', 'direct-definition-list-keeps-list-item' );
-$assert( ! in_array( 'core/group', $direct_names, true ), 'direct-definition-list-has-no-local-group-transform' );
+$assert( ! in_array( 'core/group', $direct_names, true ), 'direct-definition-list-has-no-group-wrapper' );
 $assert( ! in_array( 'core/html', $direct_names, true ), 'direct-definition-list-has-no-html-fallback' );
 
-$wrapper_stat_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl class="hero-stats" aria-label="Store highlights"><div><dt>5</dt><dd>workflow categories</dd></div><div><dt>18+</dt><dd>bench-ready tools</dd></div><div><dt>0</dt><dd>guesswork mornings</dd></div></dl>' ] );
-$assert( $wrapper_stat_blocks === array(), 'wrapped-stat-definition-list-does-not-use-local-group-transform' );
+$wrapper_stat_blocks = $assert_facade_matches_transformer( '<dl class="hero-stats" aria-label="Store highlights"><div><dt>5</dt><dd>workflow categories</dd></div><div><dt>18+</dt><dd>bench-ready tools</dd></div><div><dt>0</dt><dd>guesswork mornings</dd></div></dl>', 'wrapped-stat-definition-list' );
+$assert( $wrapper_stat_blocks === array(), 'wrapped-stat-definition-list-follows-blocks-engine-empty-output' );
 
-$complex_blocks = html_to_blocks_raw_handler( [ 'HTML' => '<dl><div><dt>Term</dt><dd>Description</dd><p>Extra</p></div></dl>' ] );
-$assert( $complex_blocks === array(), 'complex-definition-list-does-not-use-local-fallback-transform' );
+$complex_blocks = $assert_facade_matches_transformer( '<dl><div><dt>Term</dt><dd>Description</dd><p>Extra</p></div></dl>', 'complex-definition-list' );
+$assert( $complex_blocks === array(), 'complex-definition-list-follows-blocks-engine-empty-output' );
 
 if ( $failures ) {
 	fwrite( STDERR, implode( "\n", $failures ) . "\n" );
