@@ -132,9 +132,7 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 
 $repo_root = dirname( __DIR__ );
 require_once $repo_root . '/includes/class-block-factory.php';
-require_once $repo_root . '/includes/class-attribute-parser.php';
 require_once $repo_root . '/includes/class-html-element.php';
-require_once $repo_root . '/includes/class-transform-registry.php';
 require_once $repo_root . '/raw-handler.php';
 
 $failures   = [];
@@ -189,8 +187,8 @@ foreach ( [
 	'Find Us',
 	'Come <em>find us</em> on King Street',
 	'Hours',
-	'Tuesday &ndash; Friday',
-	'7am &ndash; 3pm<br>Saturday',
+	'Tuesday – Friday',
+	'7am – 3pm<br>Saturday',
 	'Closed Monday',
 	'Address',
 	'482 King Street<br>Charleston, SC 29403',

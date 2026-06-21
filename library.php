@@ -73,20 +73,11 @@ $html_to_blocks_initializer = static function () use ( $html_to_blocks_library_p
 	if ( ! class_exists( 'HTML_To_Blocks_Block_Factory', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-block-factory.php';
 	}
-	if ( ! class_exists( 'HTML_To_Blocks_Attribute_Parser', false ) ) {
-		require_once $html_to_blocks_library_path . '/includes/class-attribute-parser.php';
-	}
 	if ( ! class_exists( 'HTML_To_Blocks_SVG_Icon_Classifier', false ) ) {
 		require_once $html_to_blocks_library_path . '/includes/class-svg-icon-classifier.php';
 	}
 	if ( ! function_exists( 'html_to_blocks_classify_inline_svg_icon' ) ) {
 		require_once $html_to_blocks_library_path . '/includes/svg-icon-functions.php';
-	}
-	if ( ! class_exists( 'HTML_To_Blocks_Site_Editor_Marker_Transforms', false ) ) {
-		require_once $html_to_blocks_library_path . '/includes/transform-families/class-site-editor-marker-transforms.php';
-	}
-	if ( ! class_exists( 'HTML_To_Blocks_Transform_Registry', false ) ) {
-		require_once $html_to_blocks_library_path . '/includes/class-transform-registry.php';
 	}
 	if ( ! function_exists( 'html_to_blocks_get_capabilities' ) ) {
 		require_once $html_to_blocks_library_path . '/includes/capabilities.php';

@@ -16,13 +16,18 @@ if ( ! function_exists( 'html_to_blocks_get_capabilities' ) ) {
 	 * @return array<string,mixed> Capability inventory.
 	 */
 	function html_to_blocks_get_capabilities(): array {
-		$transform_inventory = class_exists( 'HTML_To_Blocks_Transform_Registry', false )
-			? HTML_To_Blocks_Transform_Registry::get_transform_inventory()
-			: array(
-				'families'              => array(),
-				'supported_core_blocks' => array(),
-				'explicit_markers'      => array(),
-			);
+		$supported_core_blocks = array();
+		if ( function_exists( 'html_to_blocks_transformer' ) ) {
+			$transformer = html_to_blocks_transformer();
+			if ( $transformer ) {
+				$result = $transformer->transform( '<p>Capability probe</p>' );
+				foreach ( (array) ( $result->coverage[0]['supported_blocks'] ?? array() ) as $block_name ) {
+					if ( is_string( $block_name ) && strpos( $block_name, 'core/' ) === 0 ) {
+						$supported_core_blocks[] = $block_name;
+					}
+				}
+			}
+		}
 
 		return array(
 			'version'            => defined( 'HTML_TO_BLOCKS_CONVERTER_VERSION' ) ? HTML_TO_BLOCKS_CONVERTER_VERSION : '0.7.2',
@@ -30,7 +35,12 @@ if ( ! function_exists( 'html_to_blocks_get_capabilities' ) ) {
 				'function'  => 'html_to_blocks_raw_handler',
 				'available' => function_exists( 'html_to_blocks_raw_handler' ),
 			),
-			'transforms'         => $transform_inventory,
+			'transforms'         => array(
+				'provider'              => 'blocks-engine',
+				'families'              => array(),
+				'supported_core_blocks' => array_values( array_unique( $supported_core_blocks ) ),
+				'explicit_markers'      => array(),
+			),
 			'hooks'              => array(
 				'unsupported_html_fallback' => 'html_to_blocks_unsupported_html_fallback',
 				'convert_metrics'           => 'html_to_blocks_convert_metrics',

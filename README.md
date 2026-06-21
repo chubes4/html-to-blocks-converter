@@ -210,13 +210,10 @@ loaded version string.
 
 ## Architecture
 
-The plugin uses WordPress Core's HTML API for parsing:
-
-- **HTML Element Adapter** - DOM-like interface over `WP_HTML_Processor` for familiar traversal methods
-- **Transform Registry** - PHP port of block transforms from `packages/block-library/src/*/transforms.js`
-- **Block Factory** - Creates block arrays compatible with `serialize_blocks()`
-- **Raw Handler** - Main conversion pipeline using `WP_HTML_Processor::create_fragment()`
-- **Attribute Parser** - Extracts block attributes from HTML using WordPress HTML API
+The public H2BC facade delegates HTML-to-block conversion to Blocks Engine's PHP
+transformer. H2BC keeps the WordPress plugin/package shell, HTML normalization,
+shortcode splitting, fallback event adaptation, result envelope, and automatic
+write/read hooks around that canonical transformer.
 
 ### Dual-mode loading
 

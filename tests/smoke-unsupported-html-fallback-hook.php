@@ -69,13 +69,6 @@ $assert = static function ( $condition, $label, $detail = '' ) use ( &$failures,
 	}
 };
 
-$read_required_file = static function ( string $path ) use ( $assert ): string {
-	$contents = file_get_contents( $path );
-	$assert( is_string( $contents ) && '' !== $contents, basename( $path ) . '-readable', 'Unable to read ' . $path );
-
-	return is_string( $contents ) ? $contents : '';
-};
-
 $fallback_html = '<iframe src="https://example.com/widget"></iframe>';
 $context       = [
 	'reason'     => 'no_transform',
@@ -94,12 +87,6 @@ $assert( ( $action[1][0] ?? '' ) === $fallback_html, 'fallback-action-html-arg' 
 $assert( ( $action[1][1]['reason'] ?? '' ) === 'no_transform', 'fallback-action-reason' );
 $assert( ( $action[1][1]['tag_name'] ?? '' ) === 'IFRAME', 'fallback-action-tag-name' );
 $assert( ( $action[1][2]['blockName'] ?? '' ) === 'core/html', 'fallback-action-block-arg' );
-
-$raw_handler_source = $read_required_file( dirname( __DIR__ ) . '/raw-handler.php' );
-$assert(
-	substr_count( $raw_handler_source, 'html_to_blocks_create_unsupported_html_fallback_block(' ) >= 3,
-	'raw-handler-routes-fallbacks-through-helper'
-);
 
 echo 'Assertions: ' . $assertions . PHP_EOL;
 if ( empty( $failures ) ) {
