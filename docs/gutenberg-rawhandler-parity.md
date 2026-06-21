@@ -35,6 +35,22 @@ smoke fixture for the public shape plus the parity/unit coverage named below.
 Blocks Engine keeps runtime ownership for canonical transformation behavior;
 h2bc keeps only the historical facade contract.
 
+The retained public facade surface is intentionally limited to:
+
+- `html_to_blocks_raw_handler()` and `html_to_blocks_convert()` for legacy
+  block-array callers.
+- `html_to_blocks_convert_fragment()` for compiler-facing result envelopes,
+  diagnostics, source summaries, asset references, and transformer-result access.
+- WordPress hooks documented in `README.md` for supported post-type gating,
+  fallback observation, metrics, and load-time integration.
+
+Post-parity behavior that Blocks Engine now owns should be covered through the
+public facade rather than duplicated in H2BC transforms. The retirement-readiness
+smoke in `tests/smoke-blocks-engine-parity-facade.php` proves that H2BC passes
+caller asset metadata through to Blocks Engine image conversion, exposes the
+Blocks Engine result schema/coverage, and returns native spacer blocks without a
+legacy `core/html` fallback.
+
 ## Covered Static Expectations
 
 The parity fixture suite currently covers these Gutenberg-compatible static
