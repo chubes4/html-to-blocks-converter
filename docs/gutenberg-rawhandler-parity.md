@@ -32,6 +32,8 @@ the underlying transformer result.
 Tests should assert public facade behavior and the Blocks Engine block families
 produced for supported static HTML. When behavior changes, update the focused
 smoke fixture for the public shape plus the parity/unit coverage named below.
+Blocks Engine keeps runtime ownership for canonical transformation behavior;
+h2bc keeps only the historical facade contract.
 
 ## Covered Static Expectations
 

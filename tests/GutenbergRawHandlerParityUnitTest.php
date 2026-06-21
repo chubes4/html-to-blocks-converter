@@ -87,7 +87,7 @@ class GutenbergRawHandlerParityUnitTest extends WP_UnitTestCase {
 			),
 			'quote'        => array(
 				'html'           => '<blockquote><p>Quote text</p><cite>Source</cite></blockquote>',
-				'expected_names' => array( 'core/quote', 'core/paragraph', 'core/paragraph' ),
+				'expected_names' => array( 'core/quote', 'core/paragraph' ),
 				'snippets'       => array( 'Quote text', 'Source' ),
 			),
 			'image'        => array(
