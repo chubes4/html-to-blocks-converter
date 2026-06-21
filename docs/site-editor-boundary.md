@@ -1,9 +1,9 @@
 # Site Editor Boundary
 
-`html-to-blocks-converter` is a raw-transform library. It converts deterministic
-HTML fragments into Gutenberg block arrays and falls back safely when a fragment
-does not match a known transform. It is not a block theme or Site Editor
-compiler.
+`html-to-blocks-converter` is a WordPress-facing facade for Blocks Engine raw
+conversion. It delegates deterministic HTML fragments to Blocks Engine, adapts
+the result into Gutenberg block arrays, and falls back safely when a fragment is
+not convertible. It is not a block theme or Site Editor compiler.
 
 ## Raw Handler Pattern
 
@@ -13,15 +13,15 @@ The `html_to_blocks_raw_handler()` flow mirrors Gutenberg's raw-handler shape:
 HTML fragment
   -> shortcode split
   -> HTML5 fragment parse through WP_HTML_Processor
-  -> registered raw block transforms
-  -> core/html fallback for unknown top-level elements
+  -> Blocks Engine HtmlTransformer
+  -> core/html fallback adaptation for unconverted top-level elements
   -> block arrays for serialize_blocks()
 ```
 
 This layer is intentionally deterministic. It should only produce a semantic
 block when the HTML fragment itself contains enough information to choose that
 block without knowing the surrounding template, site identity, query, or theme.
-The source-of-truth list of supported transforms, observed fallbacks, future
+The source-of-truth list of supported output, observed fallbacks, future
 candidates, and context-required block families lives in the
 [Core Block Coverage Matrix](core-block-coverage.md).
 
@@ -59,28 +59,25 @@ choose `core/heading` because that is the only answer proven by the fragment.
 ## Public Capability Inventory
 
 Consumers should call `html_to_blocks_get_capabilities()` instead of scraping
-registry source files. The returned inventory includes the package version, raw
-handler function name and availability, transform families, supported core block
-names, explicit Site Editor marker attributes, and fallback/metrics hook names.
-
-The transform family inventory is stable enough for downstream capability checks,
-but individual callback names and registry internals remain private.
+source files. The returned inventory includes the package version, raw handler
+function name and availability, Blocks Engine provider identity, supported core
+block names observed through the provider, and fallback/metrics hook names.
 
 ## Heuristic Review Standard
 
-Heuristic transforms are allowed when they identify generic static HTML patterns
-using class-token families paired with structure or content checks. Examples are
-button-like anchors with visible text, code-window chrome around real code, cards
-with repeated child structure, or decorative wrappers that preserve meaningful
-descendant content.
+Heuristic conversion is acceptable only when Blocks Engine identifies generic
+static HTML patterns using class-token families paired with structure or content
+checks. Examples are button-like anchors with visible text, code-window chrome
+around real code, cards with repeated child structure, or decorative wrappers
+that preserve meaningful descendant content.
 
 Navigation, WooCommerce identity, query/post/site-title/template intent stay
-compiler-only. The raw transform layer may preserve visible text, links, images,
+compiler-only. The raw conversion facade may preserve visible text, links, images,
 classes, and safe static layout; it must not emit native context-required blocks
 from visual similarity alone.
 
 Exact brand, site, product, or fixture names belong in tests and docs, not
-production transform rules. Production rules should be phrased as reusable
+production conversion rules. Production rules should be phrased as reusable
 tokens, attributes, structure checks, or explicit context gates. If a new rule
 needs a named brand or product in production code, document why that identifier is
 part of a shared public contract rather than a fixture shortcut.
@@ -149,9 +146,10 @@ not as WooCommerce-native state. This is intentional:
 WooCommerce-native blocks or materialized product placeholders belong to an
 importer/compiler layer that owns explicit product context, SKU/slug matching,
 inventory policy, checkout routing, and any WooCommerce entity lifecycle. For the
-current implementation ladder, h2bc only provides the safe raw-transform substrate
-and gated fixture coverage; product data creation and context forwarding remain
-owned by upstream Static Site Importer and Block Format Bridge work.
+current implementation ladder, h2bc only provides the safe facade around Blocks
+Engine raw conversion and gated fixture coverage; product data creation and
+context forwarding remain owned by upstream Static Site Importer and Block Format
+Bridge work.
 
 ## Theme Block Classification
 
@@ -193,7 +191,7 @@ made those intent-aware decisions, it can still delegate static fragments to
 
 ## Recommendation
 
-Keep h2bc focused on deterministic raw transforms. Template identity, query
+Keep h2bc focused on deterministic raw conversion delegation. Template identity, query
 semantics, navigation intent, and theme design-token extraction should live in a
 separate block theme compiler package or plugin layered above h2bc and Block Format
 Bridge. That keeps this package small, predictable, and safe as a reusable

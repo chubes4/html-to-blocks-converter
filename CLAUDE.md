@@ -24,23 +24,17 @@ Server-side HTML-to-Gutenberg-blocks conversion plugin using WordPress Core's HT
 ### Key Technical Decisions
 
 - **WordPress HTML API (`WP_HTML_Processor`)**: HTML5 spec-compliant parsing that matches browser behavior
-- **Blocks Engine delegation**: H2BC no longer owns an internal transform registry
+- **Blocks Engine delegation**: H2BC no longer owns the canonical conversion runtime
 - **Facade compatibility**: Existing public raw-handler/result APIs remain backed by Blocks Engine output
 
-## Supported Block Transforms
+## Supported Block Output
 
-| HTML Element | Block Type | Priority |
-|-------------|------------|----------|
-| `h1`-`h6` | `core/heading` | 10 |
-| `ol`, `ul` | `core/list` with `core/list-item` | 10 |
-| `figure > img` | `core/image` | 10 |
-| `img` | `core/image` | 15 |
-| `blockquote` | `core/quote` | 10 |
-| `pre > code` | `core/code` | 10 |
-| `pre` | `core/preformatted` | 11 |
-| `hr` | `core/separator` | 10 |
-| `table` | `core/table` | 10 |
-| `p` | `core/paragraph` | 20 |
+Blocks Engine owns canonical HTML-to-block conversion. Keep h2bc documentation
+and tests focused on the public facade behavior: raw-handler block arrays,
+result envelopes, fallback hooks, metrics hooks, and automatic write/read hooks.
+
+Use `docs/core-block-coverage.md` for the current Blocks Engine-backed support
+matrix instead of documenting internal conversion priority here.
 
 ## Public API
 
@@ -57,7 +51,7 @@ Server-side HTML-to-Gutenberg-blocks conversion plugin using WordPress Core's HT
 ## Requirements
 
 - WordPress 6.4+ (WP_HTML_Processor dependency)
-- PHP 7.4+
+- PHP 8.1+
 
 ## Class Reference
 

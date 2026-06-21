@@ -3,7 +3,7 @@
  * HTML Element Adapter - Provides DOM-like interface over WP_HTML_Processor
  *
  * Wraps WordPress HTML API to provide familiar DOM traversal methods
- * for transform callbacks and HTML parsing operations.
+ * for facade adaptation and HTML parsing operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

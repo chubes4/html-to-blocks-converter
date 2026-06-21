@@ -143,17 +143,7 @@ $blocks  = html_to_blocks_raw_handler( array( 'HTML' => $html ) );
 $total_ms = ( microtime( true ) - $started ) * 1000;
 
 $main_metrics = array();
-$aggregate_transforms = array();
 foreach ( $metrics_events as $event ) {
-	foreach ( (array) ( $event['transforms'] ?? array() ) as $name => $stats ) {
-		if ( ! isset( $aggregate_transforms[ $name ] ) ) {
-			$aggregate_transforms[ $name ] = array( 'count' => 0, 'execute_ms' => 0.0 );
-		}
-
-		$aggregate_transforms[ $name ]['count']      += (int) ( $stats['count'] ?? 0 );
-		$aggregate_transforms[ $name ]['execute_ms'] += (float) ( $stats['execute_ms'] ?? 0 );
-	}
-
 	if ( ! isset( $event['html_bytes'] ) || (int) $event['html_bytes'] < 100000 ) {
 		continue;
 	}
@@ -165,15 +155,6 @@ if ( empty( $main_metrics ) ) {
 	$main_metrics = array( 'total_ms' => $total_ms );
 }
 
-uasort(
-	$aggregate_transforms,
-	static function ( array $left, array $right ): int {
-		return ( $right['execute_ms'] <=> $left['execute_ms'] );
-	}
-);
-$top_transform_name  = (string) array_key_first( $aggregate_transforms );
-$top_transform_stats = $top_transform_name ? $aggregate_transforms[ $top_transform_name ] : array( 'count' => 0, 'execute_ms' => 0.0 );
-
 $timeline = array(
 	array(
 		't_ms'   => 0,
@@ -184,7 +165,7 @@ $timeline = array(
 );
 $spans = array();
 $cursor = 0;
-foreach ( array( 'extract_ms', 'element_parse_ms', 'transform_match_ms', 'transform_execute_ms', 'content_measure_ms' ) as $metric ) {
+foreach ( array( 'transform_duration_ms', 'content_measure_ms' ) as $metric ) {
 	$duration = isset( $main_metrics[ $metric ] ) && is_numeric( $main_metrics[ $metric ] ) ? (float) $main_metrics[ $metric ] : 0.0;
 	$phase    = preg_replace( '/_ms$/', '', $metric );
 	$timeline[] = array( 't_ms' => (int) round( $cursor ), 'source' => 'h2bc', 'event' => $phase . '_start', 'data' => array( 'phase' => $phase ) );
@@ -201,8 +182,6 @@ $timeline[] = array(
 		'blocks'         => count( $blocks ),
 		'total_ms'       => $total_ms,
 		'html_bytes'     => strlen( $html ),
-		'top_transform'  => $top_transform_name,
-		'top_transforms' => array_slice( $aggregate_transforms, 0, 8, true ),
 		'metrics'        => $main_metrics,
 	),
 );
@@ -214,7 +193,7 @@ file_put_contents(
 			'component_id'     => 'html-to-blocks-converter',
 			'scenario_id'      => getenv( 'HOMEBOY_TRACE_SCENARIO' ) ?: 'large-html-raw-handler',
 			'status'           => 'pass',
-			'summary'          => sprintf( '%d KB raw handler: %.1f ms total; transform execution %.1f ms; matching %.1f ms; top transform %s %.1f ms (%d calls)', (int) round( $target_bytes / 1024 ), $total_ms, (float) ( $main_metrics['transform_execute_ms'] ?? 0 ), (float) ( $main_metrics['transform_match_ms'] ?? 0 ), $top_transform_name, (float) ( $top_transform_stats['execute_ms'] ?? 0 ), (int) ( $top_transform_stats['count'] ?? 0 ) ),
+			'summary'          => sprintf( '%d KB raw handler: %.1f ms total; Blocks Engine transform %.1f ms', (int) round( $target_bytes / 1024 ), $total_ms, (float) ( $main_metrics['transform_duration_ms'] ?? 0 ) ),
 			'timeline'         => $timeline,
 			'span_definitions' => $spans,
 			'assertions'       => array(),
