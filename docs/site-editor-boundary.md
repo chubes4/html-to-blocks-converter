@@ -162,15 +162,14 @@ Bridge work.
 
 ## Future Block Theme Compiler Layer
 
-Block theme generation belongs above this package and above format bridges that
-use it. A site compiler can carry the intent that raw HTML lacks:
+Block theme generation belongs above this legacy package and above compatibility format bridges that use it. Existing H2BC compiler integrations can carry the intent that raw HTML lacks:
 
 ```text
 static HTML/CSS/site spec
   -> block theme compiler
       -> split regions: header, footer, main, templates, parts
       -> infer theme.json tokens: palette, typography, spacing
-      -> call h2bc for static fragments
+      -> call h2bc for static fragments in legacy integrations
       -> insert explicit Site Editor blocks where intent is known
   -> block theme files
       -> theme.json
@@ -179,14 +178,10 @@ static HTML/CSS/site spec
 ```
 
 That compiler can decide that a region is a `core/template-part`, that a heading
-is `core/site-title`, or that repeated cards are a `core/query` loop. Once it has
-made those intent-aware decisions, it can still delegate static fragments to
-`html_to_blocks_raw_handler()`.
+is `core/site-title`, or that repeated cards are a `core/query` loop. Existing
+H2BC integrations can still delegate static fragments to
+`html_to_blocks_raw_handler()`; new compilers should call Blocks Engine directly.
 
 ## Recommendation
 
-Keep h2bc focused on deterministic raw conversion delegation. Template identity, query
-semantics, navigation intent, and theme design-token extraction should live in a
-separate block theme compiler package or plugin layered above h2bc and Block Format
-Bridge. That keeps this package small, predictable, and safe as a reusable
-conversion primitive.
+Keep h2bc focused on deterministic raw conversion delegation for legacy callers. Template identity, query semantics, navigation intent, and theme design-token extraction should live in a separate block theme compiler package or plugin layered above Blocks Engine. That keeps this package small and predictable as a compatibility shim.

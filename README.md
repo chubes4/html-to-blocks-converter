@@ -2,7 +2,9 @@
 
 A legacy WordPress plugin **and Composer package** that exposes the historical `html_to_blocks_*` facade while delegating canonical raw HTML conversion to Blocks Engine.
 
-It works in two modes:
+New consumers should depend on `automattic/blocks-engine-php-transformer` directly and use `Automattic\BlocksEngine\PhpTransformer\HtmlTransformer\HtmlTransformer`. H2BC remains a stable compatibility shim for callers that already depend on the `html_to_blocks_*` PHP functions, raw-handler arrays, fallback hooks, diagnostics, or automatic WordPress write/read hooks.
+
+Existing H2BC consumers can continue to load the shim in two modes:
 
 - **Plugin mode:** activate the plugin and it automatically converts raw HTML to blocks on `wp_insert_post()` and REST editor reads for public REST-enabled post types.
 - **Package mode:** `composer require chubes4/html-to-blocks-converter` and load WordPress. Composer autoload registers the same conversion library and automatic hooks through the version registry. Consumers can also call `html_to_blocks_raw_handler()` directly.
@@ -11,7 +13,7 @@ It works in two modes:
 
 This package is a compatibility facade for callers that still use the `html_to_blocks_*` APIs. It delegates conversion to Blocks Engine's `HtmlTransformer`, keeps the WordPress plugin/package shell, and adapts the canonical result into the historical raw-handler arrays, fallback hooks, diagnostics, and automatic write/read hooks.
 
-### Use Cases
+### Legacy Use Cases
 
 - Migrating legacy content to Gutenberg blocks
 - Importing content from external sources via REST API
@@ -43,7 +45,9 @@ capability inventory instead of parsing source. The inventory reports the packag
 version, raw handler availability, the Blocks Engine provider, supported core
 blocks observed through the provider, and fallback/metrics hook names.
 
-## Installation
+## Installation For Existing H2BC Consumers
+
+Install H2BC only when you need the historical `html_to_blocks_*` compatibility surface. New projects should install the canonical Blocks Engine PHP Transformer package directly instead of adding H2BC as an active dependency.
 
 1. Download the plugin zip file
 2. Navigate to Plugins > Add New > Upload Plugin
@@ -56,7 +60,7 @@ cd wp-content/plugins
 git clone https://github.com/chubes4/html-to-blocks-converter.git
 ```
 
-Or install as a Composer package:
+Existing shim consumers can also install it as a Composer package:
 
 ```bash
 composer require chubes4/html-to-blocks-converter
@@ -72,9 +76,9 @@ APIs must resolve inside the scoped namespace. Build hook callback strings from
 `__NAMESPACE__` so the same source works as the standalone plugin and as a scoped
 dependency.
 
-## Usage
+## Compatibility Usage
 
-The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. No configuration required for public REST-enabled post types.
+The plugin hooks into `wp_insert_post_data` and automatically converts HTML content to blocks for supported post types. This behavior is retained for existing H2BC integrations; new conversion integrations should call Blocks Engine directly.
 
 ### Programmatic Usage
 
