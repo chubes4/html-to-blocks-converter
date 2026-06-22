@@ -14,36 +14,9 @@ use Automattic\BlocksEngine\PhpTransformer\HtmlToBlocks\HtmlTransformer;
 use Automattic\BlocksEngine\PhpTransformer\Contract\TransformerResult;
 
 if ( ! class_exists( HtmlTransformer::class ) ) {
-	$html_to_blocks_autoload_paths = array(
-		__DIR__ . '/vendor/autoload.php',
-		dirname( __DIR__ ) . '/blocks-engine/php-transformer/vendor/autoload.php',
-	);
-
-	foreach ( $html_to_blocks_autoload_paths as $html_to_blocks_autoload ) {
-		if ( file_exists( $html_to_blocks_autoload ) ) {
-			require_once $html_to_blocks_autoload;
-			break;
-		}
-	}
-
-	if ( ! class_exists( HtmlTransformer::class ) ) {
-		$html_to_blocks_engine_src = dirname( __DIR__ ) . '/blocks-engine/php-transformer/src';
-		if ( is_dir( $html_to_blocks_engine_src ) ) {
-			spl_autoload_register(
-				static function ( string $class ) use ( $html_to_blocks_engine_src ): void {
-					$prefix = 'Automattic\\BlocksEngine\\PhpTransformer\\';
-					if ( strpos( $class, $prefix ) !== 0 ) {
-						return;
-					}
-
-					$relative = substr( $class, strlen( $prefix ) );
-					$file     = $html_to_blocks_engine_src . '/' . str_replace( '\\', '/', $relative ) . '.php';
-					if ( file_exists( $file ) ) {
-						require_once $file;
-					}
-				}
-			);
-		}
+	$html_to_blocks_autoload = __DIR__ . '/vendor/autoload.php';
+	if ( file_exists( $html_to_blocks_autoload ) ) {
+		require_once $html_to_blocks_autoload;
 	}
 }
 
