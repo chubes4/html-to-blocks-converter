@@ -32,8 +32,8 @@ the h2bc facade boundary and context-required block families only.
 | Common static text/media blocks | Delegated | Paragraphs, headings, lists, quotes, images, code, separators, tables, and similar static blocks are emitted only when Blocks Engine returns them. |
 | `core/html` | Safe fallback | Unknown or intentionally unsupported fragments are preserved as custom HTML instead of guessed. |
 | Layout-only static containers | Delegated | Groups, columns, covers, buttons, and similar layout blocks are emitted only when Blocks Engine returns them. |
-| `core/pattern` | Future candidate | Explicit markers such as `data-h2bc-pattern="namespace/slug"` or the shared BFB alias `data-bfb-pattern="namespace/slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Similar-looking layout is not enough. |
-| `core/template-part` | Future candidate | Explicit markers such as `data-h2bc-template-part="area-or-slug"` or the shared BFB alias `data-bfb-template-part="area-or-slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Header/footer-looking layout is not enough. |
+| `core/pattern` | Future candidate | Explicit markers such as `data-h2bc-pattern="namespace/slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Similar-looking layout is not enough. |
+| `core/template-part` | Future candidate | Explicit markers such as `data-h2bc-template-part="area-or-slug"` remain a wrapper compatibility gap while Blocks Engine owns raw conversion. Header/footer-looking layout is not enough. |
 | Rendered navigation markup | Safe fallback | `<nav>` fragments are preserved as `core/html` in default raw conversion because native navigation blocks do not have a valid static serialization shape here. |
 | Native `core/navigation*` | Context-required | Requires editor-valid serialization, menu intent, site route knowledge, menu-location policy, and optional `wp_navigation` post lifecycle ownership. |
 | `core/navigation-link`, `core/navigation-submenu` | Context-required | These are native navigation children. Standalone links and nested lists are static content unless a compiler owns the parent navigation block contract. |
@@ -142,8 +142,8 @@ importer/compiler layer that owns explicit product context, SKU/slug matching,
 inventory policy, checkout routing, and any WooCommerce entity lifecycle. For the
 current implementation ladder, h2bc only provides the safe facade around Blocks
 Engine raw conversion and gated fixture coverage; product data creation and
-context forwarding remain owned by upstream Static Site Importer and Block Format
-Bridge work.
+context forwarding belong to higher-level importers or compilers that call Blocks
+Engine directly.
 
 ## Theme Block Classification
 
@@ -162,7 +162,7 @@ Bridge work.
 
 ## Future Block Theme Compiler Layer
 
-Block theme generation belongs above this legacy package and above compatibility format bridges that use it. Existing H2BC compiler integrations can carry the intent that raw HTML lacks:
+Block theme generation belongs above this legacy package. Existing H2BC compiler integrations can carry the intent that raw HTML lacks:
 
 ```text
 static HTML/CSS/site spec

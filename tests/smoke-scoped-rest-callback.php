@@ -2,8 +2,8 @@
 /**
  * Smoke test for namespace-safe REST filter callback registration.
  *
- * h2bc runs both as a standalone plugin and as a dependency bundled by plugins
- * such as Block Format Bridge. Bundled copies can be php-scoped into a vendor
+ * h2bc runs both as a standalone plugin and as a bundled compatibility package.
+ * Bundled copies can be php-scoped into a vendor
  * namespace, while WordPress still stores hook callbacks as strings and invokes
  * them later. This smoke guards the pattern that builds those callback strings
  * from __NAMESPACE__ instead of assuming root-global function names.
